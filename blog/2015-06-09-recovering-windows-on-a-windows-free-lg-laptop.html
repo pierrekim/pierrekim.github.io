@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>A slice of Kimchi - IT Security Blog</title>
+<title>Recovering Windows on a "Windows-free" LG laptop - A slice of Kimchi - IT Security Blog</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
@@ -33,20 +33,19 @@ h1, h2, h3, h4 {
         </div>
     </div>
     
-
-    <div class="hero-unit faq">
-        <div class="ac">
-            <h2><a href="2015-06-09-recovering-windows-on-a-windows-free-lg-laptop.html">Recovering Windows on a "Windows-free" LG laptop</a></h2>
-        </div>
+<div class="hero-unit faq">
+    <div class="ac">
+        <h2>Recovering Windows on a "Windows-free" LG laptop</h2>
     </div>
+</div>
 
-    <div>
-        <p>Hello,</p>
-<p>I just bought a new laptop, a <a href="http://search.daum.net/search?q=LG+13ZD950">LG 13ZD950</a>. This laptop can be purchased without Windows in South Korea (like a lot of new laptops in South Korea).</p>
+<div>
+    <p>Hello,</p>
+<p>I just bought a new laptop, a <a href="http://search.daum.net/search?q=LG+13ZD950">LG 13ZD950</a>. This laptop can be purchased without Windows in South Korea (like a lot of new laptops !).</p>
 <p>The "Windows-free" version doesn't boot on a system by default: you have to install your own OS.</p>
 <p>Before installing Linux, I analyzed the internal SSD: even if the laptop is "Windows-free", Windows seems to be present but the laptop doesn't boot.</p>
 <p>By default, you can only see a 10GB NTFS partition (/dev/sda1) called "DnA" containing 3GB of Windows drivers.</p>
-<p>I will explain now how to recover a full Windows 8.1 factory copy available in the SSD.</p>
+<p>I will explain now how to recover a full Windows 8.1 copy available in the SSD.</p>
 <p><strong>The laptop is brand new. According to S.M.A.R.T, the SSD is new too.</strong></p>
 <p>Boot with <a href="https://www.kali.org/">Kali Linux</a> then use <strong>testdisk</strong> (from <a href="http://www.cgsecurity.org/">photorec</a>):</p>
 <pre><code>kali% sudo testdisk /dev/sda
@@ -66,47 +65,10 @@ h1, h2, h3, h4 {
 <p>The Windows initialization system will ask the user name, the computer name and the default preferred color. After this, you have now a fully working Windows 8.1 system with a "Windows-free" LG laptop. Enjoy!</p>
 <p>Hello Windows 8.1:</p>
 <p><img alt="" src="images/lg-windows-8.1.png" /></p>
-        <div>
-            <p class="text-muted">published on 2015-06-09 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
-        </div>
+    <div>
+        <p class="text-muted">published on 2015-06-09 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
     </div>
-
-
-<hr />
-
-<h3>Older Posts</h3>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Title</th>
-        </tr>
-    </thead>
-    <tbody>
-    
-        <tr>
-            <td>2015-05-05 00:00:00</td>
-            <td><a href="2015-05-05-127-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html">ERRATA - 127 ipTIME Routers/WiFi APs/Modems/Firewalls models vulnerable with RCE with root privileges</a></td>
-        </tr>
-    
-        <tr>
-            <td>2015-04-20 00:00:00</td>
-            <td><a href="2015-04-20-112-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html">112 ipTIME Routers/WiFi APs/Modems/Firewalls models vulnerable with RCE with root privileges</a></td>
-        </tr>
-    
-        <tr>
-            <td>2015-04-08 00:00:00</td>
-            <td><a href="2015-04-08-cve-2015-1415.html">CVE-2015-1415</a></td>
-        </tr>
-    
-        <tr>
-            <td>2015-04-07 00:00:00</td>
-            <td><a href="2015-04-07-annyeong-haseyo.html">Annyeong haseyo!</a></td>
-        </tr>
-    
-    </tbody>
-</table>
+</div>
 
 </div>
 </body>
