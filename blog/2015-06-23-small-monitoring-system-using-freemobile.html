@@ -44,7 +44,7 @@ h1, h2, h3, h4 {
 <p>In order to help a friend to monitor his webservices, I have written a small tool to check the availability of the different webservices.</p>
 <p>The script is used with crontab and the <a href="https://mobile.free.fr/">Freemobile API</a> provides the possibility to send free SMS (free as a free beer). You can choose if you prefer SMS alerts, email alerts or both.
 It checks the HTTP return code of the webpages : anything other than 200 will trigger the alert.</p>
-<p>You have to edit :
+<p>You have to edit:
   - ALERT_SMS_API
   - ALERT_EMAIL
   - LOGFILE
@@ -116,16 +116,16 @@ if [ "X${output}" != "X200" ]; then
   exit
 fi
 </code></pre>
-<p>The crontab to check the webservices every 5 minutes are :</p>
+<p>The crontabs to check the webservices every 5 minutes are:</p>
 <pre><code>*/5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice0
 */5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice1
 */5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice2
 */5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice3
 </code></pre>
-<p>This tool was tested on a Debian 7.6. So you need perhaps to run apt to install the necessary packages :</p>
+<p>This tool was tested on a Debian 7.6. So you need perhaps to run apt to install the necessary packages:</p>
 <pre><code>apt-get install curl mailutils
 </code></pre>
-<p>You can see the past alerts as entries in the logfile :</p>
+<p>You can see the past alerts as entries in the logfile:</p>
 <pre><code>2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - alert()
 2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - sms sent
 2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - email sent to email@email0.com_FIXME
