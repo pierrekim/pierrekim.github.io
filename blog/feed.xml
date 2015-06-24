@@ -4,6 +4,36 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Recovering Windows on a "Windows-free" LG laptop</title>
+        <link href="2015-06-09-recovering-windows-on-a-windows-free-lg-laptop.html"/>
+        <content type="html"><p>Hello,</p>
+<p>I just bought a new laptop, a <a href="http://search.daum.net/search?q=LG+13ZD950">LG 13ZD950</a>. This laptop can be purchased without Windows in South Korea (like a lot of new laptops in South Korea).</p>
+<p>The "Windows-free" version doesn't boot on a system by default: you have to install your own OS.</p>
+<p>Before installing Linux, I analyzed the internal SSD: even if the laptop is "Windows-free", Windows seems to be present but the laptop doesn't boot.</p>
+<p>By default, you can only see a 10GB NTFS partition (/dev/sda1) called "DnA" containing 3GB of Windows drivers.</p>
+<p>I will explain now how to recover a full Windows 8.1 factory copy available in the SSD.</p>
+<p><strong>The laptop is brand new. According to S.M.A.R.T, the SSD is new too.</strong></p>
+<p>Boot with <a href="https://www.kali.org/">Kali Linux</a> then use <strong>testdisk</strong> (from <a href="http://www.cgsecurity.org/">photorec</a>):</p>
+<pre><code>kali% sudo testdisk /dev/sda
+</code></pre>
+<p><img alt="" src="images/lg-windows-testdisk-001.png" /></p>
+<p>Use Intel/PC partition and Analyse the hard disk:</p>
+<p><img alt="" src="images/lg-windows-testdisk-002.png" /></p>
+<p>You will see the 10GB NTFS partition, called "DnA" containing 3GB of Windows drivers.</p>
+<p><img alt="" src="images/lg-windows-testdisk-003.png" /></p>
+<p>The Quick Search option discovered 2 new partitions:</p>
+<p><img alt="" src="images/lg-windows-testdisk-004.png" /></p>
+<p>The "Windows" partition contains a fully bootable Windows 8.1 system.</p>
+<p>The "ICPE" partition is a rescue partition allowing the reinstallation of Windows 8.1 from scratch.</p>
+<p>Now confirm the Windows partition as a bootable partition:</p>
+<p><img alt="" src="images/lg-windows-testdisk-005.png" /></p>
+<p>Reboot now!</p>
+<p>The Windows initialization system will ask the user name, the computer name and the default preferred color. After this, you have now a fully working Windows 8.1 system with a "Windows-free" LG laptop. Enjoy!</p>
+<p>Hello Windows 8.1:</p>
+<p><img alt="" src="images/lg-windows-8.1.png" /></p></content>
+    </entry>
+    
+    <entry>
         <title>ERRATA - 127 ipTIME Routers/WiFi APs/Modems/Firewalls models vulnerable with RCE with root privileges</title>
         <link href="2015-05-05-127-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html"/>
         <content type="html"><p><a href="http://iptime.com/iptime/?uid=16202&amp;mod=document&amp;page_id=16">ipTIME's statement about 112 vulnerable devices</a> seems to be incorrect, so the precedent advisory was incorrect.</p>
