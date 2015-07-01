@@ -4,6 +4,102 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Small monitoring system using Freemobile</title>
+        <link href="2015-06-23-small-monitoring-system-using-freemobile.html"/>
+        <content type="html"><p>Hello,</p>
+<p>In order to help a friend to monitor his webservices, I have written a small tool to check the availability of the different webservices.</p>
+<p>The script is used with crontab and the <a href="https://mobile.free.fr/">Freemobile API</a> provides the possibility to send free SMS (free as a free beer). You can choose if you prefer SMS alerts, email alerts or both.
+It checks the HTTP return code of the webpages : anything other than 200 will trigger the alert.</p>
+<p>You have to edit:
+  - ALERT_SMS_API
+  - ALERT_EMAIL
+  - LOGFILE
+  - use_sms=y (by default, yes)
+  - use_email=y (by default, yes)</p>
+<pre><code>#!/bin/sh
+
+# apt-get install screen curl mailutils
+
+URL=$1
+
+ALERT_SMS_API="https://smsapi.free-mobile.fr/sendmsg?user=USERID_FIXME&amp;pass=PASSWORD_FIXME&amp;msg="
+ALERT_EMAIL="email@email0.com_FIXME email@email1.com_FIXME"
+LOGFILE=/home/availability/alert.log
+
+use_sms=y
+use_email=y
+
+
+umask 077
+
+if [ ! $1 ]; then
+  echo "usage $0 http://www.url.to/test"
+  exit 1
+fi
+
+if [ ! -f "${LOGFILE}" ]; then
+  touch "${LOGFILE}"
+fi
+
+
+
+alert() {
+  current_date=$(date "+%Y-%m-%d %H:%m:%S")
+  msg="${current_date} - ALERT on $1"
+
+  echo "${msg} - alert()" &gt;&gt; ${LOGFILE}
+
+  if [ ${use_sms} = "y" ]; then
+    curl -sL -o /dev/null --insecure "${ALERT_SMS_API}${msg}"
+    echo "${msg} - sms sent" &gt;&gt; ${LOGFILE}
+  fi
+
+  if [ ${use_email} = "y" ]; then
+    for j in ${ALERT_EMAIL}
+    do
+      echo "${msg}" | mail -s "${msg}" ${j}
+      echo "${msg} - email sent to ${j}" &gt;&gt; ${LOGFILE}
+    done
+  fi
+}
+
+
+curl 2&gt;/dev/null &gt;/dev/null
+if [ $? -ne 2 ]; then
+  alert "curl not found"
+  exit
+fi
+
+output=$(curl -sL -w "%{http_code}\n" "$1" -o /dev/null --connect-timeout 5)
+
+if [ $? -ne 0 ]; then
+  alert ${URL}
+  exit
+fi
+
+if [ "X${output}" != "X200" ]; then
+  alert ${URL}
+  exit
+fi
+</code></pre>
+<p>The crontabs to check the webservices every 5 minutes are:</p>
+<pre><code>*/5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice0
+*/5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice1
+*/5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice2
+*/5   *    *    *    *    /home/availability/alert-availability.sh http://domain.com/path/to/webservice3
+</code></pre>
+<p>This tool was tested on a Debian 7.6. So you need perhaps to run apt to install the necessary packages:</p>
+<pre><code>apt-get install curl mailutils
+</code></pre>
+<p>You can see the past alerts as entries in the logfile:</p>
+<pre><code>2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - alert()
+2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - sms sent
+2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - email sent to email@email0.com_FIXME
+2015-05-01 13:10:02 - ALERT on http://www.XXX.XXX/status/XXXX - email sent to email@email1.com_FIXME
+</code></pre></content>
+    </entry>
+    
+    <entry>
         <title>Recovering Windows on a "Windows-free" LG laptop</title>
         <link href="2015-06-09-recovering-windows-on-a-windows-free-lg-laptop.html"/>
         <content type="html"><p>Hello,</p>
