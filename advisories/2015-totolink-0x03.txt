@@ -16,7 +16,7 @@ CVE: no current CVE
 ## Product Description
 
 TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
 
 
 
@@ -120,17 +120,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVpqr4AAoJEMQ+Dtp9ky28oWIQAKqwk7P/x0abkNyJ9tyTpnkI
-j/0+uh9rcY9lGjHFnB6hR/wy01Gv+ajCoREnkm5okVzYlEDWM1ibBK3Q3YF6xPTH
-ooFHW3iG2CAi8QiMv0EJU6SJiA4ZumRagoiHEEmsxnrsWlaI9SKePbjssyUjfF8R
-0mkYPmoGnEAAvgxen93G7gaHVXoXCrKk/54dQOzxPhJVACBuWiyC6enj6xZNmPU7
-88hiU3799w9EbH2EgDb6U1vgosoON/wIkUXt3/PYrGK+lkc+UCIch1Cw8urVPJQZ
-ECPknPJOKmOAiA+PU7ntGmX1eaNmjflgedByQMsMVxcOOTbqJ9eJO3BIUJcg+rpz
-gzNfubkoZWUm/091DotyzwlShphRo8HCc6VZntmOSfWnPybaJ9Dgh22D4dSf2acb
-0JOcVpQuKpReAe1jwipzQVbotw8Vllyzk/cfNxBV6xNJw8oXdkYzlGmXyRDHo4sy
-R2dxioX9deZxuCsETLVbqbTX0hj2U9+v1qoI+PBjMQrqO9ZTqoycMEWR3AiO2eai
-pct3UB54nFBW/WaSmd+DLdv2XRKLPlLcax4JgvVRff+slrLycZuSEyPRMNosp6y3
-/32RtBiV+yeGYBUa3/9EaKEwDbB+68YMX/tplFnwTqP1STmxxZI6P60Yha1wQGWd
-ClrJuS2SjY0eL+8nL/pc
-=qeYS
+iQIcBAEBCgAGBQJVq/MNAAoJEMQ+Dtp9ky28FroP/jM/FCTlC93R5bdmPzn7l0kR
+247lhuqqMO689jGkz3kiTqUIEidKoAluH6xqs2xhqVMYie9CfrWsRwrbuF+5RSkZ
+jmzvGVH2teGBuJ70+hVY81FvEsleG5eCdz4nZXKPcyLMfSw0HxxBp4ooCDQsSj2f
+WAgKfQmKY123TLAwE+R51z2ZXPlxMIyRyjy33utQk5wtDCK0gqOtsFqA7CLtJgth
+EBi2YjrxNDM8FYJx4f7A8RBAOp34rHQx/xn2yvylwUkwZ8P0LcC9EmMPZUo0q3xu
+dIfPV1HJWlYyPVxqXg9ATWvODBbAyOWpf0/CwBsRmZVRbJL7/9tCzDYRwrm9PFgJ
+Od47n+82UfvD1aiAQxdm983Rf5i2t2ssW/e2fr9jOiWqIQChc/eRmUpso8Okluzo
+ZUVxhJGBigAsd+Z0FRCeBUki8LUKCAtbfe7Vkn/v5AlOamyc/VNOQNZpbbqa1SUv
+64DaPOhzXQ6WBGkzwxWOHy+qfQT+7/dfGZ7i6n7TwV4tIJm6yLioPBp7F1WceWh6
+KySutfVi0wpIf8mcbigsdaHmPqGSNxKnbitr8GETdV+WME5REvn9d8DhSJ7Cy+Eh
+PNPDAdSZES8WPl0f5QCNgNUxrCsFM7DLW6P15HFI/NqFzLAdifqT6IKeQtXTdYwH
+g9PPILKUXFZssc0SceTB
+=pLPu
 -----END PGP SIGNATURE-----

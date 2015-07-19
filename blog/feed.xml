@@ -24,7 +24,7 @@ CVE: no current CVE
 ## Product Description
 
 TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
 
 
 
@@ -128,19 +128,19 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVpqr4AAoJEMQ+Dtp9ky28oWIQAKqwk7P/x0abkNyJ9tyTpnkI
-j/0+uh9rcY9lGjHFnB6hR/wy01Gv+ajCoREnkm5okVzYlEDWM1ibBK3Q3YF6xPTH
-ooFHW3iG2CAi8QiMv0EJU6SJiA4ZumRagoiHEEmsxnrsWlaI9SKePbjssyUjfF8R
-0mkYPmoGnEAAvgxen93G7gaHVXoXCrKk/54dQOzxPhJVACBuWiyC6enj6xZNmPU7
-88hiU3799w9EbH2EgDb6U1vgosoON/wIkUXt3/PYrGK+lkc+UCIch1Cw8urVPJQZ
-ECPknPJOKmOAiA+PU7ntGmX1eaNmjflgedByQMsMVxcOOTbqJ9eJO3BIUJcg+rpz
-gzNfubkoZWUm/091DotyzwlShphRo8HCc6VZntmOSfWnPybaJ9Dgh22D4dSf2acb
-0JOcVpQuKpReAe1jwipzQVbotw8Vllyzk/cfNxBV6xNJw8oXdkYzlGmXyRDHo4sy
-R2dxioX9deZxuCsETLVbqbTX0hj2U9+v1qoI+PBjMQrqO9ZTqoycMEWR3AiO2eai
-pct3UB54nFBW/WaSmd+DLdv2XRKLPlLcax4JgvVRff+slrLycZuSEyPRMNosp6y3
-/32RtBiV+yeGYBUa3/9EaKEwDbB+68YMX/tplFnwTqP1STmxxZI6P60Yha1wQGWd
-ClrJuS2SjY0eL+8nL/pc
-=qeYS
+iQIcBAEBCgAGBQJVq/MNAAoJEMQ+Dtp9ky28FroP/jM/FCTlC93R5bdmPzn7l0kR
+247lhuqqMO689jGkz3kiTqUIEidKoAluH6xqs2xhqVMYie9CfrWsRwrbuF+5RSkZ
+jmzvGVH2teGBuJ70+hVY81FvEsleG5eCdz4nZXKPcyLMfSw0HxxBp4ooCDQsSj2f
+WAgKfQmKY123TLAwE+R51z2ZXPlxMIyRyjy33utQk5wtDCK0gqOtsFqA7CLtJgth
+EBi2YjrxNDM8FYJx4f7A8RBAOp34rHQx/xn2yvylwUkwZ8P0LcC9EmMPZUo0q3xu
+dIfPV1HJWlYyPVxqXg9ATWvODBbAyOWpf0/CwBsRmZVRbJL7/9tCzDYRwrm9PFgJ
+Od47n+82UfvD1aiAQxdm983Rf5i2t2ssW/e2fr9jOiWqIQChc/eRmUpso8Okluzo
+ZUVxhJGBigAsd+Z0FRCeBUki8LUKCAtbfe7Vkn/v5AlOamyc/VNOQNZpbbqa1SUv
+64DaPOhzXQ6WBGkzwxWOHy+qfQT+7/dfGZ7i6n7TwV4tIJm6yLioPBp7F1WceWh6
+KySutfVi0wpIf8mcbigsdaHmPqGSNxKnbitr8GETdV+WME5REvn9d8DhSJ7Cy+Eh
+PNPDAdSZES8WPl0f5QCNgNUxrCsFM7DLW6P15HFI/NqFzLAdifqT6IKeQtXTdYwH
+g9PPILKUXFZssc0SceTB
+=pLPu
 -----END PGP SIGNATURE-----
 </code></pre></content>
     </entry>
@@ -166,7 +166,7 @@ CVE: no current CVE
 ## Product Description
 
 TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
 
 
 
@@ -178,7 +178,7 @@ Since, the anti-CSRF protection is based on a static HTTP referrer (RFC 1945), a
 most of the configuration and settings using anyone inside the LAN of the router. Owners are urged to
 contact TOTOLINK, and activate authentication on this product (disabled by default).
 
-It affects (firmware come from totolink.net and from totolink.cn):
+It affects (firmwares come from totolink.net and from totolink.cn):
 
 - TOTOLINK iPuppy : firmware 1.2.1 (TOTOLINK iPuppy__V1.2.1.update)
 - TOTOLINK iPuppy3 : firmware 1.0.2 (TOTOLINK iPuppy3_V1.0.2.update)
@@ -375,7 +375,7 @@ The UPNP webpage in the administration area (http://192.168.0.1/popup_upnp_portm
 [...]
 
 
-- - From my research, there are some bits overflapping with others, resulting in showing funny ports
+- - - - From my research, there are some bits overflapping with others, resulting in showing funny ports
 and truncating input data. A remote DoS against the upnpd process seems to be easily done.
 
 Gaining Remote Code Execution by UPNP exploitation is again left as a exercise for the reader.
@@ -420,22 +420,23 @@ https://pierrekim.github.io/advisories/2015-totolink-0x01.txt
 This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
+
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVpqruAAoJEMQ+Dtp9ky28ikcP/0gAoSmi/Le0w99tsMAiSgxZ
-HXycJvdSuhIkp8cJ1QFhPa8O7OyfIxJmULKk9SZnlWcrgK/1n6+FwjjGbbBE09Os
-xL1lXcKDtYuG/J1AVjfH1d0N3YdcfeGCX2S6UfpcG9EKNMCZD3AH7XwWashv5Erb
-ngW2We29ovAgm9+b0O+Qxwt5lWRxMrFjvEZQXagenojKod2J6vmIBcn2fvdPMZLg
-764wMAoRy0f/hkfAbxvvijyeiVWYLVDLR8aO9/wNCKJGf6xAlhDx2gjxyfE1oP6E
-xKOrG5weZakLaaDaNcglmR3/tgPynDad5nptksNLM0pz2zS/MfO3Oujf32r9bY/M
-PpL5m50XJB+D2CB0ld8UV2HM+qIysLn44/VVzIbYi/ciD10p9o0LENP4VOUNVs3f
-U7rCdwDAKvzPm/NcYNMsJo0UmtbIvUZU1A9kzLZaerpA37gOR1HrOMoe9JRRI6c0
-XLnv9srSquiJqlw4eVnF4rhri/o2sGP7y2x0JhaJVVlZbc1TyV13hiO5EWOhgweS
-2mFnY4DkbR+2FaIuuwLO+LuTmvxb53d04ah/3j8ljOsZvdq5ccuStX1A5aAECm0X
-OADX583fe/jdhDlNx2LskiOSAfRD+yJE80HTzeX84KjCs/ep/grQ9C9xi0Za6uNI
-H5oRIj6rCmVcZH4njyx7
-=Nerb
+iQIcBAEBCgAGBQJVq/PbAAoJEMQ+Dtp9ky28JPQQAIaJJ3qgA0YZQ7AG39aUav3t
+z53mLvi5Cej3FfLVFxWeejbdkLWRLQCr+jwLH/oNyc4V4N/aDE7X8LNWDsN5LRQv
+wN21zY83sGkcG8FB3cSSubMjWZ2ZjeH7MSwSryXjfIO/RAFfRFFPV/1abdkqQWIn
+WvLHkDMI/8fHJc5mNJeAqqtsK9+t0kz6OdABmvAA5dNGd1ZddEaG/HW8xnebcAlh
+ByuLynQ5rgUGr+eTmB+DZinMk1e/P6ZiEs0urmIshUYeX3gx808Q68tF7jKcJNtr
+lC5NVJ6h8cQ3pjMOMs/5RQLcC6aCRidX3AoaO/kyibMTz+F6VwJD2WQwxb78M0B3
+FjjrHb+v1MdLhantwhZ1mfznm7rJ1/5TCq0hVjQ6sXc5/KbkZRQWq8IC65I6kFRm
+aRp2U17C5OLJ4KQ2vYb/0yy4KaIL1C7gCB2oWZ8CyyG53wn79CxcPQ5uO2Jnf6XM
+UP597Bq1JDlDsTGpMjf0kBZ8v2vcjc3gN8EZg7T2w4aNuxMjm+Y8gbu51s8yDSdC
+G0xg6mqZa2ZIt2FbWmMgo/+t04aBaUGB4y5tIeILWH2FFrHlpyvtuU5IMys/DiO+
+7Nr8g4RTEskP8x2/TAh05YJYcY8Bai5RTAQaTwT3cUNdp3B8UiLxtVwfTzmI4//F
+bjG1WlLuMMpz1dwPfEB6
+=c3Q7
 -----END PGP SIGNATURE-----
 </code></pre></content>
     </entry>
@@ -461,7 +462,7 @@ CVE: no current CVE
 ## Product Description
 
 TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
 
 
 
@@ -475,25 +476,25 @@ There are direct RCEs against the routers which give a complete root access to t
 
 The two RCEs affect 13 TOTOLINK products from 2009-era firmwares to the latest firmwares with the default configuration:
 
-- - - TOTOLINK A1004 : until last firmware (9.34 - za1004_en_9_34.bin)
-- - - TOTOLINK A5004NS : until last firmware (9.38 - za5004s_en_9_38.bin)
-- - - TOTOLINK EX300 : until last firmware (8.68 - TOTOLINK EX300_8_68.bin - totolink.net)
-- - - TOTOLINK EX300 : until last firmware (9.36 - ex300_ch_9_36.bin.5357c0 - totolink.cn)
-- - - TOTOLINK N150RB : until last firmware (9.08 - zn150rb_en_9_08.bin.5357c0)
-- - - TOTOLINK N300RB : until last firmware (9.26 - zn300rb_en_9_26.bin)
-- - - TOTOLINK N300RG : until last firmware (8.70 - TOTOLINK N300RG_8_70.bin)
-- - - TOTOLINK N500RDG : until last firmware (8.42 - TOTOLINK N500RDG_en_8_42.bin)
-- - - TOTOLINK N600RD : until last firmware (8.64 - TOTOLINK N600RD_en_8_64.bin)
-- - - TOTOLINK N302R Plus V1 : until the last firmware 8.82 (TOTOLINK N302R Plus V1_en_8_82.bin)
-- - - TOTOLINK N302R Plus V2 : until the last firmware 9.08 (TOTOLINK N302R Plus V2_en_9_08.bin)
-- - - TOTOLINK A3004NS (no firmware available in totolinkusa.com but ipTIME's A3004NS model was vulnerable to the 2 RCEs)
-- - - TOTOLINK EX150 : until the last firmware (8.82 - ex150_ch_8_82.bin.5357c0)
+- - TOTOLINK A1004 : until last firmware (9.34 - za1004_en_9_34.bin)
+- - TOTOLINK A5004NS : until last firmware (9.38 - za5004s_en_9_38.bin)
+- - TOTOLINK EX300 : until last firmware (8.68 - TOTOLINK EX300_8_68.bin - totolink.net)
+- - TOTOLINK EX300 : until last firmware (9.36 - ex300_ch_9_36.bin.5357c0 - totolink.cn)
+- - TOTOLINK N150RB : until last firmware (9.08 - zn150rb_en_9_08.bin.5357c0)
+- - TOTOLINK N300RB : until last firmware (9.26 - zn300rb_en_9_26.bin)
+- - TOTOLINK N300RG : until last firmware (8.70 - TOTOLINK N300RG_8_70.bin)
+- - TOTOLINK N500RDG : until last firmware (8.42 - TOTOLINK N500RDG_en_8_42.bin)
+- - TOTOLINK N600RD : until last firmware (8.64 - TOTOLINK N600RD_en_8_64.bin)
+- - TOTOLINK N302R Plus V1 : until the last firmware 8.82 (TOTOLINK N302R Plus V1_en_8_82.bin)
+- - TOTOLINK N302R Plus V2 : until the last firmware 9.08 (TOTOLINK N302R Plus V2_en_9_08.bin)
+- - TOTOLINK A3004NS (no firmware available in totolinkusa.com but ipTIME's A3004NS model was vulnerable to the 2 RCEs)
+- - TOTOLINK EX150 : until the last firmware (8.82 - ex150_ch_8_82.bin.5357c0)
 
 
 The DHCP RCE also affects 2 TOTOLINK products from 2009-era firmwares to the latest firmwares with the default configuration:
 
-- - - TOTOLINK A2004NS : until last firmware (9.60 - za2004s_en_9_60.bin)
-- - - TOTOLINK EX750 : until last firmware (9.60 - ex750_en_9_60.bin)
+- - TOTOLINK A2004NS : until last firmware (9.60 - za2004s_en_9_60.bin)
+- - TOTOLINK EX750 : until last firmware (9.60 - ex750_en_9_60.bin)
 
 
 Firmwares come from totolink.net and from totolink.cn.
@@ -715,8 +716,8 @@ Burst DDNS Registration is denied: iptime -&gt; now:26
 Led Silent Callback
 Turn ON All LED
 /proc/sys/net/ipv4/tcp_syn_retries: cannot create
-- - - ---&gt; Plantynet Event : 00000003
-- - - ---&gt; PLANTYNET_SYNC_INTERNET_BLOCK_DEVICE
+- - - - ---&gt; Plantynet Event : 00000003
+- - - - ---&gt; PLANTYNET_SYNC_INTERNET_BLOCK_DEVICE
 
 
 [sending the DHCP request]
@@ -731,7 +732,7 @@ Reaped 288
 Reaped 268
 Reaped 370
 Reaped 367
-- - - ---&gt; PLANTYNET_SYNC_FREE_DEVICE
+- - - - ---&gt; PLANTYNET_SYNC_FREE_DEVICE
 Restarting system.
 
 Booting...
@@ -746,7 +747,7 @@ Booting...
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 Reboot Result from Watchdog Timeout!
 
-- - - ---RealTek(RTL8196E)at 2012.07.06-04:36+0900 v0.4 [16bit](400MHz)
+- - - - ---RealTek(RTL8196E)at 2012.07.06-04:36+0900 v0.4 [16bit](400MHz)
 Delay 1 second till reset button
 Magic Number: raw_nv 00000000
 Check Firmware(05020000) : size: 0x001ddfc8 ----&gt;
@@ -798,19 +799,19 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVpqxVAAoJEMQ+Dtp9ky28pugQAK3sy8Y9AHZdMtSGN9NdJvMn
-ZJkMi/LuvwVUCDnJ3C0ARNGlYliRRwznf6DxpKIMIAwrsAFRl/Pm/Vtko90a7lZd
-njY2av8ezydFAzVo6+c7M0LXLDCyfTKNIhqtAgGmWYhrgRGZfUSUqJmifz3zJjme
-yF+IU6Jj09Yfp3QbKw3dtiujX1GuyXCJaXjvZg717wxG+bDvCY0Y2rCfNMPh8oRz
-7H0kPukbKo1eT0e+kU9lz/AzaBa8RdQ64SE/Cmji2wMZDnBj2jgG8sTxj4IZcMF/
-m7jxJRwp1yKf7/6+KmSeXZPfZd+Z/j2rSnAsGRqyq0gVdunS2MiLX2VeTDacdrME
-U4+h+6KIcE35S/FKAnLqevCFxLLisDdlzviO3QCXTPoVc7l1W+9lCHiCaqW59jWg
-0iQp7vF59SV0HADDHpLinEs5cjP2wHDLJ8SqAFa45//Q8FKty5t5w6F0VTxyGa8F
-Jwu+BNv0gXbKnUTEuJO5zH9scqW2ivMKEaj8+mKA9xwxTf5z8tMX2bBa50u4lpjH
-m97UoM05n6Ticph89U+0CvMUMea9nR5NdPHLR2uuwEhvaE4n4fUhWqsfCuZPXG5O
-IEckx7qZIfqiL8j1QjdqIaXQlspquzed9LJWGDm43oZFJQRq1dnldlm6JXw5Ydka
-Tnzx5ebfTpvioOs00bdc
-=5OT/
+iQIcBAEBCgAGBQJVq/MEAAoJEMQ+Dtp9ky28q5QP/iv9DnkWIYfVBsd9DCRjwkhp
+bJDnignaI9xbQJxw40eCcDvaEhCVKrpwpbY0SA1e0uVwTAoZIZKOuI+VZR33dU9M
++YaaxrWz8mhGUis2WrtVufNKTjKKoIeefHn9n5fjg18BKVlTcVW4sMpJAUCbI/c7
+7We3dAJgIuEVSScVHB9jsCRipZwsGzUfeLOqUboJHekmna4R2rxrVHs0noArMJdH
+IucAskoOupBP7oiWH5ifsKQSBXxKVZZihukJbWhBDeO4R2jvwgVx5cgzsezRWz4U
+EIO9skElbOKF8YWUzejMtVFP/lYVqfhixu3uoWmkVyVK4QwT8sM5mSk/xoBzc/9+
+/SA1nSflRgfuD3RBHdmUGaM9dqyldlUggfHUvx6RMXsI/zI2LHk+0w6Bl/3vBuzG
+MURIbiHm4T8SoKOC9nbPDSK9oaKoL/g0yYGkbtw87fuhYJP1Su2Xy+CG6LsBP2eM
+LpxxgLGHl6HBX4pqrHaHBbureM+wrAFbHetp1SG0rjiUkXJLgwo9pbnx1a3oe7ik
+gqQZRaveyQK+sOJdiCwgMTR4wsi3hoY+1UlntKil+XW0+Vf9arDwaTzrJs2zn1Us
+qYspmrBsBibG4T4W/reCIGU3lTNyiOWi80qGgqzab0k2/MLU23YB6ktwz8AxzpTv
+rXDUveDVcMt/YxA9/nKu
+=XzCM
 -----END PGP SIGNATURE-----
 </code></pre></content>
     </entry>

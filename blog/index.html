@@ -43,7 +43,7 @@ h1, h2, h3, h4 {
     <div>
         <h2>Product Description</h2>
 <p>TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.</p>
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.</p>
 <h2>Vulnerabilities Summary</h2>
 <p>A backdoor is present in several TOTOLINK products.
 This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.</p>
@@ -62,7 +62,7 @@ This was confirmed by analyzing the latest firmwares and by testing the backdoor
 Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.</p>
 <p>We estimate there are =~ 50 000 routers affected by this backdoor.</p>
 <h2>Details - backdoor</h2>
-<p>The init.d script executes the /bin/skt binary when the router starts:</p>
+<p>The /etc/init.d/rcS script executes the /bin/skt binary when the router starts:</p>
 <pre><code>cat etc/init.d/rcS
 [...]
 # start web server
@@ -82,9 +82,9 @@ Using skt with arguments will send a TCP packet containing the command to the sp
 <li>TcpServer looks like an echo server.</li>
 </ul>
 <p><strong>TcpClient:</strong></p>
-<p>it will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
+<p>It will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
 <p><strong>TcpServer:</strong></p>
-<p>TcpServer is a echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
+<p>TcpServer is an echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
 strings ("hel,xasf", "oki,xasf").</p>
 <p>The problem is in the sub_400B50 function:</p>
 <p><img alt="" src="images/2015-totolink-0x02-backdoor-00.png" /></p>
@@ -100,7 +100,7 @@ strings ("hel,xasf", "oki,xasf").</p>
     [...]
 }
 </code></pre>
-<p>This function compares str, which is an user-given string, and 2 hardcoded strings to execute system().</p>
+<p>This function compares str, which is an user-given string, with 2 hardcoded strings to execute system().</p>
 <p>The analysis of the binary running on the TOTOLINK devices shows the server mode responds to 3 commands by silently executing
 system() in the background:</p>
 <ul>
@@ -195,7 +195,7 @@ CVE: no current CVE
 ## Product Description
 
 TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers routers, wifi access points and network devices. Their products are sold worldwide.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
 
 
 
@@ -246,7 +246,7 @@ Using skt without argument will launch a TCP daemon on port 5555 in every interf
 Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.
 
 The analysis of the binary running on the TOTOLINK devices (for more details, read
-https://pierrekim.github.io/blog/2015-07-XX-backdoor-in-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
+http://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
 system() in the background:
 
 
@@ -361,19 +361,19 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVpqryAAoJEMQ+Dtp9ky28lLgP/3MnpOdYlY+XBKD28uzgYBrp
-sIYYIIqo0qhLvG4W9eP0xdq7sMjtdhdiJodCPqpubdmIYba5JCFXVrAQUjJXkinN
-vGXpiyrf36/4QUVyrh7yuc01u+5nw7cnkMg3dNkKeue+XurJuRiFIRrebksehd9r
-Be+muhjJ1bJXhLNGZQk5mhM626SSHOl+0zR5AFv37h5jsBhspscVldLJDGAdTBDG
-uLnofLq8PsN4UB95d7GTjw2A88quEwa7frd4FSzCOFjdCmwyVFgnPfSDV/0/3x+e
-xPqcXERXHEAqYh9UYV8zBw1Oac4ddnXvbOrBcO41Hk2mXJVVL05eg/2YIrEqTTQj
-GA4UkhwDiNPoZqxK/VvbvnULyqYzarmK5FfE8PjAdPb4NGkrMbAp6Y6auUxbADqO
-O1uMrx/POJbRNMwfwpugL+NPW8ZWgMqmXE/5IE9XapDrIh2QKfHrPSFDaZ5FTBz1
-zAUOFTxcgx24jWwosFBWa0kHNg+AbaH6e0Owgao3/SO8g6mz+N3wxO39uB+FCRCh
-DIRJlQ1oxaGTRJDfatwM9E0pZpbdnharjESW9zAv2ZHucsbubsXy7Ihy7NiZZuzE
-N0Dgg6B0yn4O4Wywfpw6Q10B6VdGL4QubUnBM+SGQ8Tt9ef4nnDg2yEjbIWLVXT5
-TsR/TJPNRX8HvmWD3+oZ
-=Kyqa
+iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
+8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
+lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
+hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
+wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
+gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
+17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
+Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
+WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
+NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
+7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
+k2ILiaGzfv4z+aJ/iI05
+=z70S
 -----END PGP SIGNATURE-----
 </code></pre>
         <div>
