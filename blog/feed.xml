@@ -194,7 +194,7 @@ usb 1-5: New USB device found, idVendor=0bda, idProduct=8152
 usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=3
 usb 1-5: Product: USB 10/100 LAN
 usb 1-5: Manufacturer: Realtek
-usb 1-5: SerialNumber: 00E04C5155ED
+usb 1-5: SerialNumber: 00E040123456
 usbcore: registered new interface driver r8152
 usbcore: registered new interface driver cdc_ether
 usb 1-5: reset high-speed USB device number 5 using xhci_hcd
@@ -219,7 +219,7 @@ usb 1-7: New USB device found, idVendor=2232, idProduct=5005
 usb 1-7: New USB device strings: Mfr=3, Product=1, SerialNumber=2
 usb 1-7: Product: LG HD WebCam
 usb 1-7: Manufacturer: Generic
-usb 1-7: SerialNumber: 200901010001
+usb 1-7: SerialNumber: 200900000000
 uvcvideo: Found UVC 1.00 device LG HD WebCam (2232:5005)
 input: LG HD WebCam as /devices/pci0000:00/0000:00:14.0/usb1/1-7/1-7:1.0/input/input27
 </code></pre>
