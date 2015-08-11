@@ -4,6 +4,21 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>updated - 172 ipTIME router models vulnerable to an unauthenticated RCE by sending a crafted DHCP request</title>
+        <link href="2015-07-27-172-iptime-router-models-unauthenticated-RCE-with-DHCP-updated.html"/>
+        <content type="html"><p><a href="http://www.cnet.co.kr/view/100140730">ipTIME responded to CNET Korea about the DHCP RCE on 2015-07-22</a> - <a href="http://pierrekim.github.io/blog/2015-07-06-127-iptime-router-models-unauthenticated-RCE-with-DHCP.html">Original advisory</a>.</p>
+<p>ipTIME released the 9.78 firmwares for 116 routers and finally credited my work. 172 products are affected in total and 9.72 firmwares will be released soon for all the router models to patch the security problem.</p>
+<p>References:</p>
+<ul>
+<li><a href="http://iptime.com/iptime/?page_id=16&amp;uid=16563&amp;mod=document">X</a></li>
+<li><a href="http://iptime.com/iptime/?page_id=16&amp;uid=16572&amp;mod=document">X</a></li>
+<li><a href="http://iptime.com/iptime/?page_id=16&amp;uid=16582&amp;mod=document">X</a></li>
+<li><a href="http://iptime.com/iptime/?page_id=16&amp;uid=16609&amp;mod=document">X</a></li>
+<li><a href="http://iptime.com/iptime/?page_id=16&amp;uid=16678&amp;mod=document">X</a></li>
+</ul></content>
+    </entry>
+    
+    <entry>
         <title>Why Full Disclosure is the solution ? An example with RIPE</title>
         <link href="2015-07-22-why-full-disclosure-is-the-solution-an-examble-with-ripe.html"/>
         <content type="html"><p><strong>TL;DR: <a href="https://mega.co.nz/#!xMIxHZCT!EgWNb65ERsTf5URgBNq8VW_flzXSNbO3URwE0nqtsXY">hashes list from the RIPE database has been posted to MEGA, containing usable hashes from 2011 to July 2015.</a></strong></p>
