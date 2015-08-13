@@ -4,6 +4,63 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Watching SBS and KBS in a remote country</title>
+        <link href="2015-08-10-watching-SBS-and-KBS-in-a-remote-country.html"/>
+        <content type="html"><p>SBS and KBS are Korean TV networks and they provide TV streaming, but they are using fancy flash players (hello 100% used CPU) and SBS even asks a passport for foreigners to get access to the streams. Koreans can have access after being authentified to their services.</p>
+<p>As I have a personal fight to provide access to K-POP for EVERYBODY and because I have to travel to different countries, I've prepared this article that will explain how to watch SBS, KBS1 and KBS2 without authentication.</p>
+<p>The <a href="https://en.wikipedia.org/wiki/Real_Time_Messaging_Protocol">RTMP</a> streams are protected using tokens.</p>
+<p>A working RTMP request, with the one-time-token:
+<img alt="" src="images/sbs-wireshark.png" /></p>
+<p>By sniffing the traffic and decompiling the SWFs file, I discovered how to easily generate tokens:</p>
+<p>The SWF in SBS website forces the browser to get a token by connecting to API (SBS). The SWFs in KBS* websites get the token directly in the webpage.</p>
+<h2>Watching SBS:</h2>
+<p>Sending this wget request will provide you the valid secure token:</p>
+<pre><code>wget -qO- --user-agent='YOUR_USER_AGENT' \
+  'http://api.sbs.co.kr/vod/_v1/Onair_Media_Auth.jsp?playerType=flash&amp;channelPath=sbsch6pc&amp;streamName=sbs1ch63.stream' | sed -e 's/\(.*\)q=\(.*\)/\2/'
+TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTO%3D%3D
+</code></pre>
+<p>This script will allows you to watch SBS:</p>
+<pre><code>#!/bin/sh
+
+token=$(wget -qO- --user-agent='YOUR_USER_AGENT' \
+  'http://api.sbs.co.kr/vod/_v1/Onair_Media_Auth.jsp?playerType=flash&amp;channelPath=sbsch6pc&amp;streamName=sbs1ch63.stream' | sed -e 's/\(.*\)q=\(.*\)/\2/')
+rtmpdump --resume -r "rtmp://nlive.sbs.co.kr/sbsch6pc/sbs1ch63.stream?u=sbs&amp;type=asp&amp;q=${token}" \
+  --app "sbsch6pc?u=sbs&amp;type=asp&amp;q=${X}" --flashVer 'MAC 18,0,0,209' \
+  -s 'http://vod.sbs.co.kr/onair/NeTVOnAir_1_4_2.swf?dd=9' \
+  -t "rtmp://nlive.sbs.co.kr/sbsch6pc?u=sbs&amp;type=asp&amp;q=${X}" \
+  -p 'http://vod.sbs.co.kr/onair/onair_index.jsp?Channem=SBS&amp;div=pc_onair' \
+  -y "sbs1ch63.stream" | mplayer -
+</code></pre>
+<h2>Watching KBS1:</h2>
+<p>Sending this wget request will provide you the valid secure token:</p>
+<pre><code>wget -qO- --user-agent='YOUR_USER_AGENT' 'http://www.kbs.co.kr/player/player_playlist.php?ch=11' | awk '/movieListVstream/{ print $4 }' | sed -e 's/\["//;s/"\];//'
+1tv_home.stream?id=2101&amp;si=9&amp;secure=TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENT==&amp;csu=false
+</code></pre>
+<p>Now using this token is easy.
+This script will allows you to watch KBS1:</p>
+<pre><code>#!/bin/sh
+
+token=$(wget -qO- --user-agent='YOUR_USER_AGENT' 'http://www.kbs.co.kr/player/player_playlist.php?ch=11' | awk '/movieListVstream/{ print $4 }' | sed -e 's/\["//;s/"\];//')
+rtmpdump --resume -r "rtmp://live2.kbs.gscdn.com/1tv_home/_definst_/${token}" \
+  --flashVer 'MAC 18,0,0,209' | mplayer -
+</code></pre>
+<h2>Watching KBS2:</h2>
+<p>Sending this wget request will provide you the valid secure token:</p>
+<pre><code>wget -qO- --user-agent='YOUR_USER_AGENT' 'http://www.kbs.co.kr/player/player_playlist.php?ch=11' | awk '/movieListVstream/{ print $4 }' | sed -e 's/\["//;s/"\];//'
+1tv_home.stream?id=2101&amp;si=9&amp;secure=TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENT==&amp;csu=false
+</code></pre>
+<p>Now using this token is easy.
+This script will allows you to watch KBS2:</p>
+<pre><code>#!/bin/sh
+
+token=$(wget -qO- --user-agent='YOUR_USER_AGENT' 'http://www.kbs.co.kr/player/player_playlist.php?ch=11' | awk '/movieListVstream/{ print $4 }' | sed -e 's/\["//;s/"\];//')
+rtmpdump --resume -r "rtmp://live2.kbs.gscdn.com/2tv_home/_definst_/${token}" \
+  --flashVer 'MAC 18,0,0,209' | mplayer -
+</code></pre>
+<p>Now, Enjoy K-POP while finding 0days ~~~~~~~~~~~~</p></content>
+    </entry>
+    
+    <entry>
         <title>updated - 172 ipTIME router models vulnerable to an unauthenticated RCE by sending a crafted DHCP request</title>
         <link href="2015-07-27-172-iptime-router-models-unauthenticated-RCE-with-DHCP-updated.html"/>
         <content type="html"><p><a href="http://www.cnet.co.kr/view/100140730">ipTIME responded to CNET Korea about the DHCP RCE on 2015-07-22</a> - <a href="http://pierrekim.github.io/blog/2015-07-06-127-iptime-router-models-unauthenticated-RCE-with-DHCP.html">Original advisory</a>.</p>
