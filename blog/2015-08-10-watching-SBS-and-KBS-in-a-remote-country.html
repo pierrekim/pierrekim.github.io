@@ -59,9 +59,9 @@ TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTO%3D%3D
 token=$(wget -qO- --user-agent='YOUR_USER_AGENT' \
   'http://api.sbs.co.kr/vod/_v1/Onair_Media_Auth.jsp?playerType=flash&amp;channelPath=sbsch6pc&amp;streamName=sbs1ch63.stream' | sed -e 's/\(.*\)q=\(.*\)/\2/')
 rtmpdump --resume -r "rtmp://nlive.sbs.co.kr/sbsch6pc/sbs1ch63.stream?u=sbs&amp;type=asp&amp;q=${token}" \
-  --app "sbsch6pc?u=sbs&amp;type=asp&amp;q=${X}" --flashVer 'MAC 18,0,0,209' \
+  --app "sbsch6pc?u=sbs&amp;type=asp&amp;q=${token}" --flashVer 'MAC 18,0,0,209' \
   -s 'http://vod.sbs.co.kr/onair/NeTVOnAir_1_4_2.swf?dd=9' \
-  -t "rtmp://nlive.sbs.co.kr/sbsch6pc?u=sbs&amp;type=asp&amp;q=${X}" \
+  -t "rtmp://nlive.sbs.co.kr/sbsch6pc?u=sbs&amp;type=asp&amp;q=${token}" \
   -p 'http://vod.sbs.co.kr/onair/onair_index.jsp?Channem=SBS&amp;div=pc_onair' \
   -y "sbs1ch63.stream" | mplayer -
 </code></pre>
