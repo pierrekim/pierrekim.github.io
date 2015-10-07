@@ -4,6 +4,108 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>TOTOLINK Update - How to NOT handle security issues</title>
+        <link href="2015-08-13-TOTOLINK-how-to-NOT-handle-security-issues.html"/>
+        <content type="html"><p>This post is an an update to:</p>
+<ul>
+<li><a href="http://seclists.org/fulldisclosure/2015/Jul/80">Backdoor and RCE found in 8 TOTOLINK router models</a></li>
+<li><a href="http://seclists.org/fulldisclosure/2015/Jul/79">Backdoor credentials found in 4 TOTOLINK router models</a></li>
+<li><a href="http://seclists.org/fulldisclosure/2015/Jul/78">4 TOTOLINK router models vulnerable to CSRF and XSS attacks</a></li>
+<li><a href="http://seclists.org/fulldisclosure/2015/Jul/77">15 TOTOLINK router models vulnerable to multiple RCEs</a></li>
+</ul>
+<p>Totolink has released new firmwares on 2015-07-25 and also removed the old firmwares from their website.</p>
+<p>The backdoor is still present in the new firmware images but it is not launched at the startup anymore.</p>
+<p>You can check yourself by downloading the images and by using binwalk:</p>
+<h2>Example with N300RH-V2:</h2>
+<pre><code>$ wget -O 'TOTOLINK%20N300RH-V2.0.1_20150725.zip' 'http://www.totolink.net/include/download.asp?path=down/010500&amp;file=TOTOLINK%20N300RH-V2.0.1_20150725.zip'
+$ 7z x TOTOLINK%20N300RH-V2.0.1_20150725.zip
+[...]
+$ binwalk -e *web
+DECIMAL       HEXADECIMAL     DESCRIPTION
+--------------------------------------------------------------------------------
+16            0x10            bzip2 compressed data, block size = 900k
+309403        0x4B89B         LZMA compressed data, properties: 0x88, dictionary size: 1048576 bytes, uncompressed size: 65535 bytes
+320182        0x4E2B6         LZMA compressed data, properties: 0x5D, dictionary size: 8388608 bytes, uncompressed size: 3414764 bytes
+1274560       0x1372C0        Squashfs filesystem, little endian, version 4.0, compression:lzma, size: 2251972 bytes,  321 inodes, blocksize: 131072 bytes, created: Thu May  4 11:47:12 2006
+$ cd _*/
+$ 7z x *squashfs
+Processing archive: 1372C0.squashfs
+
+Extracting  bin
+Extracting  dev
+[...]
+Everything is Ok
+$ strings bin/skt | grep iptables
+iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+$ tail -n 5 etc/init.d/rcS
+
+# start web server
+boa
+#skt&amp;
+</code></pre>
+<p>They commented the <code>skt&amp;</code> execution in the <em>/etc/init.d/rcS</em>. The bin/skt backdoor is still there but not activated.
+I encourage TOTOLINK users to audit next firmwares to make sure the backdoor is not reactivated by "error".</p>
+<p>There are no security indications in the <a href="http://www.totolink.net/sub/news/board_content.asp?b_type=BOARD1&amp;idx=164">"Firmware Update Release Information"</a> and I don't want to waste my time to check if they patched the other security holes (RCE, XSS, CSRF ...) described here:</p>
+<ul>
+<li><a href="https://pierrekim.github.io/blog/2015-07-16-15-TOTOLINK-products-vulnerable-to-multiple-RCEs.html">https://pierrekim.github.io/blog/2015-07-16-15-TOTOLINK-products-vulnerable-to-multiple-RCEs.html</a></li>
+<li><a href="https://pierrekim.github.io/blog/2015-07-16-4-TOTOLINK-products-vulnerable-to-CSRF-and-XSS-attacks.html">https://pierrekim.github.io/blog/2015-07-16-4-TOTOLINK-products-vulnerable-to-CSRF-and-XSS-attacks.html</a></li>
+<li><a href="https://pierrekim.github.io/blog/2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html">https://pierrekim.github.io/blog/2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html</a></li>
+<li><a href="https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html">https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html</a></li>
+</ul>
+<h2>Totolink statement</h2>
+<p>By the way, Totolink released a <a href="http://www.totolink.net/sub/news/board_content.asp?b_type=BOARD1&amp;idx=165">statement the 2015-07-30 saying that there are no backdoors in their routers and threatened to sue medias regarding "totally irresponsible behavior", stating my research contains "some unverified information"</a>:</p>
+<pre><code> ZIONCOM (HK) Technology Ltd (ZIONCOM, the manufacturer of TOTOLINK Router), would like to make an
+ official announcement regarding some inappropriately news report from network media that were totally
+ irresponsible behavior for reporting some unverified information to damage our company reputation.
+
+ 1. TOTOLINK do not compromise user privacy and security, TOTOLINK
+ product has not been installed any monitor software on user behavior after we verified all of our
+ current inventory in Hong Kong market so it is impossible to monitor user behavior. ZIONCOM will
+ reserve the right to take legal action against the media report on the wrong information broadcasting
+ that may damage our company and product reputations.
+
+ 2. Regarding the problem of a default login password of a TOTOLINK
+ router may trigger an invasion from hacker through remote control, we would like to recommend all users
+ to change the default password at the first time login.We will make an announcement through our Global
+ website ( http://www.totolink.net )  for launching new firmware update program for solving the bug soon.
+</code></pre>
+<p><strong>Note that some firmwares have apparently not been correctly updated.</strong></p>
+<p>For example, the "this-is-a-feature-not-a-backdoor-executable" is <a href="http://www.totolink.net/include/download.asp?path=down/010500&amp;file=TOTOLINK%20N300RH-V3.0.0_20150331.zip"><strong>still activated</strong> in the latest N300RH-V3 firmware router (from the N300RH webpage)</a>.</p>
+<p>You can check by yourself the "unverified information" by using the precedent commands: the file <em>/etc/init.d/rcS</em> still contains <code>skt&amp;</code> to execute the "this-is-a-feature-not-a-backdoor-executable" <code>/bin/skt</code> at startup):</p>
+<pre><code>$ wget -O TOTOLINK%20N300RH-V3.0.0_20150331.zip 'http://www.totolink.net/include/download.asp?path=down/010500&amp;file=TOTOLINK%20N300RH-V3.0.0_20150331.zip'
+$ sha256sum TOTOLINK%20N300RH-V3.0.0_20150331.zip 
+3c12a38dfc8c72733f384ba206e9b21a37614ba77aba7f3433ed1ce9bd40cda4  TOTOLINK%20N300RH-V3.0.0_20150331.zip
+$ 7z x TOTOLINK%20N300RH-V3.0.0_20150331.zip
+[...]
+Everything is Ok
+$ binwalk -e *web
+DECIMAL       HEXADECIMAL     DESCRIPTION
+--------------------------------------------------------------------------------
+16            0x10            bzip2 compressed data, block size = 900k
+307237        0x4B025         LZMA compressed data, properties: 0x88, dictionary size: 1048576 bytes, uncompressed size: 65535 bytes
+317016        0x4D658         LZMA compressed data, properties: 0x5D, dictionary size: 8388608 bytes, uncompressed size: 3666608 bytes
+1337954       0x146A62        Squashfs filesystem, little endian, version 4.0, compression:lzma, size: 2169904 bytes,  580 inodes, blocksize: 131072 bytes, created: Wed Feb 10 00:30:40 2038
+$ cd _*/
+$ 7z x *squashfs
+Extracting  bin
+Extracting  dev
+[...]
+Everything is Ok
+$ strings bin/skt | grep iptables
+iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+$ tail -n 5 etc/init.d/rcS
+
+# start web server
+boa
+skt&amp;                                                  &lt;-- backdoor is launched at startup
+</code></pre>
+<p>I leave security researchers, totolink users and medias to use their own judgment and draw a conclusion about this case.</p>
+<p>Regards,</p></content>
+    </entry>
+    
+    <entry>
         <title>Watching SBS and KBS in a remote country</title>
         <link href="2015-08-10-watching-SBS-and-KBS-in-a-remote-country.html"/>
         <content type="html"><p>SBS and KBS are Korean TV networks and they provide TV streaming, but they are using fancy flash players (hello 100% used CPU) and SBS even asks a passport for foreigners to get access to the streams. Koreans can have access after being authentified to their services.</p>
