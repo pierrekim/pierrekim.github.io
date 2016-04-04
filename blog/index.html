@@ -88,7 +88,7 @@ the vulnerable firmware seems to be used in several routers:</p>
 <p><strong>Due to lack of security patches provided by the vendor, the vulnerabilities will remain unpatched</strong>.</p>
 <p><a id="hardcoded-ssh-server-key"></a></p>
 <h2>Details - Hardcoded SSH Server key</h2>
-<p>A harcoded SSH server key can be found in <code>/etc/dropbear/dropbear_rsa_host_key</code> and can be used to decipher SSH traffic to the router:</p>
+<p>A hardcoded SSH server key can be found in <code>/etc/dropbear/dropbear_rsa_host_key</code> and can be used to decipher SSH traffic to the router:</p>
 <pre><code>admin@homerouter:~$ ls -la /etc/dropbear/dropbear_rsa_host_key
 -rw-------  1 root  root  427 Dec 10  2014 dropbear/dropbear_rsa_host_key
 #
@@ -120,7 +120,7 @@ admin@homerouter:~$
 root:aRDiHrJ0OkehM:16414:0:99999:7:::
 root@homerouter:~#
 </code></pre>
-<p>Using john to crack the hashs:</p>
+<p>Using john to crack the hashes:</p>
 <pre><code>user@kali:~$ john -show shadow+passwd
 admin:admin:admin:/:/bin/sh
 root:1234:16414:0:99999:7:::
@@ -706,7 +706,7 @@ user@kali:~$
 </code></pre>
 <p><a id="remote-fota"></a></p>
 <h2>Details - Remote FOTA (Firmware Over The Air)</h2>
-<p>The credentials to contact the FOTA server are harcoded in the <code>/sbin/fotad</code> binary, as shown with this IDA screenshot:</p>
+<p>The credentials to contact the FOTA server are hardcoded in the <code>/sbin/fotad</code> binary, as shown with this IDA screenshot:</p>
 <p><img alt="" src="images/2016-quanta-sbin-fota-http-req.png" /></p>
 <p>The function sub_C8A4 contains the credentials as base64-strings, used to retrieve the firmware.</p>
 <p>It's notable the FOTA daemon tries to retrieve the firmware over HTTPS. But at the date of the writing,
