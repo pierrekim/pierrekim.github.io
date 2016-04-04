@@ -4,6 +4,56 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Why I stopped using StartSSL (Hint it involves a Chinese company)</title>
+        <link href="2016-02-16-why-i-stopped-using-startssl-because-of-qihoo-360.html"/>
+        <content type="html"><h3>TL;DR: The PKI plateform of <a href="https://auth.startssl.com">StartSSL</a>, an Israeli leader of free SSL certificates, is now hosted by <a href="https://en.wikipedia.org/wiki/Qihoo_360">Qihoo 360</a>, a Chinese Antivirus Company, which uses IPs from a Chinese state-owned telecommunication company.</h3>
+<p>StartSSL is PKI solution from StartCom, a company based in Israel. </p>
+<p>From <a href="https://en.wikipedia.org/wiki/StartCom">https://en.wikipedia.org/wiki/StartCom</a>:</p>
+<pre><code>StartSSL offers the free (for personal use) Class 1 X.509 SSL certificate "StartSSL Free", which works for webservers (SSL/TLS) as well as for E-mail encryption (S/MIME). It also offers Class 2 and 3 certificates as well as Extended Validation Certificates. All major browsers include support for StartSSL certificates.
+</code></pre>
+<h3>StartSSL announced in December 2015 that it will expand activities in China:</h3>
+<p>From <a href="https://www.startssl.com/NewsDetailss">https://www.startssl.com/NewsDetails</a>:</p>
+<pre><code>StartCom, a leading global Certificate Authority (CA) and provider of trusted identity and authentication services, launched its newly designed website just at the end of the year and announces expansion if its activities in China.
+</code></pre>
+<h2>Mapping of StartSSL public infrastructure</h2>
+<p>StartSSL uses <a href="https://auth.startssl.com/">https://auth.startssl.com/</a> for the front-end to access to their PKIs (login to the PKI, create, revoke certificates...). It's the <strong>Core of their service</strong> and the critical part of their infrastructure.</p>
+<p>Using Robtex, we discover the platform of StartSSL is mainly operated in Israel with the 192.116.242.0/24 IP range (netname: SrartCom-Ltd(sic!), with country: IL).</p>
+<p>From  <a href="https://www.robtex.com/route/192.116.242.0-24.html">https://www.robtex.com/route/192.116.242.0-24.html</a>:</p>
+<p><img alt="" src="images/startssl-192.116.242.0-24.png" /></p>
+<p>The www.startssl.com vhost is provided by a custom CDN:</p>
+<pre><code>root@kali:~/# host www.startssl.com
+www.startssl.com has address 97.74.232.97    &lt;- Godaddy
+www.startssl.com has address 52.7.55.170     &lt;- Amazon Web Services
+www.startssl.com has address 52.21.57.183    &lt;- Amazon Web Services
+www.startssl.com has address 52.0.114.134    &lt;- Amazon Web Services
+www.startssl.com has address 50.62.56.98     &lt;- Godaddy
+www.startssl.com has address 104.192.110.222 &lt;- QiHU 360 Inc.
+www.startssl.com has address 50.62.133.237   &lt;- Godaddy
+root@kali:~/#
+</code></pre>
+<p>Apart from IPs from CDNs, we find a strange fact:</p>
+<p>The DNS of auth.startssl.com changed in December 2015 from <a href="https://apps.db.ripe.net/search/query.html?searchtext=192.116.242.27#resultsAnchor">192.116.242.27</a> (<strong>StrartCom-Ltd</strong>) to <a href="https://whois.arin.net/rest/net/NET-104-192-110-0-1/pft?s=104.192.110.222">104.192.110.222</a> (<strong>QiHU 360</strong>), which belongs to a Chinese Company (<strong>Qihoo 360</strong>).</p>
+<p>There are only 3 vhosts pointing to 104.192.110.222 :</p>
+<pre><code>www.startssl.com resolves for 1 IP to 104.192.110.222
+auth.startssl.com -&gt; 104.192.110.222
+www.startpki.com -&gt; 104.192.110.222
+</code></pre>
+<p>We can use <a href="https://www.whatsmydns.net/#A/auth.startssl.com">WhatsMyDNS</a> to check that auth.startssl.com revolves to 104.192.110.222 from any location. This is not a CDN solution but an intentional usage of a single Chinese IP.</p>
+<p><img alt="https://www.whatsmydns.net/#A/auth.startssl.com" src="images/startssl-www.whatsmydns.net-auth.startssl.com.png" /></p>
+<h2>Whois information for 104.192.110.222:</h2>
+<p>From <a href="https://whois.arin.net/rest/net/NET-104-192-110-0-1/pft?s=104.192.110.222">https://whois.arin.net/rest/net/NET-104-192-110-0-1/pft?s=104.192.110.222</a>:</p>
+<p><img alt="" src="images/startssl-ARIN-104.192.110.222.png" /></p>
+<p><a href="https://www.whatsmydns.net/#A/auth.startssl.com">As auth.startssl.com revolves to 104.192.110.222 from any location</a>, we can assume the PKI is now hosted on the 104.192.110.222 IP.</p>
+<p>104.192.110.222 is an IP from "QiHU 360 Inc", which actually means Qihoo 360. Qihoo 360 is a Chinese tech company.</p>
+<p>You may be heard something about Qihoo 360, <a href="https://www.techinasia.com/chinese-tech-companies-bought-opera">who just bought Opera</a>.
+Strangely enough, Qihoo 360 uses IPs from China Telecom Americas. China Telecom Americas is a subsidiary of China Telecom Corporation Limited which is a Chinese state-owned telecommunication company. It is the <a href="https://en.wikipedia.org/wiki/China_Telecom">largest fixed-line service and the third largest mobile telecommunication provider in the People's Republic of China</a>.</p>
+<p>It is worrying that the PKI front-end (auth.startssl.com) is now hosted within a Chinese Antivirus Company, who uses a Chinese ISP for 2 months AND that there hasn't been any news around. It can be only linked to the expansion of StartSSL's activities in China in December 2015, as explained above.</p>
+<p>From a history point of view, StartSSL <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=994033">already refused to revoke certificates affected by the HeartBleed vulnerability</a> and accused the user from negligence ("your software was vulnerable").</p>
+<p>With all these facts, I don't think using StartSSL is a good idea now, except if they offer a clear explanation why they are hosting their PKI in a Chinese company.</p>
+<p>Go use <a href="http://www.letsencrypt.org/">Let's encrypt</a> ! :)</p></content>
+    </entry>
+    
+    <entry>
         <title>CVE-2015-5677 - FreeBSD bsnmpd information disclosure</title>
         <link href="2016-01-15-cve-2015-5677-freebsd-bsnmpd.html"/>
         <content type="html"><h2>Product Description</h2>
