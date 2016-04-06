@@ -3402,7 +3402,7 @@ UH4RwA7mV/6Pm3ZOYG0I
     </entry>
     
     <entry>
-        <title>Exploit Code for ipTIME firmwares < 9.58 RCE with root privileges against 127 router models</title>
+        <title>Exploit Code for ipTIME firmwares &#60; 9.58 RCE with root privileges against 127 router models</title>
         <link href="2015-07-01-poc-with-RCE-against-127-iptime-router-models.html"/>
         <content type="html"><h2>Disclaimer</h2>
 <pre><code>This advisory is licensed under a Creative Commons Attribution Non-Commercial
