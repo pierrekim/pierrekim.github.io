@@ -4,6 +4,1891 @@
     <title>A slice of Kimchi - IT Security Blog</title>
     
     <entry>
+        <title>Studying the Internet Censorship in South Korea</title>
+        <link href="2016-10-17-studying-the-internet-censorship-in-south-korea.html"/>
+        <content type="html"><p>TL;DR: Please go directly to the <a href="#conclusion">Conclusion</a> to discover how (in)effective
+the censorship of Internet in South Korea is. This blogpost can be served for you to remind how HTTP requests work.</p>
+<h2>Table of contents</h2>
+<p>&nbsp;<a href="#introduction">0. Introduction</a><br>
+&nbsp;<a href="#first-contact">1. First contact with the censorship system</a><br>
+&nbsp;<a href="#locating-the-censorship-system">2. Locating the censorship system in the networks</a><br>
+&nbsp;<a href="#inner-work-of-the-censorship-system">3. Inner work of the censorship system</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#different-answers-provided-by-censorship-systems">3.1. Different answers provided by censorship systems</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#direct-html-as-an-answer">3.1.1. Direct HTML as an answer</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#direct-html-as-an-answer-system-a">3.1.2. Direct HTML as an answer (censorship system A)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#direct-html-as-an-answer-system-b">3.1.3. 302 Temporary redirect (censorship system B)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#brief-analysis">3.2. Brief analysis</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#from-http-0.9-to-http-1.1">3.3. Let's debug the censorship system - From HTTP/0.9 to HTTP/1.1</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http-0.9">3.3.1. HTTP/0.9</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http-1.0">3.3.2. HTTP/1.0</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http-1.1">3.3.3. HTTP/1.1</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#analysis">3.4. Analysis</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#more-tricky-requests-with-http">3.5 More tricky requests with HTTP</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#custom-vhosts">3.5.1. Custom Vhosts</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http-requests-methods">3.5.2. HTTP requests methods</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#having-fun-with-http-1.1-persistent-connection">3.5.3. Having fun with HTTP/1.1 persistent connection</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http-vs-https">3.5.4. HTTP vs. HTTPS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#random-behaviors-provided-by-the-censorship-system">3.5.5. Random behaviors provided by the censorship system</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#cdn-for-content">3.5.6. CDN for content (VOD/images)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http2-for-http-uris">3.5.7. HTTP2 for http URIs</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#websockets">3.5.8. WebSockets</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#http2-for-https-uris">3.5.9. HTTP2 for https URIs</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#readline-vs-buffered-http-requests">3.5.10. Readline vs. buffered HTTP requests</a><br>
+&nbsp;<a href="#http-proxies">4. Using HTTP proxies</a><br>
+&nbsp;<a href="#ipv6">5. IPv6</a><br>
+&nbsp;<a href="#bypassing-the-filter">6. Bypassing the filter</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-a-different-vhost">6.1. By using a different vhost (easy-PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-http-persistent-connection-head-then-get">6.2. By using HTTP persistent connection: HEAD then GET (PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-http-persistent-connection-get-then-get">6.3. By using HTTP persistent connection: GET then GET (PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-lf-instead-of-crlf">6.4. By using \n instead of \r\n in the HTTP requests (unreliable method, PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-http-invalid-methods">6.5. By using HTTP invalid methods (PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-sending-http-requests-line-by-line">6.6. By sending HTTP requests line by line (PoC)</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-method-only-if-there-is-a-censorship">6.7. By using a method ONLY if there is a censorship</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-a-vpn">6.8. By using a VPN</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bypassing-by-using-https-websites-proxies">6.9. By using HTTPS websites/proxies</a><br>
+&nbsp;<a href="#conclusion">7. Conclusion</a><br>
+&nbsp;<a href="#credits-and-greeting">8. Credits and Greetings</a><br>
+&nbsp;<a href="#personal-note-to-www.warning.or.kr-administrator">9. Personal note to http://www.warning.or.kr/ administrator</a><br>
+&nbsp;<a href="#license">10. License</a><br></p>
+<p><a id="introduction"></a></p>
+<h2>0. Introduction</h2>
+<p>As staying in South Korea, I was curious and wanted to know more about the censorship as stated in Wikipedia.</p>
+<p><a href="https://en.wikipedia.org/wiki/Internet_censorship_in_South_Korea">Wikipedia: Censorship in South Korea</a>:</p>
+<blockquote>
+<p>KCSC (Korea Communications Standards Commission) is responsible for online control and requires Korean citizens to enter government issued ID numbers in order to post political comments online. The KCSC has the right to suspend or delete any web posting or articles for 30 days as soon as a complaint is filed (to combat cyberbullying in South Korea). Every week, portions of the Korean web are taken down by the KCSC. In 2013, around 23,000 Korean webpages were deleted and another 63,000 blocked by the KCSC.</p>
+<p>Korean officials' rhetoric about censored material, including that it is "subversive", "illegal", "harmful" or related to "pornography and nudity", has been noted as similar to that of their Chinese counterparts. Critics also say that the government takes prohibitions on profanity as "a convenient excuse to silence critics" and chill speech.</p>
+<p>This designation persisted in 2012, where the report suggests South Korea's censorship is similar to those of Russia and Egypt.</p>
+</blockquote>
+<p>You may have seen the infamous message "This webpage is illegal" when you try to get into some websites. By the way, if you don't speak Korean, I wish you a good luck trying to copy/paste texts from an image and understand what is going on:</p>
+<p><img alt="" src="images/2016-censorship-www.warning.or.kr-logo.png" /></p>
+<p>Wikipedia lists a short list of websites forbidden to visit in South Korea, but I used
+<a href="https://github.com/aredo/porn-site-list/blob/master/sites.json">https://github.com/aredo/porn-site-list/blob/master/sites.json</a> to get a list of potentially banned websites (a lot of them are actually blocked) in South Korea.</p>
+<p>As you see, quite a large number of websites are currently blocked. They include the websites that are considered containing "socially harmful" or subversive contents such as adult or gambling websites as well as political matters notably related to North Korea. Social medias are very much censored too (online comments are massively removed).</p>
+<p>This research excludes any politically sensitive items as this analysis is intended to be limited to a technical side and I am not making any political judgment. I am trying, from an external point of view, to evaluate the technical level of the current censorship system. Social medias are out of scope of this analysis. </p>
+<p>This study was done in September 2016 using 3 major ISPs: KT, SK Telecom (SKT) and LG U+.</p>
+<p><a id="first-contact"></a></p>
+<h2>1. First contact with the censorship system</h2>
+<p>We will use <code>telnet</code> to understand how the censorship system works.</p>
+<p>If you go on a censored website, you will see this webpage:
+<img alt="" src="images/2016-censorship-www.warning.or.kr.png" /></p>
+<p>Let's dig:</p>
+<p>A standard (and very basic) HTTP request is:</p>
+<pre><code>GET / HTTP/1.1
+Host: www.remote-server.com\r\n\r\n
+</code></pre>
+<p>Trying this on a censored website:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.1
+Host: xhamster.com
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+user@kali:~$
+</code></pre>
+<p>By changing the <code>Host</code> value to a banned website, it seems we can trigger the censorship system:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.1
+Host: wutwut
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Location: http://xhamster.com/
+user@kali:~$
+</code></pre>
+<p>This request seems to work and the Nginx server from <code>xhamster.com</code> will reply to us. So, at least, the censorship system is analyzing the <code>Host</code> header in the HTTP request.</p>
+<p><a id="locating-the-censorship-system"></a></p>
+<h2>2. Locating the censorship system in the networks</h2>
+<p>We will use <code>wget</code> to customize the request in order to understand where is the filtering process.</p>
+<p>We ask the Google.ru webpage (note: I made a configuration to ensure www.google.ru resolves to a Google server not located in South Korea. <code>216.58.214.131</code> is located in Europe).</p>
+<p>I, then, will use Google servers located in South Korea to see if the censorship is really analyzing every Host header on every HTTP connection or only targeting a few IPs.</p>
+<p>We will eventually determine where this censorship system is located.</p>
+<p>We are doing a name resolution to get a Google server outside South Korea:</p>
+<pre><code>user@kali:~$ host google.ru 8.8.8.8
+Using domain server:
+Name: 8.8.8.8
+Address: 8.8.8.8#53
+Aliases:
+
+google.ru has address 216.58.197.227
+google.ru has IPv6 address 2404:6800:4005:802::2003
+google.ru mail is handled by 50 alt4.aspmx.l.google.com.
+google.ru mail is handled by 30 alt2.aspmx.l.google.com.
+google.ru mail is handled by 20 alt1.aspmx.l.google.com.
+google.ru mail is handled by 10 aspmx.l.google.com.
+google.ru mail is handled by 40 alt3.aspmx.l.google.com.
+user@kali:~$
+user@kali:~$  traceroute -n 216.58.197.227
+traceroute to 216.58.197.227 (216.58.197.227), 30 hops max, 60 byte packets
+1  100.114.55.252  3.915 ms  4.052 ms  4.495 ms
+2  100.114.27.169  4.503 ms  4.498 ms  4.495 ms
+3  1.255.24.48  4.806 ms  5.027 ms  5.026 ms
+4  61.98.54.109  5.380 ms  5.376 ms  5.372 ms
+5  58.229.4.16  7.384 ms 58.229.4.12  13.247 ms 58.229.4.8  10.801 ms
+6  118.221.7.46  9.586 ms  5.669 ms  5.596 ms
+7  39.115.132.69  5.062 ms 58.229.15.213  5.038 ms 39.115.132.69  5.030 ms
+8  72.14.216.77  41.280 ms 72.14.215.199  38.651 ms  38.296 ms
+9  216.239.54.1  39.183 ms  39.033 ms 209.85.142.95  38.461 ms
+10  209.85.142.185  43.401 ms 216.239.40.11  43.397 ms 209.85.142.185  40.657 ms
+11  72.14.238.35  64.533 ms 216.58.197.227  36.478 ms  37.243 ms
+user@kali:~$
+</code></pre>
+<p>Google.ru resolves to a foreign IP which is far away.</p>
+<p>Ok let's debug:</p>
+<pre><code>user@kali:~$ wget -O- http://www.google.ru/ | grep -ai google|head -n 1
+--2016-10-01 XX:XX:XX--  http://www.google.ru/
+Resolving www.google.ru (www.google.ru)... 216.58.214.131, 2a00:1450:4001:813::2003
+Connecting to www.google.ru (www.google.ru)|216.58.214.131|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+&lt;!doctype html&gt;&lt;html itemscope="" itemtype="http://schema.org/WebPage" lang="ru"&gt;&lt;head&gt;&lt;meta content="Google." name="description"&gt;&lt;meta content="noodp" name="robots"&gt;&lt;meta content="text/html; charset=UTF-8" http-equiv="Content-Type"&gt;&lt;meta content="/images/branding/googleg/1x/googleg_standard_color_128dp.png" itemprop="image"&gt;&lt;title&gt;Google&lt;/title&gt;&lt;script&gt;(function(){window.google={kEI:'9kbBV4mEM8nt0gSfvbGQCg',kEXPI:'3700062,3700283,3700389,4029815,4031109,4032678,4036509,4036527,4038012,4039268,4043492,4045841,4048347,4052304,4058543,4061154,4062702,4063879,4065786,4065793,4066654,4066708,4067175,4067860,4068550,4068816,4069839,4069841,4069905,4070127,4070220,4070598,4071231,4071575,4071603,4071842,4072000,4072289,4072364,4072653,4072682,4072773,4073231,4073405,4073419,4073958,4073980,4074426,4074801,4075122,4075451,4075464,4075781,4075788,4075860,4075966,4075976,4076018,4076096,4076115,4076117,4076797,4076931,4077219,4077221,4077384,4077391,8300096,8300273,8502184,8503585,8504846,8505150,8505152,8505585,8505677,8505816,8506585,10200083',authuser:0,kscs:'c9c918f0_24'};google.kHL='ru';})();(function(){google.lc=[];google.li=0;google.getEI=function(a){for(var b;a&amp;&amp;(!a.getAttribute||!(b=a.getAttribute("eid")));)a=a.parentNode;return b||google.kEI};google.getLEI=function(a){for(var b=null;a&amp;&amp;(!a.getAttribute||!(b=a.getAttribute("leid")));)a=a.parentNode;return b};google.https=function(){return"https:"==window.location.protocol};google.ml=function(){return null};google.wl=function(a,b){try{google.ml(Error(a),!1,b)}catch(c){}};google.time=function(){return(new Date).getTime()};google.log=function(a,b,c,e,g){a=google.logUrl(a,b,c,e,g);if(""!=a){b=new Image;var d=google.lc,f=google.li;d[f]=b;b.onerror=b.onload=b.onabort=function(){delete d[f]};window.google&amp;&amp;window.google.vel&amp;&amp;window.google.vel.lu&amp;&amp;window.google.vel.lu(a);b.src=a;google.li=f+1}};google.logUrl=function(a,b,c,e,g){var d="",f=google.ls||"";if(!c&amp;&amp;-1==b.search("&amp;ei=")){var h=google.getEI(e)
+
+user@kali:~$
+</code></pre>
+<p>Yeah! We can access to Google.</p>
+<p>Now, question: Does it work when we try to contact Google server in South Korea? (<code>1.255.22.242</code> is an IP for www.google.co.kr, located in South Korea, as shown below):</p>
+<p>Google inside Korean IP space:</p>
+<pre><code>user@kali:~$ host google.co.kr
+google.co.kr has address 1.255.22.241
+google.co.kr has address 1.255.22.237
+google.co.kr has address 1.255.22.217
+google.co.kr has address 1.255.22.216
+google.co.kr has address 1.255.22.227
+google.co.kr has address 1.255.22.251
+google.co.kr has address 1.255.22.242
+google.co.kr has address 1.255.22.232
+google.co.kr has address 1.255.22.226
+google.co.kr has address 1.255.22.247
+google.co.kr has address 1.255.22.236
+google.co.kr has address 1.255.22.222
+google.co.kr has address 1.255.22.221
+google.co.kr has address 1.255.22.212
+google.co.kr has address 1.255.22.231
+google.co.kr has address 1.255.22.246
+google.co.kr has IPv6 address 2404:6800:400a:806::2003
+google.co.kr mail is handled by 10 aspmx.l.google.com.
+google.co.kr mail is handled by 40 alt3.aspmx.l.google.com.
+google.co.kr mail is handled by 20 alt1.aspmx.l.google.com.
+google.co.kr mail is handled by 50 alt4.aspmx.l.google.com.
+google.co.kr mail is handled by 30 alt2.aspmx.l.google.com.
+
+user@kali:~$ tcptraceroute -n 1.255.22.242 80
+Running:
+    traceroute -T -O info -n -p 80 1.255.22.242 
+traceroute to 1.255.22.242 (1.255.22.242), 30 hops max, 60 byte packets
+1  100.114.55.252  3.759 ms  4.431 ms  4.556 ms
+2  100.114.27.169  4.553 ms  4.551 ms  4.547 ms
+3  1.255.24.48  5.182 ms  5.668 ms  5.900 ms
+4  61.98.54.109  5.900 ms  6.452 ms  6.992 ms
+5  58.229.4.28  10.786 ms 58.229.4.20  12.408 ms 58.229.4.36  10.783 ms
+6  58.229.4.163  10.713 ms  7.037 ms  7.370 ms
+7  1.255.22.242&lt;syn,ack&gt;  6.621 ms  7.737 ms  7.798 ms
+user@kali:~$ ping 1.255.22.242
+PING 1.255.22.242 (1.255.22.242) 56(84) bytes of data.
+64 bytes from 1.255.22.242: icmp_seq=1 ttl=58 time=4.32 ms
+^C
+--- 1.255.22.242 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 4.328/4.328/4.328/0.000 ms
+user@kali:~$
+</code></pre>
+<p>4.32ms to contact <code>1.255.22.242</code>! - this IP is located in South Korea (and <code>whois 1.255.22.242</code> will confirm it - <em>SK Broadband Co Ltd</em>).</p>
+<p>Fetching a webpage located at <code>1.255.22.242</code>:</p>
+<pre><code>user@kali:~$ wget -O- http://1.255.22.242/ &gt;/dev/null
+--2016-10-01XX:XX:XX--  http://1.255.22.242/
+Connecting to 1.255.22.242:80... connected.
+HTTP request sent, awaiting response... 301 Moved Permanently
+Location: http://www.google.com/ [following]
+--2016-10-01 XX:XX:XX--  http://www.google.com/
+Resolving www.google.com (www.google.com)... 74.125.203.103, 74.125.203.105, 74.125.203.106, ...
+Connecting to www.google.com (www.google.com)|74.125.203.103|:80... connected.
+HTTP request sent, awaiting response... 302 Found
+Location: http://www.google.co.kr/?gfe_rd=cr&amp;ei=n3nCV9PEPM-T9QWY36ywCg [following]
+--2016-10-01 XX:XX:XX--  http://www.google.co.kr/?gfe_rd=cr&amp;ei=n3nCV9PEPM-T9QWY36ywCg
+Resolving www.google.co.kr (www.google.co.kr)... 74.125.23.94, 2404:6800:4008:c01::5e
+Connecting to www.google.co.kr (www.google.co.kr)|74.125.23.94|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+-                                                        [ &lt;=&gt;]  10.78K  --.-KB/s    in 0.001s
+
+2016-10-01 XX:XX:XX (7.03 MB/s) - written to stdout [11040]
+</code></pre>
+<p>The default webpage will give us a 302 Redirect to <code>http://www.google.co.kr/</code>.</p>
+<p>We can access to Google servers located in South Korea too!</p>
+<p>Now, we know that browsing the <code>www.xhamster.com</code> webpage will show the <code>warning.or.kr</code> webpage from the first part.</p>
+<p>We can forge the Host header in the HTTP request to understand where the censorship system is located.</p>
+<p>Asking a Google webpage on a Google server located outside South Korea with a custom header with a banned Host (<code>Host: www.xhamster.com</code>):</p>
+<pre><code>user@kali:~$ wget -O- --header="Host: www.xhamster.com" http://www.google.ru/
+--2016-10-01XX:XX:XX--  http://www.google.ru/
+Resolving www.google.ru (www.google.ru)... 216.58.214.131, 2a00:1450:4001:813::2003
+Connecting to www.google.ru (www.google.ru)|216.58.214.131|:80... connected.
+HTTP request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 XX:XX:XX--  http://www.warning.or.kr/
+Resolving www.warning.or.kr (www.warning.or.kr)... 121.189.57.82
+Connecting to www.warning.or.kr (www.warning.or.kr)|121.189.57.82|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'STDOUT'
+
+-                             0%[                                            ]       0  --.-KB/s               &lt;html&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=utf-8"&gt;
+&lt;meta name="kcsc" content="blocking" /&gt;
+&lt;title&gt;www.warning.or.kr&lt;/title&gt;
+&lt;style type="text/css"&gt;
+[...]
+
+user@kali:~$
+</code></pre>
+<p>This request is blocked (see the 302 direction to <code>http://www.warning.or.kr/</code>).</p>
+<p>As seen before, we have access to Google servers located inside and outside South Korea.</p>
+<p>If I try to contact a Google server located outside South Korea and ask for a custom censored host, then the request seems to be censored.</p>
+<p>However, if I ask a Google server located in South Korea to provide me with a banned website, this request will work and Google will provide a reply, as shown below.</p>
+<p>Asking <code>www.xhamster.com</code> on a Google Korean Server will result a 404 page from Google (that is, <strong>this request is NOT blocked by the censorship system</strong>):</p>
+<pre><code>user@kali:~$ wget -O- --header="Host: www.xhamster.com" http://1.255.22.242/
+--2016-10-01XX:XX:XX--  http://1.255.22.242/
+Connecting to 1.255.22.242:80... connected.
+HTTP request sent, awaiting response... 404 Not Found
+2016-10-01   XX:XX:XX ERROR 404: Not Found.
+user@kali:~$
+</code></pre>
+<p>Using telnet for the same request (in HTTP/1.0):</p>
+<pre><code>user@kali:~$ telnet 1.255.22.242 80
+Trying 1.255.22.242...
+Connected to 1.255.22.242.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+
+HTTP/1.0 404 Not Found
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1561
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+
+&lt;!DOCTYPE html&gt;
+&lt;html lang=en&gt;
+&lt;meta charset=utf-8&gt;
+&lt;meta name=viewport content="initial-scale=1, minimum-scale=1, width=device-width"&gt;
+&lt;title&gt;Error 404 (Not Found)!!1&lt;/title&gt;
+&lt;style&gt;
+    *{margin:0;padding:0}html,code{font:15px/22px arial,sans-serif}html{background:#fff;color:#222;padding:15px}body{margin:7% auto 0;max-width:390px;min-height:180px;padding:30px 0 15px}* &gt; body{background:url(//www.google.com/images/errors/robot.png) 100% 5px no-repeat;padding-right:205px}p{margin:11px 0 22px;overflow:hidden}ins{color:#777;text-decoration:none}a img{border:0}@media screen and (max-width:772px){body{background:none;margin-top:0;max-width:none;padding-right:0}}#logo{background:url(//www.google.com/images/branding/googlelogo/1x/googlelogo_color_150x54dp.png) no-repeat;margin-left:-5px}@media only screen and (min-resolution:192dpi){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat 0% 0%/100% 100%;-moz-border-image:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) 0}}@media only screen and (-webkit-min-device-pixel-ratio:2){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat;-webkit-background-size:100% 100%}}#logo{display:inline-block;height:54px;width:150px}
+&lt;/style&gt;
+&lt;a href=//www.google.com/&gt;&lt;span id=logo aria-label=Google&gt;&lt;/span&gt;&lt;/a&gt;
+&lt;p&gt;&lt;b&gt;404.&lt;/b&gt;&lt;ins&gt;That's an error.&lt;/ins&gt;
+&lt;p&gt;The requested URL &lt;code&gt;/&lt;/code&gt; was not found on this server.  &lt;ins&gt;That's all we know.&lt;/ins&gt;
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>But asking <code>www.xhamster.com</code> on a foreign server will result a 302 redirect to <code>www.warning.or.kr</code>:</p>
+<pre><code>user@kali:~$ wget -O- --header="Host: www.xhamster.com" http://www.google.com/
+--2016-10-01XX:XX:XX--  http://www.google.com/
+Resolving www.google.com (www.google.com)... 64.233.188.94, 2404:6800:4005:800::2003
+Connecting to www.google.com (www.google.com)|64.233.188.94|:80... connected.
+HTTP request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 XX:XX:XX--  http://www.warning.or.kr/
+Resolving www.warning.or.kr (www.warning.or.kr)... ^C
+user@kali:~$
+</code></pre>
+<p><strong>From this, we can assume the filtering system only targets HTTP connections from international links.</strong></p>
+<p>Let's do a traceroute and a TCPtraceroute to find out what is happening.</p>
+<p>Using SKT connections, UDP traceroute to <code>www.xhamster.com</code>:</p>
+<pre><code>user@kali:~$ traceroute www.xhamster.com    
+traceroute to www.xhamster.com (88.208.29.24), 30 hops max, 60 byte packets
+ 1  100.114.55.252 (100.114.55.252)  2.803 ms  3.910 ms  4.871 ms
+ 2  100.114.27.169 (100.114.27.169)  4.863 ms  5.679 ms  6.116 ms
+ 3  1.255.24.48 (1.255.24.48)  6.121 ms  6.611 ms  7.979 ms
+ 4  61.98.54.109 (61.98.54.109)  8.227 ms  8.713 ms  8.709 ms
+ 5  58.229.4.32 (58.229.4.32)  9.056 ms 58.229.4.12 (58.229.4.12)  15.861 ms  15.868 ms
+ 6  118.221.7.34 (118.221.7.34)  13.865 ms  6.821 ms 1.255.26.242 (1.255.26.242)  7.892 ms
+ 7  58.229.14.9 (58.229.14.9)  164.852 ms  162.677 ms  164.854 ms
+ 8  iptp.as41095.any2ix.coresite.com (206.72.210.118)  159.382 ms  159.961 ms  165.059 ms
+ 9  be2.r0.r328.nkf.ams.nl.iptp.net (91.194.117.128)  326.743 ms  328.153 ms  327.627 ms
+10  be101.r0.r328.nkf.ams.nl.iptp.net (176.56.179.130)  324.799 ms be100.r0.r328.nkf.ams.nl.iptp.net (176.56.179.128)  328.517 ms be101.r0.r328.nkf.ams.nl.iptp.net (176.56.179.130)  325.047 ms
+11  * * *
+12  * * *
+13  * * *
+[...]
+user@kali:~$
+</code></pre>
+<p>Now doing a TCPtraceroute to <code>www.xhamster.com</code> on port 80 shows something fishy:</p>
+<pre><code>user@kali:~$ tcptraceroute www.xhamster.com 80
+Running:
+    traceroute -T -O info -p 80 www.xhamster.com 
+traceroute to www.xhamster.com (88.208.29.24), 30 hops max, 60 byte packets
+ 1  100.114.55.252 (100.114.55.252)  5.047 ms  5.730 ms  6.041 ms
+ 2  100.114.27.169 (100.114.27.169)  6.050 ms  6.047 ms  8.086 ms
+ 3  1.255.24.48 (1.255.24.48)  8.099 ms  8.097 ms  8.092 ms
+ 4  61.98.54.109 (61.98.54.109)  8.090 ms  8.086 ms  8.082 ms
+ 5  58.229.4.12 (58.229.4.12)  8.079 ms 58.229.4.20 (58.229.4.20)  8.698 ms 58.229.4.12 (58.229.4.12)  14.548 ms
+ 6  118.221.7.46 (118.221.7.46)  9.524 ms 118.221.7.26 (118.221.7.26)  7.158 ms 1.255.26.242 (1.255.26.242)  5.676 ms
+ 7  39.115.132.234 (39.115.132.234)  6.989 ms  5.656 ms  6.988 ms
+ 8  * * *
+ 9  * * *
+10  192.168.112.1 (192.168.112.1)  13.741 ms  14.491 ms  16.793 ms
+11  39.115.132.233 (39.115.132.233)  6.942 ms  6.935 ms  5.209 ms
+12  58.229.14.9 (58.229.14.9)  312.169 ms  312.143 ms  312.145 ms
+13  iptp.as41095.any2ix.coresite.com (206.72.210.118)  312.111 ms  307.172 ms  309.766 ms
+14  be2.r0.r328.nkf.ams.nl.iptp.net (91.194.117.128)  337.794 ms  337.775 ms  337.779 ms
+15  be100.r0.r328.nkf.ams.nl.iptp.net (176.56.179.128)  337.777 ms  337.775 ms be101.r0.r328.nkf.ams.nl.iptp.net (176.56.179.130)  329.002 ms
+16  88.208.29.24 (88.208.29.24) &lt;syn,ack&gt;  317.332 ms  312.113 ms  312.082 ms
+user@kali:~$
+</code></pre>
+<p>The hop number 10 shows a RCF1918 IP (<code>192.168.112.1</code>) only when doing a traceroute using TCP.</p>
+<p>Let's target another website (<code>www.ovh.com</code>, a big European ISP):</p>
+<pre><code>user@kali:~$ tcptraceroute www.ovh.com 80
+Running:
+    traceroute -T -O info -p 80 www.ovh.com 
+traceroute to www.ovh.com (198.27.92.1), 30 hops max, 60 byte packets
+ 1  100.114.55.252 (100.114.55.252)  1.750 ms  1.996 ms  2.272 ms
+ 2  100.114.27.169 (100.114.27.169)  3.064 ms  3.070 ms  3.067 ms
+ 3  1.255.24.48 (1.255.24.48)  12.399 ms  13.106 ms  13.552 ms
+ 4  61.98.54.109 (61.98.54.109)  4.066 ms  4.321 ms  4.568 ms
+ 5  58.229.4.8 (58.229.4.8)  6.992 ms  6.999 ms 58.229.4.20 (58.229.4.20)  5.160 ms
+ 6  1.255.26.254 (1.255.26.254)  6.987 ms 118.221.7.42 (118.221.7.42)  5.064 ms 118.221.7.70 (118.221.7.70)  7.499 ms
+ 7  39.115.132.238 (39.115.132.238)  7.452 ms  7.457 ms  7.454 ms
+ 8  * * *
+ 9  * * *
+10  192.168.112.1 (192.168.112.1)  7.414 ms 192.168.132.1 (192.168.132.1)  7.410 ms  7.407 ms
+11  39.115.132.237 (39.115.132.237)  7.843 ms  7.824 ms  6.593 ms
+12  39.115.132.90 (39.115.132.90)  60.029 ms 210.180.97.9 (210.180.97.9)  58.820 ms  59.904 ms
+13  * * *
+14  be1-1170.sbg-g1-a9.fr.eu (37.187.232.86)  308.407 ms  308.406 ms  308.404 ms
+15  * po99-1123.mil-5-6k.it.eu (91.121.131.149)  308.365 ms po97-1122.mil-5-6k.it.eu (91.121.131.147)  308.171 ms
+16  www.ovh.com (198.27.92.1) &lt;syn,ack&gt;  308.370 ms *  308.316 ms
+user@kali:~$
+</code></pre>
+<p><code>192.168.112.1</code> is present (but it's NOT present if we do ICMP/UDP traceroutes).</p>
+<p>Another TCPtraceroute will show a suspicious <code>192.168.132.1</code> in hop 10 (in a different date):</p>
+<pre><code>user@kali:~$ tcptraceroute www.ovh.com 80
+    Running:
+    traceroute -T -O info -p 80 www.ovh.com 
+traceroute to www.ovh.com (198.27.92.1), 30 hops max, 60 byte packets
+ 1  100.114.55.252 (100.114.55.252)  1.611 ms  2.138 ms  2.676 ms
+ 2  100.114.27.169 (100.114.27.169)  2.690 ms  2.677 ms  2.674 ms
+ 3  1.255.24.48 (1.255.24.48)  2.833 ms  3.128 ms  3.419 ms
+ 4  61.98.54.109 (61.98.54.109)  3.427 ms  3.420 ms  3.414 ms
+ 5  58.229.4.20 (58.229.4.20)  3.982 ms 58.229.4.16 (58.229.4.16)  5.237 ms  5.247 ms
+ 6  118.221.7.70 (118.221.7.70)  5.666 ms  6.473 ms  4.136 ms
+ 7  39.115.132.238 (39.115.132.238)  5.232 ms  5.449 ms  5.450 ms
+ 8  * * *
+ 9  * * *
+10  192.168.132.1 (192.168.132.1)  5.971 ms  5.373 ms  4.869 ms
+11  39.115.132.237 (39.115.132.237)  7.897 ms 39.115.132.233 (39.115.132.233)  5.352 ms 39.115.132.237 (39.115.132.237)  7.870 ms
+12  39.115.132.90 (39.115.132.90)  60.661 ms  59.833 ms  59.790 ms
+13  * * *
+14  be1-1170.sbg-g1-a9.fr.eu (37.187.232.86)  307.206 ms  307.098 ms  308.245 ms
+15  * * *
+16  www.ovh.com (198.27.92.1) &lt;syn,ack&gt;  306.193 ms  306.008 ms  307.063 ms
+</code></pre>
+<p>With KT, sometimes, a strange hop will appear when doing a TCP traceroute, as shown below (hop 11):</p>
+<pre><code>user@kali:~$ tcptraceroute 216.58.197.227
+    Running:
+    traceroute -T -O info -p 80 216.58.197.227
+traceroute to 216.58.197.227 (216.58.197.227), 30 hops max, 60 byte packets
+ 1  gateway (172.30.1.254)  1.196 ms  1.197 ms  1.225 ms
+ 2  115.21.98.254 (115.21.98.254)  5.727 ms  7.883 ms  7.901 ms
+ 3  119.196.200.157 (119.196.200.157)  5.700 ms  7.305 ms  8.944 ms
+ 4  112.190.16.37 (112.190.16.37)  5.655 ms  6.549 ms  10.649 ms
+ 5  112.190.2.93 (112.190.2.93)  18.086 ms  18.105 ms  18.104 ms
+ 6  112.174.125.137 (112.174.125.137)  16.063 ms  3.217 ms  3.205 ms
+ 7  112.174.48.202 (112.174.48.202)  2.385 ms  4.605 ms  4.584 ms
+ 8  112.174.31.154 (112.174.31.154)  4.540 ms  6.182 ms 112.174.31.146 (112.174.31.146)  7.205 ms
+ 9  * * *
+10  * * *
+11  192.168.144.1 (192.168.144.1)  2.568 ms  2.587 ms  2.577 ms
+12  112.174.31.189 (112.174.31.189)  3.301 ms 112.174.31.177 (112.174.31.177)  5.663 ms 112.174.31.25 (112.174.31.25)  15.977 ms
+13  112.174.84.186 (112.174.84.186)  15.926 ms 112.174.84.58 (112.174.84.58)  15.946 ms 112.174.83.58 (112.174.83.58)  15.937 ms
+14  72.14.194.194 (72.14.194.194)  46.967 ms  47.023 ms  52.190 ms
+15  209.85.142.95 (209.85.142.95)  48.218 ms 216.239.54.1 (216.239.54.1)  48.857 ms 209.85.142.95 (209.85.142.95)  48.220 ms
+16  72.14.237.223 (72.14.237.223)  38.998 ms 72.14.238.99 (72.14.238.99)  41.599 ms  45.584 ms
+17  nrt13s49-in-f3.1e100.net (216.58.197.227) &lt;syn,ack&gt;  41.301 ms  41.277 ms  33.900 ms
+</code></pre>
+<p>And the UDP traceroute:</p>
+<pre><code>user@kali:~$ traceroute 216.58.197.227
+traceroute to 216.58.197.227 (216.58.197.227), 30 hops max, 60 byte packets
+ 1  gateway (172.30.1.254)  2.500 ms  2.563 ms  4.136 ms
+ 2  115.21.98.254 (115.21.98.254)  7.673 ms  9.465 ms  9.461 ms
+ 3  119.196.200.157 (119.196.200.157)  8.254 ms  9.429 ms  10.889 ms
+ 4  112.190.16.37 (112.190.16.37)  7.591 ms  8.242 ms  8.762 ms
+ 5  112.190.2.93 (112.190.2.93)  12.834 ms  12.849 ms  12.847 ms
+ 6  112.174.125.137 (112.174.125.137)  14.237 ms  4.237 ms  3.832 ms
+ 7  112.174.48.202 (112.174.48.202)  2.976 ms  2.971 ms  2.968 ms
+ 8  112.174.84.22 (112.174.84.22)  2.921 ms 112.174.84.58 (112.174.84.58)  3.792 ms  3.791 ms
+ 9  72.14.194.194 (72.14.194.194)  34.562 ms  35.805 ms  35.211 ms
+10  209.85.142.95 (209.85.142.95)  36.480 ms 216.239.54.1 (216.239.54.1)  35.262 ms 209.85.142.95 (209.85.142.95)  37.717 ms
+11  72.14.237.223 (72.14.237.223)  35.233 ms  35.211 ms  35.202 ms
+12  nrt13s49-in-f227.1e100.net (216.58.197.227)  38.470 ms  34.080 ms  39.364 ms
+</code></pre>
+<p>If you read the TCPtraceroutes, you will see a hop located in the edge of the Korean network (hop10 or 11): <code>192.168.112.1</code> or <code>192.168.132.1</code> or <code>192.168.144.1</code>. This router doesn't appear when doing UDP or ICMP traceroutes.</p>
+<p>When doing tcptraceroute to exotic remote ports (<code>61721</code>), this hop doesn't appear. In fact, this hop appears only for a list of specific ports (<code>80</code>, <code>8080</code>, <code>8000</code>, <code>2222</code>, ...) but the censorship seems to affect every TCP connection.</p>
+<p>Note: This hop appears not every time when using KT or LG U+ connection (but they are still censoring Internet connection). It means that the 2 ISPs are using different methods to censor websites or the censorship system has different network behaviors.</p>
+<p>You can test filtering by yourself with these <code>wget</code> commands, by contacting a remote server and asking to serve HTTP webpages:</p>
+<p>Connecting to <code>ftp.de.freebsd.org</code> and asking HTTP on a FTP server will result errors from the FTP server (which is normal):</p>
+<pre><code>user@kali:~$ wget -O- http://ftp.de.freebsd.org:21/ 
+--2016-10-01 XX:XX:XX--  http://ftp.de.freebsd.org:21/
+Resolving ftp.de.freebsd.org (ftp.de.freebsd.org)... 213.83.42.56, 2a02:2e0:11:a00::10
+Connecting to ftp.de.freebsd.org (ftp.de.freebsd.org)|213.83.42.56|:21... connected.
+HTTP request sent, awaiting response... 200 No headers, assuming HTTP/0.9
+Length: unspecified
+Saving to: 'STDOUT'
+
+-                                                        [&lt;=&gt;                                                                                                                   ]       0  --.-KB/s               220 FTP Server ready.
+500 GET not understood
+500 USER-AGENT: not understood
+500 ACCEPT: not understood
+500 ACCEPT-ENCODING: not understood
+500 HOST: not understood
+500 CONNECTION: not understood
+500 Invalid command: try being more creative
+^C
+user@kali:~$
+</code></pre>
+<p>Now connecting to the same FTP server and providing a <code>Host: www.xhamster.com</code> with the HTTP request will send us a HTTP reply by the censorship system:</p>
+<pre><code>user@kali:~$ wget --header="Host: www.xhamster.com" -O- http://ftp.de.freebsd.org:21/
+--2016-10-01 XX:XX:XX--  http://ftp.de.freebsd.org:21/
+Resolving ftp.de.freebsd.org (ftp.de.freebsd.org)... 213.83.42.56, 2a02:2e0:11:a00::10
+Connecting to ftp.de.freebsd.org (ftp.de.freebsd.org)|213.83.42.56|:21... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+-                                                        [&lt;=&gt;                                                                                                                   ]       0  --.-KB/s               &lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+-                                                        [ &lt;=&gt;                                                                                                                  ]     437  --.-KB/s    in 0s
+
+2016-10-01 XX:XX:XX (13.5 MB/s) - written to stdout [437]
+
+user@kali:~$
+</code></pre>
+<p>Same with SSH:</p>
+<p>We see the SSH banner on ftp.de.freebsd.org using <code>telnet</code>:</p>
+<pre><code>user@kali:~$ telnet ftp.de.freebsd.org 22
+Trying 213.83.42.56...
+Connected to ftp.plusline.de.
+Escape character is '^]'.
+SSH-2.0-OpenSSH_5.3
+^]
+telnet&gt; q
+Connection closed.
+user@kali:~$
+</code></pre>
+<p>Now sending an http request to the sshd server of <code>ftp.de.freebsd.org</code> with a censored <code>Host</code> will trigger the censorship:</p>
+<pre><code>user@kali:~$  wget --header="Host: www.xhamster.com" -O- http://ftp.de.freebsd.org:22/
+--2016-10-01 XX:XX:XX--  http://ftp.de.freebsd.org:22/
+Resolving ftp.de.freebsd.org (ftp.de.freebsd.org)... 213.83.42.56, 2a02:2e0:11:a00::10
+Connecting to ftp.de.freebsd.org (ftp.de.freebsd.org)|213.83.42.56|:22... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+-                                                        [&lt;=&gt;                                                                                                                   ]       0  --.-KB/s               &lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+-                                                        [ &lt;=&gt;                                                                                                                  ]     437  --.-KB/s    in 0s
+
+2016-10-01 XX:XX:XX (37.8 MB/s) - written to stdout [437]
+</code></pre>
+<p><code>FTP.DE.FREEBSD.ORG</code> has other interesting ports, like rsync:</p>
+<p>Sending http requests to open TCP ports (<code>873/tcp</code> [rsync] and <code>5666/tcp</code>) on <code>ftp.de.freebsd.org</code> with a censored Host will trigger the censorship too:</p>
+<pre><code>user@kali:~$ wget --header="Host: www.xhamster.com" -O- http://ftp.de.freebsd.org:873/ 
+--2016-10-01 XX:XX:XX--  http://ftp.de.freebsd.org:873/
+Resolving ftp.de.freebsd.org (ftp.de.freebsd.org)... 213.83.42.56, 2a02:2e0:11:a00::10
+Connecting to ftp.de.freebsd.org (ftp.de.freebsd.org)|213.83.42.56|:873... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+-                                                        [&lt;=&gt;                                                                                                                   ]       0  --.-KB/s               &lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+-                                                        [ &lt;=&gt;                                                                                                                  ]     437  --.-KB/s    in 0s
+
+2016-10-01 XX:XX:XX (43.1 MB/s) - written to stdout [437]
+
+
+user@kali:~$ wget --header="Host: www.xhamster.com" -O- http://ftp.de.freebsd.org:5666/
+--2016-10-01 XX:XX:XX--  http://ftp.de.freebsd.org:5666/
+Resolving ftp.de.freebsd.org (ftp.de.freebsd.org)... 213.83.42.56, 2a02:2e0:11:a00::10
+Connecting to ftp.de.freebsd.org (ftp.de.freebsd.org)|213.83.42.56|:5666... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+-                                                        [&lt;=&gt;                                                                                                                   ]       0  --.-KB/s               &lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+-                                                        [ &lt;=&gt;                                                                                                                  ]     437  --.-KB/s    in 0s
+
+2016-10-01 XX:XX:XX (35.3 MB/s) - written to stdout [437]
+
+user@kali:~$
+</code></pre>
+<p><strong>Analysis: the censorship system is a transparent proxy located in hop 10 or 11, located in the edge of Korean network to listen to international links.</strong></p>
+<p><strong>The censorship system only targets HTTP identified connections within ALL TCP connections passing in the international links of South Korea.</strong></p>
+<p><strong>The local traffic inside the country is not filtered.</strong></p>
+<p><a id="inner-work-of-the-censorship-system"></a></p>
+<h2>3. Inner work of the censorship system</h2>
+<p><a id="different-answers-provided-by-censorship-systems"></a></p>
+<h3>3.1 Different answers provided by the censorship system</h3>
+<p>In the previous section, I illustrated how the censorship system analyses all the HTTP packets looking for the host of the remote website. You can contact a legit remote HTTP server and change the Host Field to trigger the censorship as long as you cross international fiber optic.</p>
+<p>The censorship system is working with different proxy clusters, providing different answers. That is, depending on the transparent proxy you are using, you get different behaviors. You have no control about the transparent proxies you are using.</p>
+<p>In this section, I would like to introduce different behaviors of the censorship that you will face when you visit a banned website in the SKT, KT and LG networks. </p>
+<p><a id="direct-html-as-an-answer"></a></p>
+<h4>1) Direct HTML as an answer</h4>
+<p>This answer seems to be used for a cache proxy.</p>
+<p>When trying to contact a website for the first time, if the remote transparent proxy doesn't reply yet to a browser, it will reply this webpage:</p>
+<pre><code>&lt;!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/strict.dtd"&gt;
+&lt;!-- &lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd"&gt; --&gt;
+&lt;HTML&gt;
+&lt;HEAD&gt;
+&lt;META HTTP-EQUIV="Refresh" CONTENT="0.1"&gt;
+&lt;META HTTP-EQUIV="Pragma" CONTENT="no-cache"&gt;
+&lt;META HTTP-EQUIV="Expires" CONTENT="-1"&gt;
+&lt;TITLE&gt;&lt;/TITLE&gt;
+&lt;/HEAD&gt;
+&lt;BODY&gt;&lt;P&gt;&lt;/BODY&gt;
+&lt;/HTML&gt;
+</code></pre>
+<p>Your browser will ask a refresh within 0.1 second of the URI, which will provide a new HTTP answer (see the next two answers):</p>
+<p><a id="direct-html-as-an-answer-system-a"></a></p>
+<h4>2) Direct HTML as an answer (censorship system A)</h4>
+<p>Contacting a Google server at <code>216.58.214.131</code> (not hosted in South Korea), asking for a censored website:</p>
+<pre><code>user@kali:~$ wget -O- --header="Host: www.xhamster.com" http://www.google.ru/
+--2016-10-01XX:XX:XX--  http://www.google.ru/
+Resolving www.google.ru (www.google.ru)... 216.58.214.131, 2a00:1450:4001:813::2003
+Connecting to www.google.ru (www.google.ru)|216.58.214.131|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://www.warning.or.kr"
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=")
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.google.com");}
+else{
+c = a[0].split("?");
+location.replace(c[0]);
+}
+&lt;/script&gt;&lt;/html&gt;
+
+2016-10-01XX:XX:XX (12.5 MB/s) - written to stdout [330]
+user@kali:~$
+</code></pre>
+<p>The answer is:</p>
+<pre><code>HTTP/1.0 200 OK
+Content-type: text/html
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://www.warning.or.kr"
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=")
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.google.com");}
+else{
+c = a[0].split("?");
+location.replace(c[0]);
+    }
+&lt;/script&gt;&lt;/html&gt;
+</code></pre>
+<p>The JavaScript code may differ depending on the used ISP (i.e.: KT):</p>
+<pre><code>HTTP/1.0 200 OK
+Content-type: text/html
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+</code></pre>
+<p>You will note the censorship system is banning my request even if I try to contact a remote server from Google that doesn't host a censored website.</p>
+<p><a id="direct-html-as-an-answer-system-b"></a></p>
+<h4>3) 302 Temporary redirect (censorship system B)</h4>
+<p>By contacting Google servers located in US and asking a banned vhost, the webpage will show a 302 redirection to <code>http://www.warning.or.kr/</code>:</p>
+<p>This one is a 302 temporary redirect:</p>
+<pre><code>user@kali:~$ wget -O- --header="Host: www.xhamster.com" http://www.google.ru/
+--2016-10-01XX:XX:XX--  http://www.google.ru/
+Resolving www.google.ru (www.google.ru)... 216.58.214.131, 2a00:1450:4001:813::2003
+Connecting to www.google.ru (www.google.ru)|216.58.214.131|:80... connected.
+HTTP request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 XX:XX:XX--  http://www.warning.or.kr/
+Resolving www.warning.or.kr (www.warning.or.kr)... 121.189.57.82
+Connecting to www.warning.or.kr (www.warning.or.kr)|121.189.57.82|:80...connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'STDOUT'
+
+&lt;html&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=utf-8"&gt;
+&lt;meta name="kcsc" content="blocking" /&gt;
+&lt;title&gt;www.warning.or.kr&lt;/title&gt;
+&lt;style type="text/css"&gt;
+[...]
+</code></pre>
+<p>The answer is:</p>
+<pre><code>HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+</code></pre>
+<p><a id="brief-analysis"></a></p>
+<h3>3.2 Brief analysis</h3>
+<p>In short, load-balanced transparent proxies are located somewhere in South Korea and are analyzing the <code>Host</code> header in the HTTP request (or in the URIs if you are using HTTP/0.9 or HTTP/1.0 - we will see that in the next section). These are:</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp; 1/ If the vhost is not blacklisted, forwarding the request to the remote server.</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;OR</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;2/ If the vhost is blacklisted,</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i) Blocking and providing a HTML webpage asking for a refresh so that a cached webpage will be created and provided to the client.</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AND</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii) Blocking and providing a 302 HTTP response to the client. The client will follow the 302 response to http://www.warning.or.kr/.</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OR</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iii) Blocking and providing a webpage witha JavaScript redirection to http://www.warning.or.kr/. The client will be directed to the http://www.warning.or.kr/ webpage.</p>
+<p>This will open discussion about HTTP/2, HTTPS, and exotic protocol (websockets). Let's not forget IPv6 as a network layer (this is important) but before, we will speak about the future: HTTP/0.9 and HTTP/1.0.</p>
+<p>OK, let's go browsing censored websites, with more potential options (HTTPS, HTTP/* support...) that will allow us to determine how the censorship works.</p>
+<p><a id="from-http-0.9-to-http-1.1"></a></p>
+<h3>3.3 Let's debug the censorship system - From HTTP/0.9 to HTTP/1.1</h3>
+<p>Forging HTTP request manually will show us what is happening in the application layer. No more use of fake HTTP Google servers. Let's try to contact remote censored websites!</p>
+<p><a id="http-0.9"></a></p>
+<h4>3.3.1 HTTP/0.9</h4>
+<p>Firstly, playing with HTTP/0.9:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.18.30...
+Connected to xhamster.com.
+Escape character is '^]'.
+GET /
+
+&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;&lt;meta name="referrer" content="always" /&gt;
+&lt;title&gt;Free Porn Videos &amp; HD Sex Tube Movies at xHamster&lt;/title&gt;
+&lt;meta name="description" content="Watch and download all Porn Videos at xHamster for Free, including HD. Browse sex photos, date girls to fuck &amp;amp; have fun in Live Sex Chat only at xHamster!"&gt;
+&lt;meta name="RATING" content="RTA-5042-1996-1400-1577-RTA"&gt;
+&lt;meta name="viewport" content=""&gt;
+&lt;meta http-equiv="X-UA-Compatible" content="IE=edge"&gt;
+&lt;meta name="yandex-tableau-widget" content="logo=http://static-ec.xhcdn.com/images/xYa.png, color=#f2f2f2" /&gt;
+&lt;link rel="alternate" href="http://xhamster.com/" hreflang="x-default"&gt;
+&lt;link rel="alternate" href="http://xhamster.com/" hreflang="en"&gt;
+&lt;link rel="alternate" href="http://ru.xhamster.com/" hreflang="ru"&gt;
+&lt;link rel="alternate" href="http://de.xhamster.com/" hreflang="de"&gt;
+[...]
+</code></pre>
+<p>Success! The banned website can now be visited using the bleeding-edge HTTP/0.9 technology.</p>
+<p>It's useless as visiting websites using only HTTP/0.9 will result in a lot of broken resources (no vhost support, good luck).</p>
+<p><a id="http-1.0"></a></p>
+<h4>3.3.2 HTTP/1.0</h4>
+<p>Ok let's play with HTTP/1.0 where the <code>Host</code> header is still not mandatory if we read the <a href="https://tools.ietf.org/html/rfc1945">RFC1945 - Hypertext Transfer Protocol -- HTTP/1.0</a>:</p>
+<p>With SKT and KT, you will receive the uncensored webpage:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+
+HTTP/1.1 200 OK
+Server: nginx/1.10.1
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+Vary: Accept-Encoding
+X-Powered-By: PHP/7.0.5
+Set-Cookie: stats_id=000000; expires=Wed, XX-Oct-2016 00:00:00 GMT; Max-Age=604800; path=/; domain=.xhamster.com
+Srv: m43
+Set-Cookie: first_visit=0000000000; expires=Thu, XX-Oct-2017 00:00:00 GMT; Max-Age=31536000; path=/; domain=.xhamster.com
+Set-Cookie: prid=--; expires=Thu, 01-Oct-2016 00:00:00 GMT; Max-Age=86400; path=/; domain=.xhamster.com
+Set-Cookie: prs=--; expires=Thu, 01-Oct-2016 00:00:00 GMT; Max-Age=86400; path=/; domain=.xhamster.com
+
+&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;&lt;meta name="referrer" content="always" /&gt;
+&lt;title&gt;Free Porn Videos &amp; HD Sex Tube Movies at xHamster&lt;/title&gt;
+&lt;meta name="description" content="Watch and download all Porn Videos at xHamster for Free, including HD. Browse sex photos, date girls to fuck &amp;amp; have fun in Live Sex Chat only at xHamster!"&gt;
+&lt;meta name="RATING" content="RTA-5042-1996-1400-1577-RTA"&gt;
+&lt;meta name="viewport" content=""&gt;
+&lt;meta http-equiv="X-UA-Compatible" content="IE=edge"&gt;
+&lt;meta name="yandex-tableau-widget" content="logo=http://static-ec.xhcdn.com/images/xYa.png, color=#f2f2f2" /&gt;
+&lt;link rel="alternate" href="http://xhamster.com/" hreflang="x-default"&gt;
+[...]
+</code></pre>
+<p>It works on this censored website, too. Having an old browser without <code>Host</code> support will bypass the censorship (as long as the remote website is serving webpages without providing <code>Host</code> - it depends on the remote configuration of the remote servers).
+But good luck browsing the Internet without having vhost support :)</p>
+<p>Note that this technique doesn't work with a LG U+ connection:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr/
+</code></pre>
+<p>However, if you contact an uncensored website without proving a <code>Host</code> field, the webpage will not be blocked in a LG U+ connection.</p>
+<p><strong>It means that LG has apparently a database of IPs corresponding of censored websites and if you contact them without providing a Host, the request will be blocked.</strong></p>
+<p>Now still with HTTP/1.0:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.18.30...
+Connected to xhamster.com.
+Escape character is '^]'.
+GET http://www.xhamster.com/ HTTP/1.0
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><strong>Wow, this request was banned even with HTTP/1.0. From this, we can determine the transparent proxies are analyzing the URI too (along with the Host field), looking for forbidden domains.</strong></p>
+<p><a id="http-1.1"></a></p>
+<h4>3.3.3 HTTP/1.1</h4>
+<p>Now we start playing with Host using the "new" HTTP/1.1 technology (RFC 2616, only 17 year old):</p>
+<p>The <code>Host</code> field containing a censored webpage will trigger the censorship system:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: xhamster.com
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>This request is banned.</p>
+<p>The invalid Host <code>www.xhamster.com/aaaaaaaafield</code> containing a censored webpage will trigger the censorship system too:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.18.30...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com/aaaaaaaa
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>This request is banned even if the vhost is not good.</p>
+<p>The Host <code>www.xhamster.com:80</code> field containing a censored webpage will trigger the censorship system:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com:80
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>The request is still banned with <code>www.xhamster.com:80</code> as a remote host.</p>
+<p>The Host <code>www.xhamster.com:-800000000000000000000</code> field containing a censored webpage will trigger the censorship system too:</p>
+<pre><code>user@kali:~$telnet www.xhamster.com 80
+Trying 88.208.18.30...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com:-800000000000000000000
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>So <code>www.xhamster.com:-800000000000000000000</code> is banned too.</p>
+<p>The Host <code>www.xhamster.com:80:80</code> field containing a censored webpage will trigger the censorship system:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com:80:80
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><code>www.xhamster.com:80:80</code> is banned too.</p>
+<p>Sending 2 hosts with the first one in the list of censored websites trigger the censorship system:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+Host: www.lulz.com
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>With 2 <code>Host</code> fields, only the first one seems to be used. Sending 2 hosts with only the second one in the list of censored websites will NOT trigger the censorship system as I received an answer from Xhamster.com servers:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.lulz.com
+Host: www.xhamster.com
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.10.1
+Date: Fri, 01Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.5
+Location: http://lulz.com/
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>With 2 <code>Host</code> fields, the first one is used and this request was OK but unusable because the remote server is configured to use the first vhost and is providing me with a 301 redirection to it (protip xhamster admins: please use a catch-all vhost!).</p>
+<p>Ok, as seen already, the system is analyzing HTTP requests passing to every international link. Let's continue using Google servers :)</p>
+<p>Asking <code>www.xhamster.com</code> to a Google server will result in a 302 redirect to <code>http://www.warning.or.kr</code>:</p>
+<pre><code>user@kali:~$ telnet 216.58.197.227 80
+Trying 216.58.197.227...
+Connected to 216.58.197.227.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>Asking <code>www.xhamster.com%00</code> will produce an error from the Google server, showing that the request was NOT censored!</p>
+<pre><code>user@kali:~$ telnet 216.58.197.227 80
+Trying 216.58.197.227...
+Connected to 216.58.197.227.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com%00
+
+HTTP/1.0 400 Bad Request
+Content-Length: 54
+Content-Type: text/html; charset=UTF-8
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+
+&lt;html&gt;&lt;title&gt;Error 400 (Bad Request)!!1&lt;/title&gt;&lt;/html&gt;Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>Ok, let's try on <code>Xhamster.com</code> website:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80  
+Trying 88.208.29.24...
+Connected to xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com%00
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.10.1
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.5
+Location: http://xhamster.com%00/
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>It works - I got a reply from the www.xhamster.com server.</p>
+<p>Let's try to add some random stuff with invalid HTTP request (e.g. Host: <code>%s:www.xhamster.com</code>):</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.18.30...
+Connected to xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: %s:www.xhamster.com
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.10.1
+Date: Fri, 01Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.5
+Location: http://xhamster.com/
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>It works too!</p>
+<p>Ok, doing Webdav will work too. The remote Xhamster.com webpage will reply to me:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80   
+Trying 88.208.29.24...
+Connected to xhamster.com.
+Escape character is '^]'.
+OPTIONS * HTTP/1.1
+Host: www.xhamster.com:80
+
+HTTP/1.1 400 Bad Request
+Server: nginx/1.10.1
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Content-Length: 173
+Connection: close
+
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;400 Bad Request&lt;/title&gt;&lt;/head&gt;
+&lt;body bgcolor="white"&gt;
+&lt;center&gt;&lt;h1&gt;400 Bad Request&lt;/h1&gt;&lt;/center&gt;
+&lt;hr&gt;&lt;center&gt;nginx/1.10.1&lt;/center&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>Using URIs will trigger the censorship system too:</p>
+<p>Fetching <code>http://xhamster.com/about.php</code> and <code>http://www.xhamster.com/</code> will show a 302 redirect to <code>http://www.warning.or.kr</code>:</p>
+<pre><code>user@kali:~$ telnet xhamster.com 80
+Trying 88.208.29.24...
+Connected to xhamster.com.
+Escape character is '^]'.
+GET http://xhamster.com/about.php HTTP/1.1
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>In this one, I ask <code>http://www.xhamster.com/</code> to a remote Google server (censored too):</p>
+<pre><code>user@kali:~$ telnet 216.58.214.131 80
+Trying 216.58.214.131...
+Connected to 216.58.214.131.
+Escape character is '^]'.
+GET http://www.xhamster.com/ HTTP/1.0
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>And minutes later, the same request will send me another reply:</p>
+<pre><code>user@kali:~$ telnet google.ru 80
+Trying 216.58.214.131...
+Connected to google.ru.
+Escape character is '^]'.
+GET http://www.xhamster.com/ HTTP/1.0
+HTTP/1.0 200 OK
+Content-type: text/html
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://www.warning.or.kr"
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=")
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.google.com");}
+else{
+c = a[0].split("?");
+location.replace(c[0]);
+}
+&lt;/script&gt;&lt;/html&gt;
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><a id="analysis"></a></p>
+<h3>3.4 Analysis</h3>
+<p>The censorship system analyzes <code>URI</code> and <code>Host</code> field to identify remote webserver and denies the access by providing a 302 redirection to <code>www.warning.co.kr</code> or by providing a webpage with a JavaScript redirection.</p>
+<p>HTTP/0.9 is not supported and bypasses the censorship system.</p>
+<p>HTTP/1.0 and HTTP/1.1 requests without Hosts or complete URI are not supported and thus bypass the censorship system by default.</p>
+<p>We have now questions:</p>
+<ul>
+<li>Will using HTTPS bypass the transparent proxy?</li>
+<li>Will using HTTP/2 with TLS bypass the transparent proxy?</li>
+<li>How about IPv6?</li>
+</ul>
+<p><a id="more-tricky-requests-with-http"></a></p>
+<h3>3.5 More tricky requests with HTTP</h3>
+<p><a id="custom-vhosts"></a></p>
+<h4>3.5.1 Custom Vhosts</h4>
+<p>I was lucky to find a website with a wildcard for the vhost: <code>Tube8.com</code> (NSFW - thank you tube8.com admins).</p>
+<p>Using random vhosts while contacting the <code>Tube8.com</code> servers will still provide me with <code>tube8.com</code> webpages.</p>
+<p>As shown below, <code>Tube8.com</code> is configured as a wildcard, and requesting this webpage with a custom vhost (<code>please-enlarge-my-bandwith</code>) will work:</p>
+<pre><code>user@kali:~$ telnet tube8.com 80
+Trying 31.192.112.104...
+Connected to tube8.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: please-enlarge-my-bandwith
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Connection: close
+Set-Cookie: t8segm=0; expires=Wed, 01-Oct-2016 00:00:00 GMT; Max-Age=604800; path=/
+Set-Cookie: rand1=1472020135; expires=Wed, 01-Oct-2016 00:00:00 GMT; Max-Age=3600; path=/; domain=tube8.com
+Set-Cookie: rand2=REMOVED; expires=Wed, 01-Oct-2016 00:00:00 GMT; Max-Age=3600; path=/; domain=tube8.com
+Set-Cookie: GA-BE-SID=REMOVED
+Vary: User-Agent, Accept-Encoding
+Rating: RTA-5042-1996-1400-1577-RTA
+Set-Cookie: RNLBSERVERID=ded1772; path=/
+
+&lt;!DOCTYPE html&gt;
+        &lt;html class="en" lang="en" id="lang_en"&gt;
+        &lt;head&gt;
+        &lt;script type="text/javascript"&gt;
+            var rta = document.createElement('script');
+            rta.type = 'text/javascript';
+
+
+[will send the complete index.html webpage]
+</code></pre>
+<p>Trying to <code>wget</code> the webpage (with <code>tube8.com</code> vhost) will forward to the <code>www.warning.or.kr</code> webpage, ruining all the fun:</p>
+<pre><code>user@kali:~$  wget http://www.tube8.com/
+--2016-10-01 XX:XX:XX--  http://www.tube8.com/
+Resolving www.tube8.com (www.tube8.com)... 31.192.112.104
+Connecting to www.tube8.com (www.tube8.com)|31.192.112.104|:80... connected.
+HTTP request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 XX:XX:XX--  http://www.warning.or.kr/
+Resolving www.warning.or.kr (www.warning.or.kr)... 121.189.57.82
+Connecting to www.warning.or.kr (www.warning.or.kr)|121.189.57.82|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'index.html.1'
+
+index.html.1100%[=====================================================================================================================&gt;]  10.34K  --.-KB/s    in 0.02s
+
+2016-10-01 XX:XX:XX (628 KB/s) - 'index.html.1' saved [10590/10590]
+
+user@kali:~$
+</code></pre>
+<p>Now by setting a custom vhost (<code>please-enlarge-my-bandwith.com</code>), we will bypass the censorship!</p>
+<pre><code>user@kali:~$ wget --header="Host: please-enlarge-my-bandwith.com" -O- http://www.tube8.com/      
+--2016-10-01 XX:XX:XX--  http://www.tube8.com/
+Resolving www.tube8.com (www.tube8.com)... 31.192.112.104
+Connecting to www.tube8.com (www.tube8.com)|31.192.112.104|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'STDOUT'
+
+&lt;!DOCTYPE html&gt;
+&lt;html class="en" lang="en" id="lang_en"&gt;
+&lt;head&gt;
+&lt;script type="text/javascript"&gt;
+var rta = document.createElement('script');
+rta.type = 'text/javascript';
+
+[...]
+</code></pre>
+<p>Censorship was bypassed and confirms the filtering occurs in the <code>Host</code> header if we are using HTTP/1.1.</p>
+<p><a id="http-requests-methods"></a></p>
+<h4>3.5.2 HTTP requests methods</h4>
+<p>Introducing a new banned website: <code>www.spankwire.com</code>.</p>
+<p>This website is censored.</p>
+<p>The reader will note that we only did <code>GET</code> requests in the previous sections. Now, from my tests, only <code>GET</code> and <code>POST</code> are filtered:</p>
+<p>These requests will be censored:</p>
+<p><code>GET</code> request with a <code>Host</code> header:</p>
+<pre><code>user@kali:~$ (echo GET / HTTP/1.0
+echo Host: www.spankwire.com
+echo ) | nc www.spankwire.com 80
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+</code></pre>
+<p><code>GET</code> request with a complete URI containing a censored website:</p>
+<pre><code>user@kali:~$ (echo GET http://www.spankwire.com/ HTTP/1.0
+echo ) | nc www.spankwire.com 80
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+</code></pre>
+<p><code>POST</code> requests are censored too.</p>
+<p>Fun facts: <code>X</code> <code>RANDOM</code> <code>PUT</code> <code>DELETE</code> <code>OPTIONS</code> <code>TRACE</code> <code>CONNECT</code> methods are NOT censored.</p>
+<p>A <code>X</code> method and a <code>RANDOM</code> method can work against Apache2 servers.</p>
+<p><code>X / HTTP/1.0</code> will provide us with a remote resource, being treated as <code>GET / HTTP/1.0</code> by Apache.</p>
+<p>Nginx doesn't like random HTTP methods.</p>
+<p>This can be used to bypass the censorship system as only <code>GET</code> and <code>POST</code> requests are analyzed.</p>
+<p><a id="having-fun-with-http-1.1-persistent-connection"></a></p>
+<h4>3.5.3 Having fun with HTTP/1.1 persistent connection</h4>
+<p>You can send requests to multiple resources within a TCP connection for a HTTP/1.1 connection. Let's use it to find a "race condition" :)</p>
+<pre><code>user@kali:~$ cat tcp-http11-persistent-test0.sh
+#!/bin/sh
+
+(
+# first request, asking information about /
+echo 'HEAD / HTTP/1.1'
+echo
+
+sleep 0.3 # will bypass the block
+
+
+# second request, getting /
+echo 'GET / HTTP/1.1'
+echo 'Host: www.tube8.com'
+echo
+) | nc www.tube8.com 80
+
+user@kali:~$
+</code></pre>
+<p>Surprisingly, this request will bypass the censorship:</p>
+<pre><code>user@kali:~$ sh tcp-http11-persistent-test0.sh
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Content-Length: 178
+Location: http://www.tube8.com/400.html
+Vary: User-Agent, Accept-Encoding
+Rating: RTA-5042-1996-1400-1577-RTA
+Set-Cookie: RNLBSERVERID=ded1165; path=/
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Transfer-Encoding: chunked
+Set-Cookie: t8segm=0; expires=Fri, 01-Oct-2017 00:00:00 GMT; Max-Age=604800; path=/
+Set-Cookie: rand1=0000000000; expires=Fri, 01-Oct-2017 00:00:00 GMT; Max-Age=3600; path=/; domain=tube8.com
+Set-Cookie: rand2=REMOVED; expires=Fri, 01-Oct-2017 00:00:00 GMT; Max-Age=3600; path=/; domain=tube8.com
+Set-Cookie: GA-BE-SID=REMOVED
+Vary: User-Agent, Accept-Encoding
+Rating: RTA-5042-1996-1400-1577-RTA
+Set-Cookie: RNLBSERVERID=ded1770; path=/
+
+1e50
+&lt;!DOCTYPE html&gt;
+&lt;html class="en" lang="en" id="lang_en"&gt;
+&lt;head&gt;
+&lt;script type="text/javascript"&gt;
+var rta = document.createElement('script');
+rta.type = 'text/javascript';
+rta.id = 'htScript';
+rta.async = true;
+rta.src = ('https:' == document.location.protocol ? 'https://' : 'http://')
+[...]
+</code></pre>
+<p>Analysis: If you don't wait enough after sending the first request and then you send a second request with the same HTTP connection, the second HTTP request will not be analyzed by the censorship system.</p>
+<p>I determined the sleep must be <code>&lt;= 0.3 second</code> to bypass the censorship. 0.4 second between HTTP requests with the same TCP connection will trigger the censorship system and the second request will be censored as shown below:</p>
+<pre><code>user@kali:~$ cat tcp-http11-persistent-test1.sh                        
+#!/bin/sh
+
+(
+# first request, asking information about /
+echo 'HEAD / HTTP/1.1'
+echo
+
+sleep 0.5 # will produce the block
+
+
+# second request, getting /
+echo 'GET / HTTP/1.1'
+echo 'Host: www.tube8.com'
+echo
+) | nc www.tube8.com 80
+user@kali:~$
+</code></pre>
+<p>Testing this code will trigger the censorship system on the <code>GET</code> method:</p>
+<pre><code>user@kali:~$ sh cat tcp-http11-persistent-test1.sh
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Content-Length: 178
+Location: http://www.tube8.com/400.html
+Vary: User-Agent, Accept-Encoding
+Rating: RTA-5042-1996-1400-1577-RTA
+Set-Cookie: RNLBSERVERID=ded1770; path=/
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+user@kali:~$
+</code></pre>
+<p><a id="http-vs-https"></a></p>
+<h4>3.5.4 HTTP vs. HTTPS</h4>
+<p>As there are no HTTPS websites in the Wikipedia list of censored websites, I had to use <a href="https://github.com/aredo/porn-site-list/blob/master/sites.json">https://github.com/aredo/porn-site-list/blob/master/sites.json</a> to find censored websites with different characteristics (HTTP and HTTPS). Apparently, a lot of adult websites don't provide HTTPS versions. <strong>Booooh</strong>.</p>
+<p>Only a few adult websites are using HTTPS. <code>Google.com</code> helped me find a candidate supporting HTTP and HTTPS: <code>www.tnaflix.com</code> (heavily NSFW, found with "porn using https").</p>
+<p><code>www.tnaflix.com</code> is censored by default. It will redirect to <code>http://www.warning.or.kr/</code>:</p>
+<pre><code>user@kali:~$ wget http://www.tnaflix.com/
+--2016-10-01 XX:XX:XX--  http://www.tnaflix.com/
+Resolving www.tnaflix.com (www.tnaflix.com)... 108.61.250.17
+Connecting to www.tnaflix.com (www.tnaflix.com)|108.61.250.17|:80... connected.
+HTTP request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01XX:XX:XX--  http://www.warning.or.kr/
+Resolving www.warning.or.kr (www.warning.or.kr)... 121.189.57.82
+Connecting to www.warning.or.kr (www.warning.or.kr)|121.189.57.82|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'index.html.6'
+
+index.html.6                                         100%[=====================================================================================================================&gt;]  10.34K  --.-KB/s    in 0.01s
+
+2016-10-01 XX:XX:XX (1002 KB/s) - 'index.html.6' saved [10590/10590]
+user@kali:~$
+</code></pre>
+<p>Now the HTTPS version will provide the original 179KB of the webpage:</p>
+<pre><code>user@kali:~$ wget https://www.tnaflix.com/
+--2016-10-01 XX:XX:XX--  https://www.tnaflix.com/
+Resolving www.tnaflix.com (www.tnaflix.com)... 108.61.250.17
+Connecting to www.tnaflix.com (www.tnaflix.com)|108.61.250.17|:443...connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [text/html]
+Saving to: 'index.html.4'
+
+index.html.4                                             [    &lt;=&gt;] 180.17K  97.7KB/s    in 1.8s
+
+2016-10-01 XX:XX:XX (97.7 KB/s) - 'index.html.4' saved [184492]
+user@kali:~$
+</code></pre>
+<p><strong>Using HTTPS will completely bypass the "Warning webpage" from South Korean Agency, sus, bypassing the censorship.</strong></p>
+<p><a id="random-behaviors-provided-by-the-censorship-system"></a></p>
+<h4>3.5.5 Random behaviors provided by the censorship system</h4>
+<p>Note that there are different behaviors with the censorship.
+For some websites blocked in HTTP, sometimes they can be browsed and sometimes they are blocked.
+It shows there is a BIG problem about transparent proxies (and it added complexity for me to debug/understand technologies involved). To demonstrate this:</p>
+<p>Access OK:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.10.1
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.5
+Location: http://xhamster.com/
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>Access blocked seconds later:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+
+HTTP/1.0 302 Redirect
+Location: http://www.warning.or.kr
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p>Access OK seconds later:</p>
+<pre><code>user@kali:~$ telnet www.xhamster.com 80
+Trying 88.208.29.24...
+Connected to www.xhamster.com.
+Escape character is '^]'.
+GET / HTTP/1.0
+Host: www.xhamster.com
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.10.1
+Date: Fri, 01 Oct 2016 00:00:10 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.5
+Location: http://xhamster.com/
+
+Connection closed by foreign host.
+user@kali:~$
+</code></pre>
+<p><a id="cdn-for-content"></a></p>
+<h4>3.5.6 CDN for content (VOD/images)</h4>
+<p>A lot of censored websites are using CDN to deliver online videos and images. These CDNs hosts don't seem to be censored even when clear text HTTP is being used.</p>
+<p>The domains used in CDNs are not blacklisted by transparent proxies but by main domain names (www.stuff.tld, subdomain.stuff.tld).</p>
+<p><a id="http2-for-http-uris"></a></p>
+<h4>3.5.7 HTTP2 for http URIs</h4>
+<p>I could not find censored websites supporting HTTP2 without HTTPS, so I was not able to test. However, considering how primitive the transparent proxies are, I'm sure it is not blocked.</p>
+<p>But the lack of browser supporting this option limits the use of this technique to bypass the censorship:</p>
+<blockquote>
+<p>However, some implementations have stated that they will only support HTTP/2 when it is used over an encrypted connection, and currently no browser supports HTTP/2 unencrypted.</p>
+<p>-- <cite><a href="https://http2.github.io/faq/#does-http2-require-encryption">https://http2.github.io/faq/#does-http2-require-encryption</a></cite></p>
+</blockquote>
+<p><a id="websockets"></a></p>
+<h4>3.5.8 WebSockets</h4>
+<p>I could not find censored websites supporting Websockets but, considering how primitive the transparent proxies are, there is a high probability that it is not censored.</p>
+<p><a id="http2-for-https-uris"></a></p>
+<h4>3.5.9 HTTP2 for https URIs</h4>
+<p>As already shown, HTTPS websites are not censored. HTTPS with or without HTTP2 will allow to bypass the censorship.</p>
+<p>HTTP/1.1 in clear text with the HTTP/2 <code>upgrade</code> header will be triggered by the censorship system (because of the <code>Host</code> header):</p>
+<pre><code>GET / HTTP/1.1
+Host: server.example.com
+Connection: Upgrade, HTTP2-Settings
+Upgrade: h2c
+HTTP2-Settings: &lt;base64url encoding of HTTP/2 SETTINGS payload&gt;
+</code></pre>
+<p><a id="readline-vs-buffered-http-requests"></a></p>
+<h4>3.5.10 Readline vs. buffered HTTP requests</h4>
+<p>From my tests, I observed different behaviors when the request is sent line by line and when it's buffered and sent all together.
+<strong>This is a rare occurrence and I can't understand why</strong>.</p>
+<p>Sending this request line by line on KT network will work (but not on SKT):</p>
+<pre><code>user@kali:~$ cat /dev/shm/req.txt 
+GET / HTTP/1.1
+User-Agent: Wget/1.18 (linux-gnu)
+Accept: */*
+Accept-Encoding: identity
+Host: www.youjizz.com
+Connection: Keep-Alive
+user@kali:~$
+</code></pre>
+<p>Using readline (netcat), the connection will be blocked:</p>
+<pre><code>user@kali:~$ cat /dev/shm/req.txt| nc www.youjizz.com 80
+HTTP/1.0 200 OK
+Content-type: text/html
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+user@kali:~$
+</code></pre>
+<p>Using buffered HTTP requests (with telnet) - the connection will be uncensored:</p>
+<pre><code>user@kali:~$ telnet www.youjizz.com 80   
+Trying 31.192.122.224...
+Connected to www.youjizz.com.
+Escape character is '^]'.
+GET / HTTP/1.1
+User-Agent: Wget/1.18 (linux-gnu)
+Accept: */*
+Accept-Encoding: identity
+Host: www.youjizz.com
+Connection: Keep-Alive
+
+HTTP/1.1 200 OK
+Server: nginx/1.9.5
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Transfer-Encoding: chunked
+Connection: close
+X-Powered-By: PHP/5.2.17
+Set-Cookie: PHPSESSID=REMOVED; path=/
+Expires: Thu, 01 Oct 1981 00:00:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Set-Cookie: RNLBSERVERID=ded1416; path=/
+
+e69
+
+&lt;!DOCTYPE html&gt;
+&lt;html xmlns="http://www.w3.org/1999/xhtml"&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+&lt;meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" /&gt;
+&lt;meta name="KEYWORDS" content="porn tube,you porn,sex tube,porntube,youporn,sextube,tube porn,porno tube,sex,free sex,mobile porn,iphone porn,phone porn,free porn videos,free sex movies,vids,adult,movie,amateur porn,anal sex,big dicks,big tits,blowjob,creampie,cumshot,hardcore,teen porn,youjizz,youjizz.com,nude teens,teen sex,hardcore sex,xxx adult video,porn videos,hardcore video,porn movies,teen hardcore,milf hardcore,sex movies,porn links,sex movies,all porn"/&gt;
+&lt;meta name="DESCRIPTION" content="Youjizz Porn Tube! Free porn movies and sex videos on your desktop or mobile phone."/&gt;
+[...]
+</code></pre>
+<p>The same result with netcat - the connection will be uncensored:</p>
+<pre><code>user@kali:~$ nc www.youjizz.com 80   
+Trying 31.192.122.224...
+Connected to www.youjizz.com.
+Escape character is '^]'.
+GET / HTTP/1.1
+User-Agent: Wget/1.18 (linux-gnu)
+Accept: */*
+Accept-Encoding: identity
+Host: www.youjizz.com
+Connection: Keep-Alive
+
+HTTP/1.1 200 OK
+Server: nginx/1.9.5
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html
+Transfer-Encoding: chunked
+Connection: close
+X-Powered-By: PHP/5.2.17
+Set-Cookie: PHPSESSID=REMOVED; path=/
+Expires: Thu, 01Oct 1981 00:00:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Set-Cookie: RNLBSERVERID=ded1416; path=/
+
+e69
+
+&lt;!DOCTYPE html&gt;
+&lt;html xmlns="http://www.w3.org/1999/xhtml"&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+&lt;meta name="RATING" content="RTA-5042-1996-1400-1577-RTA" /&gt;
+&lt;meta name="KEYWORDS" content="porn tube,you porn,sex tube,porntube,youporn,sextube,tube porn,porno tube,sex,free sex,mobile porn,iphone porn,phone porn,free porn videos,free sex movies,vids,adult,movie,amateur porn,anal sex,big dicks,big tits,blowjob,creampie,cumshot,hardcore,teen porn,youjizz,youjizz.com,nude teens,teen sex,hardcore sex,xxx adult video,porn videos,hardcore video,porn movies,teen hardcore,milf hardcore,sex movies,porn links,sex movies,all porn"/&gt;
+&lt;meta name="DESCRIPTION" content="Youjizz Porn Tube! Free porn movies and sex videos on your desktop or mobile phone."/&gt;
+</code></pre>
+<p>From nc manpage:</p>
+<blockquote>
+<p>Data from the network connection is always delivered to standard output as efficiently as possible, using large 8K reads and writes.  Standard input is normally sent to the net in the same way, but the -i switch specifies an "interval time" which slows this down considerably.  Standard input is still read in large batches, but netcat then tries to find where line breaks exist and sends one line every interval time.  Note that if standard input is a terminal, data is already read line by line, so unless you make the -i interval rather long, what you type will go out at a fairly normal rate.  -i is really designed for use when you want to "measure out" what is read from files or pipes.</p>
+<p>-- <code>man 1 nc</code></p>
+</blockquote>
+<p>A basic test is provided with a second website:</p>
+<pre><code>user@kali:~$ cat buffered-request.sh 
+echo GET / HTTP/1.0
+echo Host: www.xhamster.com
+echo
+user@kali:~$
+</code></pre>
+<p>Using <code>nc</code> with a pipe will have my request censored:</p>
+<pre><code>user@kali:~$ sh buffered-request.sh | nc www.xhamster.com 80
+
+HTTP/1.0 200 OK
+Content-type: text/html
+
+&lt;html&gt;&lt;script&gt;
+var arg = "http://warning.or.kr";
+var str = new Array();
+str = arg.split("&amp;", 1);
+var a = new Array();
+a = str[0].split("=");
+var b = Math.floor(a[1] / 100);
+var c = new Array();
+if(b == 10){location.replace("http://www.naver.com");}
+else if(b == 20){location.replace("http://www.daum.net");}
+else if(b == 30){location.replace("http://www.paran.com");}
+else{ c = a[0].split("?");
+location.replace(c[0]);}
+&lt;/script&gt;&lt;/html&gt;
+</code></pre>
+<p>Using <code>nc</code> within a shell will bypass the censorship:</p>
+<pre><code>user@kali:~$ nc www.xhamster.com 80
+GET / HTTP/1.0
+Host: www.xhamster.com
+
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 01 Oct 2016 00:00:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+Location: http://xhamster.com/
+</code></pre>
+<p><strong>Analysis</strong>: if you send HTTP requests line by line, you "CAN" bypass the censorship system. Unfortunately, browsers are sending requests in a big buffer. Note this is specific to the KT ISP. I think they are using a specific version of the censorship cluster, as the behavior is inconsistent with the other 2 ISPs.</p>
+<p><a id="http-proxies"></a></p>
+<h2>4. Using HTTP proxies</h2>
+<p>Using <a href="http://www.samair.ru/">samair.ru</a> services and proxies in private VPS, I determined that all the TCP ports are being watched.</p>
+<p>When a proxy with port <code>80/tcp</code> is used, the request is blocked:</p>
+<pre><code>user@kali:~$ http_proxy=http://115.159.XXX.XXX:80/ wget http://www.tube8.com
+--2016-10-01 00:00:00--  http://www.tube8.com/
+Connecting to 115.159.XXX.XXX:80... connected.
+Proxy request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 00:00:00--  http://www.warning.or.kr/
+Connecting to 115.159.217.30:80... connected.
+[...]
+</code></pre>
+<p>When proxy with port <code>2222/tcp</code> is used, the request is blocked:</p>
+<pre><code>user@kali:~$ http_proxy='http://9X.XX.XX.XX:2222/' wget http://www.redtube.com/
+--2016-10-01 00:00:00--  http://www.redtube.com/
+Connecting to 9X.XX.XX.XX:2222... connected.
+Proxy request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 00:00:00--  http://www.warning.or.kr/
+Connecting to 9X.XX.XX.XX:2222... connected.
+Proxy request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'index.html.2'
+
+index.html.2        100%[===================&gt;]  10.34K  16.8KB/s    in 0.6s
+
+2016-10-01 00:00:00 (16.8 KB/s) - 'index.html.2' saved [10590/10590]
+
+user@kali:~$
+</code></pre>
+<p>When a proxy with port <code>3128/tcp</code> is used, the request is blocked too:</p>
+<pre><code>user@kali:~$ http_proxy='http://9X.XX.XX.XX:3128/' wget http://www.tube8.com
+--2016-10-01 XX:XX:XX--  http://www.tube8.com/
+Connecting to 9X.XX.XX.XX:3128... connected.
+Proxy request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 XX:XX:XX--  http://www.warning.or.kr/
+Connecting to 9X.XX.XX.XX:3128... connected.
+Proxy request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'index.html.1'
+
+index.html.1        100%[===================&gt;]  10.34K  20.1KB/s    in 0.5s
+
+2016-10-01 XX:XX:XX (20.1 KB/s) - 'index.html.1' saved [10590/10590]
+
+user@kali:~$
+</code></pre>
+<p>When a proxy with port <code>54182/tcp</code> is used, the request is blocked too:</p>
+<pre><code>user@kali:~$ http_proxy='http://9X.XX.XX.XX:54182/' wget http://www.tube8.com
+--2016-10-01 XX:XX:XX--  http://www.tube8.com/
+Connecting to 9X.XX.XX.XX:54182... connected.
+Proxy request sent, awaiting response... 302 Redirect
+Location: http://www.warning.or.kr [following]
+--2016-10-01 00:00:00--  http://www.warning.or.kr/
+Connecting to 9X.XX.XX.XX:54182... connected.
+Proxy request sent, awaiting response... 200 OK
+Length: 10590 (10K) [text/html]
+Saving to: 'index.html.1'
+
+index.html.1        100%[===================&gt;]  10.34K  20.1KB/s    in 0.5s
+
+2016-10-01 XX:XX:XX (20.1 KB/s) - 'index.html.1' saved [10590/10590]
+
+user@kali:~$
+</code></pre>
+<p><strong>Analysis</strong>: the censorship system is analyzing ALL the HTTP packets.</p>
+<p><a id="ipv6"></a></p>
+<h2>5. IPv6</h2>
+<p>Unfortunately the censorship system with IPv6 packets cannot be tested as it is impossible to get an IPv6 in South Korea :(</p>
+<p><a id="bypassing-the-filter"></a></p>
+<h2>6. Bypassing the filter</h2>
+<p>I will show different measures that do not require a VPN to bypass the censorship.</p>
+<p><a id="bypassing-by-using-a-different-vhost"></a></p>
+<h3>6.1. By using a different vhost (easy-PoC)</h3>
+<p>This is the easiest solution but requires a wildcard configuration in the remote http website you want to visit.</p>
+<p>As seen before, <code>www.tube8.com</code> webservers accept all vhosts to serve <code>www.tube8.com</code> webpages.</p>
+<p>We get the IP of <code>www.tube8.com</code>:</p>
+<pre><code>user@kali:~$ host www.tube8.com
+www.tube8.com has address 31.192.112.104
+user@kali:~$
+</code></pre>
+<p>By simply adding the IP to the <code>/etc/hosts</code> file on Linux, you will associate a new host:</p>
+<pre><code>root@kali:~# echo "31.192.112.104 this.is.not.tube8" &gt;&gt; /etc/hosts
+</code></pre>
+<p>By visiting <code>http://this.is.not.tube8/</code>, you will have access to the <code>tube8.com</code> website evading the censorship (the resulting image was censored by me):</p>
+<p><img alt="" src="images/2016-censorship-screenshot-this.is.not.tube8.png" /></p>
+<p>You can also use a proxy that rewrites all the requests.</p>
+<p>We will code a proxy for the next solutions only :)</p>
+<p><a id="bypassing-by-using-http-persistent-connection-head-then-get"></a></p>
+<h3>6.2. By using HTTP persistent connection: HEAD then GET</h3>
+<p>The censorship only works on the first HTTP request when using a HTTP/1.1 persistent connection as long as the second request is sent fast enough (&lt; 0.3s). If you use it within 0.3s, you can force the remote transparent proxies to skip the verification.</p>
+<p>From my tests, doing a HTTP/1.1 keep-alive request with 1 <code>GET</code> then waiting less than 0.3s and asking a new <code>GET</code> will bypass the censorship. A delay more than 0.3s between the requests will force a verification by the transparent proxies. Doing 2x <code>GET</code> for each resource is too expensive in bandwidth term. We will prefer using a <code>HEAD</code> instead of the first <code>GET</code> request (you can use a <code>PUT</code> or whatever you want).</p>
+<p>By exploiting this fact it is very easy to bypass censorship - see a HTTP proxy as provided below:</p>
+<ul>
+<li>Step 1: client sends a request to the proxy: <code>GET http://google.com/ HTTP/1.1</code></li>
+<li>Step 2: the proxy sends a request to the remote HTTP server containing below:</li>
+</ul>
+<pre>
+HEAD / HTTP/1.1
+Host: hacktheplanet
+
+GET http://google.com/ HTTP/1.1\r\n\r\n
+</pre>
+
+<ul>
+<li>Step 3: the proxy sends to the client the answer of the second request (<code>GET http://google.com/ HTTP/1.1</code>) from the HTTP/1.1 keep-alive session, skipping the answer of the <code>HEAD / HTTP/1.1</code> request.</li>
+</ul>
+<p>The bypass is complete but requires sending a <code>HEAD</code> for each <code>GET</code>.</p>
+<p>Example:</p>
+<p>Someone wants to visit <code>www.xhamster.com</code>:</p>
+<pre><code>user@kali:~$ http_proxy=http://127.0.0.1:8081/ firefox http://www.xhamster.com/ &amp;!
+</code></pre>
+<p>The proxy logs will show you the requests of the client:</p>
+<pre><code>user@kali:~$ ./proxy-head-then-get.py
+Starting HEAD-then-GET PoC Proxy Server on 127.0.0.1 : 8081
+Request to http://www.xhamster.com/
+Request to http://xhamster.com/
+Request to http://static-ec.xhcdn.com/id93/css/main2.css
+Request to Request to http://static-ec.xhcdn.com/id277/js/main2.jshttp://static-ec.xhcdn.com/js/jquery-1.9.1.o.min.js
+Request to Request to Request to Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+http://static-ec.xhcdn.com/id2/js/ads.js
+http://static-ec.xhcdn.com/id16/js/track.min.jsRequest to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+http://cdn.trafficstars.com/sdk/v1/p.js
+Request to http://static-ec.xhcdn.com/images/favicon/favicon-128x128.png
+Request to http://ocsp.digicert.com/
+Request to http://static-ec.xhcdn.com/id16/js/track.min.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/id93/css/main2.css
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://xhamster.com/
+Request to http://static-ec.xhcdn.com/id93/css/main2.css
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id2/js/ads.js
+Request to http://static-ec.xhcdn.com/id16/js/track.min.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/js/jquery-1.9.1.o.min.js
+Request to http://static-ec.xhcdn.com/id277/js/main2.js
+Request to http://cdn.trafficstars.com/sdk/v1/p.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to Request to http://static-ec.xhcdn.com/images/flag/v3/KR.png
+http://txh.xhcdn.com/t/685/9_6478685.jpg
+Request to Request tohttp://txh.xhcdn.com/t/050/9_6478050.jpg
+http://static-ec.xhcdn.com/images/tpl2/rta.png
+Request toRequest to http://txh.xhcdn.com/t/482/1_6478482.jpg
+Request to http://txh.xhcdn.com/t/287/1_6478287.jpg
+Request to http://txh.xhcdn.com/t/685/9_6478685.jpg
+^CTraceback (most recent call last):
+  File "./proxy-head-then-get.py", line 95, in &lt;module&gt;
+main()
+  File "./proxy-head-then-get.py", line 45, in main
+conn, client_addr = s.accept()
+  File "/usr/lib/python2.7/socket.py", line 206, in accept
+sock, addr = self._sock.accept()
+KeyboardInterrupt
+user@kali:~$
+</code></pre>
+<p>This proxy will successfully bypass the censorship system. The user has a full access to the censored website.</p>
+<p>Example with <code>www.youporn.com</code>:</p>
+<p><img alt="" src="images/2016-censorship-screenshot-head-then-get.png" /></p>
+<p>You can fetch this PoC at <a href="https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-head-then-get.py">https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-head-then-get.py</a>.</p>
+<p><a id="bypassing-by-using-http-persistent-connection-get-then-get"></a></p>
+<h3>6.3. By using HTTP persistent connection: GET then GET</h3>
+<p>As seen in the 6.2 section, you can use multiple HTTP requests inside a HTTP connection.</p>
+<p>To avoid using too much bandwidth asking the remote resource twice, we can do the following:</p>
+<ul>
+<li>
+<p>Step 1: client sends a request to the proxy: <code>GET http://google.com/ HTTP/1.1</code></p>
+</li>
+<li>
+<p>Step 2: the proxy sends a request to the remote HTTP server containing below:</p>
+</li>
+</ul>
+<pre>
+GET /random-404-blabla HTTP/1.1
+Host: hacktheplanet
+
+GET http://google.com/ HTTP/1.1\r\n\r\n
+</pre>
+
+<ul>
+<li>Step 3: the proxy sends the answer of the second request (<code>GET http://google.com/ HTTP/1.1</code>) from the HTTP/1.1 keep-alive session, skipping the answer of the first <code>GET</code> request.</li>
+</ul>
+<p>This allows to completely bypass the censorship.</p>
+<p>A PoC (proxy) is provided and works as long as the size of the 404 page is small.</p>
+<p>The PoC in action while the user wants to visit a censored webpage (using the 127.0.0.1:8082) proxy is below:</p>
+<pre><code>user@kali:~$ http_proxy=http://127.0.0.1:8082/ ./proxy-get-then-get.py
+Starting GET-then-GET PoC Proxy Server on 127.0.0.1 : 8082
+Request to http://xhamster.com/
+Request to http://static-ec.xhcdn.com/id93/css/main2.css
+Request to Request toRequest to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+ http://static-ec.xhcdn.com/id277/js/main2.jsRequest to http://static-ec.xhcdn.com/id2/js/ads.js
+http://static-ec.xhcdn.com/js/jquery-1.9.1.o.min.js
+
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+ Request to http://static-ec.xhcdn.com/id16/js/track.min.js
+Request to http://static-ec.xhcdn.com/images/favicon/favicon-128x128.png
+Unhandled exception in thread started by &lt;function proxy_thread at 0x7f0e80592140&gt;
+Traceback (most recent call last):
+  File "./proxy-get-then-get.py", line 54, in proxy_thread
+url        = first_line.split(' ')[1]
+IndexError: list index out of range
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id2/js/ads.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://cdn.trafficstars.com/sdk/v1/p.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id2/js/ads.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id16/js/track.min.js
+Request to http://static-ec.xhcdn.com/images/favicon/favicon-128x128.png
+Unhandled exception in thread started by &lt;function proxy_thread at 0x7f0e80592140&gt;
+Traceback (most recent call last):
+  File "./proxy-get-then-get.py", line 54, in proxy_thread
+url        = first_line.split(' ')[1]
+IndexError: list index out of range
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id2/js/ads.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://cdn.trafficstars.com/sdk/v1/p.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/id3/js/private/private.min.js
+Request to http://static-ec.xhcdn.com/id2/js/ads.js
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://clients1.google.com/ocsp
+Request to http://static-ec.xhcdn.com/id4/js/ablockhint.js
+Request to http://static-ec.xhcdn.com/images/snapchat/snapchat-image.png
+Request to http://txh.xhcdn.com/t/480/7_6062480.jpg
+ Request to http://static-ec.xhcdn.com/images/tpl2/rta.png
+[...]
+</code></pre>
+<p>This proxy will successfully bypass the censorship system. The user has a full access to the censored website.</p>
+<p>You can fetch this PoC at <a href="https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-get-then-get.py">https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-get-then-get.py</a>.</p>
+<p><a id="bypassing-by-lf-instead-of-crlf"></a></p>
+<h3>6.4. By using \n instead of \r\n in the HTTP requests (unreliable method)</h3>
+<p>The censorship engine on the edge of KT network only supports \r\n in HTTP requests.</p>
+<p>By using <code>\n</code> inside your http requests instead of <code>\r\n</code>, you will completely bypass the censorship system.</p>
+<p>From <a href="https://www.ietf.org/rfc/rfc2616.txt">RFC2616</a>:</p>
+<blockquote>
+<p>CR = &lt;US-ASCII CR, carriage return (13)&gt;</p>
+<p>LF = &lt;US-ASCII LF, linefeed (10)&gt;</p>
+<p>HTTP/1.1 defines the sequence CR LF as the end-of-line marker for all protocol elements except the entity-body</p>
+</blockquote>
+<p>However, there is a "tolerance provision" in Section 19.3 in <a href="https://www.ietf.org/rfc/rfc2616.txt">RFC2616</a>:</p>
+<blockquote>
+<p>The line terminator for message-header fields is the sequence CRLF. However, we recommend that applications, when parsing such headers, recognize a single LF as a line terminator and ignore the leading CR.</p>
+</blockquote>
+<p>The censorship system located on the edge of KT network only supports <code>\r\n</code>, so using <code>\n</code> will bypass the censorship and allow access to servers accepting <code>\n</code> (like 100% of the available HTTP servers).</p>
+<p>A proxy is provided:</p>
+<pre><code>user@kali:~$ python proxy-crlf-to-lf.py
+Starting CRLF-to-LF PoC Proxy Server on 127.0.0.1 : 8080
+Works using KT
+Request to http://localhost/
+</code></pre>
+<p>Using <code>127.0.0.1:8080</code> as a proxy will rewrite all the HTTP requests without having to configure anything.</p>
+<p>This method is unreliable and may not work sometimes. I bet I'm using a specific cluster of transparent proxies that are very HTTP-compliant.</p>
+<p>Note to the developers of the transparent proxies: seriously guys? Only accepting <code>\r\n</code> as a valid method and allowing <code>\n</code> to bypass all the filters? This smells like a nice backdoor feature.</p>
+<p>You can fetch this PoC at <a href="https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-crlf-to-lf.py">https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-crlf-to-lf.py</a>.</p>
+<p><a id="bypassing-by-using-http-invalid-methods"></a></p>
+<h3>6.5. By using HTTP invalid methods</h3>
+<p>As you may know, there are a lot of HTTP methods: <code>PUT</code>, <code>GET</code>, <code>POST</code>, <code>TRACE</code>...</p>
+<p>You can define an <code>X</code> method instead of <code>GET</code>. Apache2 is very permissive and will serve the webpages even if it's not a valid method. Nginx will refuse invalid methods.</p>
+<p>A PoC is provided and will rewrite all the <code>GET</code> into a <code>X</code> producing these requests:</p>
+<pre><code>X / HTTP/1.0
+Host: www.website.com
+</code></pre>
+<p>The problem is that CDN used for JavaScript/images will refuse the <code>X</code> method and you will see borked websites.</p>
+<p>Using the list provided at <a href="https://github.com/aredo/porn-site-list/blob/master/sites.json">https://github.com/aredo/porn-site-list/blob/master/sites.json</a>, I determined 50% of the websites are reachable using this technique.</p>
+<p>You can fetch this PoC at <a href="https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-X-method.py">https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-X-method.py</a>.</p>
+<p><a id="bypassing-by-sending-http-requests-line-by-line"></a></p>
+<h3>6.6. By sending HTTP requests line by line</h3>
+<p>As <a href="#readline-vs-buffered-http-requests">demonstrated above in the section 3.5.10</a>, if you send requests line by line using the KT network, you will bypass the censorship system.</p>
+<p>A proxy is provided in the PoC and will modify the requests.</p>
+<p>The important part is:</p>
+<pre><code>s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+s.connect((webserver, 80))
+
+for req in request.split('\n'):
+s.send(req + '\n')
+</code></pre>
+<p>It is not very performance-oriented but it will bypass the censorship system :)</p>
+<p>You can fetch this PoC at <a href="https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-readline.py">https://github.com/pierrekim/censorship-in-south-korea/blob/master/proxy-readline.py</a>.</p>
+<p><a id="bypassing-by-using-method-only-if-there-is-a-censorship"></a></p>
+<h3>6.7: By using a method ONLY if there is a censorship</h3>
+<p>When requesting a remote webpage, by observing the answer, we can determine whether a website is censored or not (does the reply contains a 302 redirection to <code>www.warning.or.kr</code> or does it contain the string <code>www.warning.or.kr</code> ?).</p>
+<p>If it is censored, the proxy can try consecutively multiple methods (see 6.1 to 6.6) to fetch the resource and, if the censorship is bypassed, to serve it to the client. The proxy can have a hash list corresponding to blocked websites and the working methods to bypass the censorship system.</p>
+<p>As CDN are not blocked, this method is very effective. Writing a PoC is left as an exercise for the reader.</p>
+<p><a id="bypassing-by-using-a-vpn"></a></p>
+<h3>6.8: By using a VPN</h3>
+<p>The censorship system does not analyze VPN connections. You can put your traffic inside encrypted connection to bypass it.</p>
+<p>This is the easiest solution but can be costly instead of the free ones I listed above.</p>
+<p><a id="bypassing-by-using-https-websites-proxies"></a></p>
+<h3>6.9: By using HTTPS websites/proxies</h3>
+<p>The censorship system does not support HTTPS. You can put your traffic inside encrypted HTTPS connections to bypass it with a remote https proxy or just by accessing to remote HTTPS websites.</p>
+<p><a id="conclusion"></a></p>
+<h2>7. Conclusion</h2>
+<p>The Internet censorship used in South Korea is rudimentary from a technical point of view. It only analyzes <code>Host</code> headers in every request and absolute URLs in old HTTP versions. It doesn't block VPN, HTTPS and HTTP2 websites but analyzes all the TCP connections. It can be bypassed very easily compared to the Chinese wall and is not compatible to a very-old protocol or new-protocol. I discovered no DNS poisoning in my tests.</p>
+<p>For some sites, a browser plugin rewriting the <code>Host</code> field will even allow to bypass the censorship (as long as the websites provide webpages for the default/random virtual hosts).</p>
+<p>The government is still analyzing at least the headers of all HTTP requests and is comparing the <code>Host</code> header and the <code>URI</code> with a blacklist of domains.</p>
+<p>Considering all the efforts that the government of South Korea is making in censorship <a href="https://en.wikipedia.org/wiki/Censorship_in_South_Korea">from a legal point of view</a>, I'm very surprised at the lack of technologies involved - we are speaking about one of the best connected countries in the world with gigabit connections everywhere (although their <a href="https://pierrekim.github.io/blog/2015-07-01-poc-with-RCE-against-127-iptime-router-models.html">routers</a> <a href="https://pierrekim.github.io/blog/2015-05-05-127-iptime-routers-wifiaps-modems-firewalls-models-vulnerable-with-RCE-with-root-privileges.html">are</a> <a href="https://pierrekim.github.io/blog/2015-07-06-127-iptime-router-models-unauthenticated-RCE-with-DHCP.html">massively</a> <a href="https://pierrekim.github.io/blog/2015-07-27-172-iptime-router-models-unauthenticated-RCE-with-DHCP-updated.html">hackable</a>). A 12 year-old boy can bypass this borked censorship system in 5 minutes. We see minimal best effort to block websites, showing that the government wants users to think they are controlling the Internet but doesn't have budget to apply the censorship. We see transparent HTTP proxies with different behaviors (accepting and sometimes blocking for the same webpage), which means deployment problems and inconsistencies in configurations of the blocking solution.</p>
+<p>The current solution is not working and, because of its inefficiency dealing with encrypted websites or new protocols, in my view, will be replaced by massive nullroutes of targeted websites. As soon as major adult websites will switch to SSL/TLS, the current censorship system will become completely ineffective.</p>
+<p>Note that South Korean social medias (Naver, Daum, ...) appear to be still very monitored. However, using social medias not located in South Korea seems to bypass this censorship. Social medias are not included in the scope of this technical analysis.</p>
+<p>Search engines are massively censored as well: Naver.com (first search engine in South Korea) and Google.co.kr will happily return 0 result about certain terms or will ask you information to release results (your name, your phone number, your birthday) saying that: "<em>Harmful results for youth have been excluded. Users being more that 19 year-old can view all the results through the adult authentication.</em>"</p>
+<p><a id="credits-and-greeting"></a></p>
+<h2>8. Credits and Greetings</h2>
+<p>I would like to thank my wife who endures my time-consuming passions (maybe craziness is the correct term).</p>
+<p>I would like to thank A, J and T (you know who you are :)</p>
+<p>A new generation is coming, we have duties to transfer knowledge in order to show how things work and how to break them. Our freedom depends on it.</p>
+<p><a id="personal-note-to-www.warning.or.kr-administrator"></a></p>
+<h2>9. Personal note to http://www.warning.or.kr/ administrator</h2>
+<p>1/ Please don't use an image containing a lot of Korean text to explain what is going on. Using <a href="http://warning.or.kr/img/img.png">http://warning.or.kr/img/img.png</a> is a bad idea for beginners in Hangeul.</p>
+<p>2/ Don't use JavaScript to disable the right click - we are not in the 2000s anymore. Seriously?!?</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">&lt;</span>script language<span style="color: #666666">=</span><span style="color: #BA2121">&quot;JavaScript&quot;</span><span style="color: #666666">&gt;</span>
+<span style="color: #408080; font-style: italic">&lt;!--</span>
+<span style="color: #008000; font-weight: bold">function</span> click()
+{
+<span style="color: #008000; font-weight: bold">if</span> (event.button <span style="color: #666666">!=</span> <span style="color: #666666">1</span>) {  } 
+}
+<span style="color: #008000">document</span>.onmousedown<span style="color: #666666">=</span>click;
+<span style="color: #666666">--&gt;</span>
+<span style="color: #666666">&lt;</span><span style="border: 1px solid #FF0000">/script&gt;</span>
+</pre></div>
+
+<p>3/ Please provide an International/English version for non-Korean speaker/Hangeul-beginner.</p>
+<p><a id="license"></a></p>
+<h2>10. License</h2>
+<p>This research is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>Multiple vulnerabilities found in the Dlink DWR-932B (backdoor, backdoor accounts, weak WPS, RCE ...)</title>
         <link href="2016-09-28-dlink-dwr-932b-lte-routers-vulnerabilities.html"/>
         <content type="html"><h2>Product Description</h2>
