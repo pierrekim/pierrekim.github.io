@@ -1872,7 +1872,7 @@ int       rce(char    *argv,
   return (0);
 }
 
-Alternatively, you can fetch it at [https://pierrekim.github.io/advisories/expl-goahead-camera.c](https://pierrekim.github.io/advisories/expl-goahead-camera.c).
+Alternatively, you can fetch it at https://pierrekim.github.io/advisories/expl-goahead-camera.c.
 
 
 
@@ -2271,7 +2271,7 @@ https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html
 This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
------BEGIN PGP SIGNATURE-----
+- -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
 iQIcBAEBCgAGBQJYv2FRAAoJEMQ+Dtp9ky28u0wP+gKZN/rFYe779jhqKbgD8QZZ
@@ -2287,4 +2287,21 @@ VjiLdnGsDB/FhV7+quFl5jnUptHdZp1tAoD5bUwnjGEcnCM++4jJm2v+B+9iKc7P
 OqstECZ5//WmSxcpNz7KE6m91HPIxaXSEqrb7EqjXO9ac8pFczQNMelQA4lrmyMU
 5ZaooR4dGpQxUeD2WGWx
 =WqGG
+- -----END PGP SIGNATURE-----
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJYv2SMAAoJEMQ+Dtp9ky28PR8QAJac38SdlA4sUWAdUeW4apNZ
+81qkjZNkg8ZfcVZQ32KiP5b2prtg6Zs/YIDp0Y3Hc/cQu6yf3rdRHNyJhxrEff+Z
+HvbZPo8CQMPKiiKMxX9f8DZ9/KY/LnKrzAFunXQT9Rylt7nYxNqipOtGacSIf745
+R4k1xv6FU+xqCNkK8vSuKeGgCEBfbuiTBu2aSdegUnnSKRGF/YMWvIt0b+2HRmo4
+Fy5SLR7x0JVpdB5D1SWOr4zPAGBpFWw/+gR7hnOur+HStaGCcML+6eMJ99tKNOab
+YP9yzAD9bhl+KuaH2bCGJNpMaQs6xCeHyWDP564RGyi+deJnoTTOd5P6j5VrdNoB
+V18FoWBQH26qNmffmCYLUkdLeNICANQnYHr5AfdjuqvdBh2/R31Ch5nbv0eb0upb
+7FmUiat37MBdcNpZoLxLAfrT0XhdOSNCyy9vfw7Fx/uht4lxkmsnFQTQsPOxum2p
+rIuffld26MT2ZgqWaO7A8OoI1MF1GoLBNVQ34kSizy2DPXv/pkblCdSDubESEgSR
+oEkEO6n5wTRrsfU1qL4E9C3dm/1UcToPt0Qcyd/0qhiutMU/LsBGuGR4+TIEIc58
+wfse7dVJcO6tJI9+UlS2brExJsMBCTvcqXTHsPXzoMcRYv/M++hyNFaLAarZcbMv
+WryRjsZSLOc8Zr5SCNWT
+=ORv0
 -----END PGP SIGNATURE-----
