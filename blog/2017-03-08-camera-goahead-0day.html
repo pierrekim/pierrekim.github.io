@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in GoAhead - A slice of Kimchi - IT Security Blog</title>
+<title>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in custom http server - A slice of Kimchi - IT Security Blog</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="css/bootstrap.min.css" rel="stylesheet">
 <link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
@@ -35,7 +35,7 @@ h1, h2, h3, h4 {
     
 <div class="hero-unit faq">
     <div class="ac">
-        <h2>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in GoAhead</h2>
+        <h2>Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in custom http server</h2>
     </div>
 </div>
 
@@ -50,21 +50,24 @@ This camera is very similar to a lot of other Chinese cameras.</p>
 <p>It seems that a generic camera is being sold by a Chinese company in bulk (OEM) and
 the buyer companies resell them with custom software development and specific branding. Wireless IP Camera (P2) WIFICAM is one of the branded cameras.</p>
 <p>So, cameras are sold under different names, brands and functions. The HTTP
-interface is different for each vendor but shares the same vulnerabilities.</p>
+interface is different for each vendor but shares the same vulnerabilities.
+The OEM vendors used a custom version of GoAhead and added vulnerable code inside.</p>
+<p>GoAhead stated that GoAhead itself is not affected by the vulnerabilities but the OEM vendor who did the custom and 
+specific development around GoAhead is responsible for the cause of vulnerabilities.</p>
 <p>Because of code reusing, the vulnerabilities are present in a huge list of cameras (especially the InfoLeak and the RCE),
 <strong>which allow to execute root commands against 1250+ camera models with a pre-auth vulnerability</strong>.</p>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
 <li><a href="#backdoor-account">Backdoor account</a></li>
 <li><a href="#rsa-lulz">RSA key and certificates</a></li>
-<li><a href="#pre-auth-info-leak-goahead">Pre-Auth Info Leak (credentials) within the GoAhead http server</a></li>
+<li><a href="#pre-auth-info-leak-goahead">Pre-Auth Info Leak (credentials) within the custom http server</a></li>
 <li><a href="#root-rce">Authenticated RCE as root</a></li>
 <li><a href="#pre-auth-root-rce">Pre-Auth RCE as root</a></li>
 <li><a href="#open-streaming">Misc - Streaming without authentication</a></li>
 <li><a href="#cloud">Misc - "Cloud" (Aka Botnet)</a></li>
 </ol>
 <p><strong>The vulnerabilities in the Cloud management affect a lot of P2P or "Cloud" cameras.</strong></p>
-<p><strong>My tests have shown that the InfoLeak affecting the GoAhead server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
+<p><strong>My tests have shown that the InfoLeak affecting the custom http server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
 Thus, these cameras are likely affected by a pre-auth RCE as root:</strong></p>
 <pre><code>3G+IPCam Other
 3SVISION Other
@@ -1360,8 +1363,10 @@ Key Attributes: &lt;No Attributes&gt;
 -----END RSA PRIVATE KEY-----
 </code></pre>
 <p><a id="pre-auth-info-leak-goahead"></a></p>
-<h2>Details - Pre-Auth Info Leak (credentials) within the GoAhead http server</h2>
-<p>The HTTP interface is provided by GoAhead. It allows 2 kinds of authentication:</p>
+<h2>Details - Pre-Auth Info Leak (credentials) within the custom http server</h2>
+<p>The HTTP interface is provided by a custom http server. This HTTP server is in fact based on GoAhead and
+was modified by the OEM vendor of the cameras (which resulted in the listed vulnerabilities).
+It allows 2 kinds of authentication:</p>
 <ul>
 <li>htdigest authentication OR</li>
 <li>authentication using credentials in URI (<code>?loginuse=LOGIN&amp;?loginpas=PASS</code>).</li>
@@ -1502,11 +1507,11 @@ bye
 </code></pre>
 <p><a id="pre-auth-root-rce"></a></p>
 <h2>Details - Pre-Auth RCE as root</h2>
-<p>By combining the Pre-Auth Info Leak within the GoAhead http server vulnerability and then authenticated RCE as root, an attacker can achieve a pre-auth RCE as root on a LAN or on the Internet.</p>
+<p>By combining the Pre-Auth Info Leak within the custom http server vulnerability and then authenticated RCE as root, an attacker can achieve a pre-auth RCE as root on a LAN or on the Internet.</p>
 <p>An exploit is provided and can be used to get a root RCE with connect-back.</p>
 <p>The exploit will:</p>
 <ol>
-<li>extract the valid credentials by connecting to the remote GoAhead HTTP server of the targeted camera</li>
+<li>extract the valid credentials by connecting to the remote custom HTTP server of the targeted camera</li>
 <li>plant a connect-back with <code>nc</code></li>
 <li>execute the payload</li>
 <li>the attacker will receive a root shell with netcat on a second terminal</li>
@@ -2114,6 +2119,8 @@ Complete trace is:</p>
 <ul>
 <li>Feb 26, 2017: Vulnerabilities found by Pierre Kim.</li>
 <li>Mar 08, 2017: A public advisory is sent to security mailing lists.</li>
+<li>Mar 08, 2017: Following exchanges with Embedthis Software, it appears <strong>the vulnerabilities are not located inside GoAhead but from custom and proprietary development by the Chinese OEM vendor</strong>.</li>
+<li>Mar 08, 2017: The advisory is updated.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>

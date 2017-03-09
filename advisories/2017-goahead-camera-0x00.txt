@@ -4,7 +4,7 @@ Hash: SHA512
 
 ## Advisory Information
 
-Title: Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in GoAhead
+Title: Multiple vulnerabilities found in Wireless IP Camera (P2P) WIFICAM cameras and vulnerabilities in http server
 Advisory URL: https://pierrekim.github.io/advisories/2017-goahead-camera-0x00.txt
 Blog URL: https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html
 Date published: 2017-03-08
@@ -33,6 +33,10 @@ the buyer companies resell them with custom software development and specific br
 
 So, cameras are sold under different names, brands and functions. The HTTP
 interface is different for each vendor but shares the same vulnerabilities.
+The OEM vendors used a custom version of GoAhead and added vulnerable code inside.
+
+GoAhead stated that GoAhead itself is not affected by the vulnerabilities but the OEM vendor who did the custom and
+specific development around GoAhead is responsible for the cause of vulnerabilities.
 
 
 Because of code reusing, the vulnerabilities are present in a huge list of cameras (especially the InfoLeak and the RCE),
@@ -43,7 +47,7 @@ The summary of the vulnerabilities is:
 
 1. Backdoor account
 2. RSA key and certificates
-3. Pre-Auth Info Leak (credentials) within the GoAhead http server
+3. Pre-Auth Info Leak (credentials) within the custom http server
 4. Authenticated RCE as root
 5. Pre-Auth RCE as root
 6. Misc - Streaming without authentication
@@ -52,7 +56,7 @@ The summary of the vulnerabilities is:
 
 The vulnerabilities in the Cloud management affect a lot of P2P or "Cloud" cameras.
 
-My tests have shown that the InfoLeak affecting the GoAhead server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
+My tests have shown that the InfoLeak affecting the custom http server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
 Thus, these cameras are likely affected by a pre-auth RCE as root:
 
 
@@ -1361,9 +1365,11 @@ The `/system/www/pem/ck.pem` contains an Apple certificate with a private RSA ke
 
 
 
-## Details - Pre-Auth Info Leak (credentials) within the GoAhead http server
+## Details - Pre-Auth Info Leak (credentials) within the custom http server
 
-The HTTP interface is provided by GoAhead. It allows 2 kinds of authentication:
+The HTTP interface is provided by a custom http server. This HTTP server is in fact based on GoAhead and
+was modified by the OEM vendor of the cameras (which resulted in the listed vulnerabilities).
+It allows 2 kinds of authentication:
 
 - - htdigest authentication OR
 - - authentication using credentials in URI (`?loginuse=LOGIN&?loginpas=PASS`).
@@ -1526,13 +1532,13 @@ Testing this will give us root account on port 25/tcp:
 
 ## Details - Pre-Auth RCE as root
 
-By combining the Pre-Auth Info Leak within the GoAhead http server vulnerability and then authenticated RCE as root, an attacker can achieve a pre-auth RCE as root on a LAN or on the Internet.
+By combining the Pre-Auth Info Leak within the custom http server vulnerability and then authenticated RCE as root, an attacker can achieve a pre-auth RCE as root on a LAN or on the Internet.
 
 An exploit is provided and can be used to get a root RCE with connect-back.
 
 The exploit will:
 
-1. extract the valid credentials by connecting to the remote GoAhead HTTP server of the targeted camera
+1. extract the valid credentials by connecting to the remote custom HTTP server of the targeted camera
 2. plant a connect-back with `nc`
 3. execute the payload
 4. the attacker will receive a root shell with netcat on a second terminal
@@ -2249,6 +2255,8 @@ I advise to IMMEDIATELY DISCONNECT cameras to the Internet. Hundreds of thousand
 
 * Feb 26, 2017: Vulnerabilities found by Pierre Kim.
 * Mar 08, 2017: A public advisory is sent to security mailing lists.
+* Mar 08, 2017: Following exchanges with Embedthis Software, it appears the vulnerabilities are not located inside GoAhead but from custom and proprietary development by the Chinese OEM vendor.
+* Mar 08, 2017: The advisory is updated.
 
 
 
@@ -2275,17 +2283,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJYv2UeAAoJEMQ+Dtp9ky28neMP/18McFaGxLqBaBjsbDFynjou
-IZN/iA6FYm27lfGJ3RME9U+G0IwLzQuWshF2hGPsqmogxLRNRE5QB20Yy9P4+nyH
-VtFqZ1tN6lfZhlQCKDlGr3UdYdwpuP+fNmC11KU153d3TT1c9lWjNnVcatEPPati
-wbxJK0EwZ9T8UuzT/hweBPxRH9RDeWjWUjIBrv0+sLuwKrxkPgkE0IXKHLTLoKhy
-DR0jQd5oCN8rorm5NCPGYCttBBSv0qwy4nIsgVzIViGoaumtrnOJUuwmHzVcvU1n
-oAQVY/WwU2GLjWHqamAY9n4H6FEGYd+vGAtwnbxdVXAHwlHgY34sO7wuomHXNWwL
-52Hwm+65qdBx9+iD9IPZtNoOgwPuOxp7RReEvj144EDbVptAUy62f4ilR05+XQZL
-DmBxgqBwdLLVXBOnl/f7qj4ptERID2lW5XMUw6FURxXHrfle80Sgp/Yios8E/bcW
-SyQJmAgRy3ZzQ7m4uUmIiUgAuyq2F2DA+CB7/8nkysPruw+In/Tdj5WIWTAAb8aT
-ksZ05z+tGHYMXt8NlGvKLYcAmhU9Nw8X1KF4ChCuA59jy1fNjUplAyl6AemzAETB
-Sknfr7lSQMGGY+GyQ1X3NxHfjAcWytpVsjb+/UOJE+Y+hHP59pRL5Smo1lOE9BWz
-0VEWlkNCYSlBtIXqVQqW
-=iiUl
+iQIcBAEBCgAGBQJYwJwJAAoJEMQ+Dtp9ky28rMQP/1e54ytdQp4RONJkckByFfOp
+qcGX5zOw5dUF/jqskiS0H35f7FYU2XNkzZjJk7SH2Ci5ZZgy08PoOM15QItROCeg
+zZXX8/Kkx6Ljm9UGmBBTrBoRhLWfVmPUNJgWV6UBBQibpWyDAuhxQkFP1U42KUGF
+Pz7uGujSJABkbSMEetPr1vmuNpbOYOM4RKXpo7WGlOe716f3HoS9ZcbDfLu/TeEj
+VAtmih19mok4oz3iHXD6ZYUymvkNlYsXrN0E9ZgZcxOruay0LAwm/jP1IzMBBP0v
+sV4v/dcc/Ruisl8qbDtaibZ6Z6MPyrhbQC5qhj2yViCrqtLb9JVWsOTO7wE6nJOL
+/ohJA0gP0vcHrOwVS1IbHAOI/AtwXgKNssM5AIN5i/omtmpzWxlHf9WiKwi07USb
+m2i0czs9LYOY2YtTykcF/jBmvVAbSmcy3gzgQ1jM0cxGU6LN/VVGUIfEbOS2ENh/
+eyuIKU4DlGasPCQ0QYwiglY1VFOWN18QMgquycaUcJMMhy7l7Uno285kelkOXCDZ
+NkPFLAIpL0NJ+AIXSacMu9DPzNZInyD3hqbZWsNehYyHW2XJi9wyHk1y/70BjpZw
+xu3HQ0k0VFkJpL/1eMMfaZ9mX1Gufv2pmT/iiwNPEFmg2y7uooxuB+PbeA7XZft2
+SQDWctBU6nLVsSKvPhl8
+=O86M
 -----END PGP SIGNATURE-----
