@@ -2112,6 +2112,7 @@ Complete trace is:</p>
 <p>This "cloud" protocol seems to be more a botnet protocol than a legit remote access protocol and has indeed weakness (everything in clear-text, i.e. an attacker can attack cameras within the cloud and leverage potential access to hack internal networks).</p>
 <p>A lot of P2P ('Cloud') cameras are in fact using the same botnet protocols and the same infrastructure seemingly to be managed by a single entity.</p>
 <p>Writing a PoC which bruteforces credentials of the remote camera is left as an exercise for the reader.</p>
+<p><strong>Update (Mar 10, 2017):</strong> <a href="https://twitter.com/zh4ck">@zh4ck</a> <a href="https://www.slideshare.net/bz98/iot-security-is-a-nightmare-but-what-is-the-real-risk">analyzed the cloud protocol</a>.</p>
 <h2>Vendor Response</h2>
 <p>Due to difficulties in finding and contacting all the vendors, full-disclosure is applied.</p>
 <p><strong>I advise to IMMEDIATELY DISCONNECT cameras to the Internet. Hundreds of thousands cameras are affected by the 0day Info-Leak. Millions of them are using the insecure Cloud network.</strong></p>
@@ -2127,6 +2128,11 @@ Complete trace is:</p>
 <h2>References</h2>
 <p><a href="https://pierrekim.github.io/advisories/2017-goahead-camera-0x00.txt">https://pierrekim.github.io/advisories/2017-goahead-camera-0x00.txt</a></p>
 <p><a href="https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html">https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html</a></p>
+<h2>Misc</h2>
+<ul>
+<li>Mar 09, 2017: <a href="https://blogs.securiteam.com/index.php/archives/3043">SSD disclosed a new pre-authentification infoleak vulnerability affecting the cameras</a>.</li>
+<li>Mar 09, 2017: <a href="https://s3-us-west-1.amazonaws.com/cybereasonbucket/wp-content/uploads/2017/03/08194911/PeekabooIOwnYou.pdf">Cybereason disclosed a new pre-authentification infoleak vulnerability affecting the cameras</a>.</li>
+</ul>
 <h2>Disclaimer</h2>
 <p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
