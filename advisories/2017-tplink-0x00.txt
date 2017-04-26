@@ -10,7 +10,7 @@ Blog URL: https://pierrekim.github.io/blog/2017-02-09-tplink-c2-and-c20i-vulnera
 Date published: 2017-02-09
 Vendors contacted: TP-Link
 Release mode: Released
-CVE: no current CVE
+CVE: CVE-2017-8217, CVE-2017-8218, CVE-2017-8219, CVE-2017-8220
 
 
 
@@ -27,7 +27,7 @@ An attacker can DoS the httpd server and the firewall rules are too permissive b
 
 
 
-## Details - RCE with a single HTTP request
+## Details - CVE-2017-8220 - RCE with a single HTTP request
 
 Using the so-called "Diagnostic" page, the attacker can run any command including telnetd, using the remote host field of the ping utility:
 
@@ -217,7 +217,7 @@ diagnosticsState=Requested
 
 
 
-## Details - DoSing the HTTP server
+## Details - CVE-2017-8219 - DoSing the HTTP server
 
 While being authenticated (see the credentials in base64 format), sending this HTTP request directly will crash the remote HTTP server:
 
@@ -241,18 +241,18 @@ drwxr-xr-x    3         0 Wireless
 drwxrwxrwx    2         0 usbdisk
 drwxrwxrwx    2         0 dev
 drwxr-xr-x    5         0 samba
-- -rw-r--r--    1       132 passwd
+- - -rw-r--r--    1       132 passwd
 drwxrwxrwx    2         0 3G
 drwxrwxrwx    2         0 l2tp
 drwxrwxrwx    7         0 vsftp
-- -rw-------    1    348160 core-httpd-506-11-1482798208
+- - -rw-------    1    348160 core-httpd-506-11-1482798208
 drwxr-xr-x   13       177 ..
 drwxr-xr-x   13         0 .
 /var #
 
 
 
-## Details - Permissive Iptables rules
+## Details - CVE-2017-8217 - Permissive Iptables rules
 
 The default iptables rules are generated within /lib/libcmm.so by writing commands inside /var/tmp/dconf/rc.router and using system() on this file.
 
@@ -286,7 +286,7 @@ Luckily, even if SNMP configuration can be modified using the hidden /main/snmp.
 it appears the snmpd has been removed from the firmware image.
 
 
-## Details - Misc
+## Details - CVE-2017-8218 - Misc
 
 The binaries (/usr/bin/cos, /usr/bin/tmpd, /lib/libcmm.so) are overall badly designed programs, executing tons of system() and running as root.
 
@@ -332,6 +332,7 @@ would need to have valid credentials.
 * Jan 24, 2017: TP-Link Korea contacts Pierre Kim about the vulnerabilities.
 * Jan 27, 2017: Pierre sends a final draft to TP-Link.
 * Feb 09, 2017: A public advisory is sent to security mailing lists.
+* Apr 25, 2017: MITRE provides CVE-2017-8217 - CVE-2017-8218 - CVE-2017-8219 - CVE-2017-8220
 
 
 
@@ -356,17 +357,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJYm6p7AAoJEMQ+Dtp9ky28z0EP/3jr6ZAKokevAVO067r97tdm
-tROahAX4+GD56OI4rq2yh/GkFfDI7tksfZfYJkIEwhR92zIiJls3ldjZ7k7Ogy2s
-/qo4mI1Q/iAcGCZgt8eq2uJXFNcqh7j1DgsB39WF/tKWubUZJZKuHopAtUeBOsVe
-01/VPu2xS40K+lXkTT0DqR4QAHrVqeuUfsnreY4C4tMLkbDMddS5q7+t8peaRWhU
-jsczw2Ik98/YfCz6cGgzPLUdVEYGU9L1yX5Z6yScMpdVAQBA1LQ5MrYrzlpaYvAt
-FeSSYv9ZuX/JL13dpfdMjCpVOhwO2CeoAjHrU5JS1ZmDCVY0iTfVIYceXp+if+Le
-oR46EvUBFCW8be5IAytW+0mLDMM9ZkXLSZf8Fw1NUSzFHxhggEa3QZWUoCLYhdrM
-q1eoTFM0oK71G0TXOrGCfxu9uQDaKlVR/e6FyJjewHyIQCsprs9FhiKPsFuWXUwJ
-b7mxto61bB0az+tCiffWEGtpEkipb/B6S0GfATRdkuXUQtu/aJa4GZG6XSt69a32
-z903tNW0B0SDNNpWY3ej1kIe2MInXFSVVkcEjrnhN62OFEsD1GHRo/pF03dYjQ9T
-A/W1030Q3eQQXbWeIecwletJDUa1GT4QKUUnUm4daWbjDt6P2HP7JXMOTMgqUCYe
-4RedvpPdUgXTOwwCaQjT
-=Adqz
+iQIcBAEBCgAGBQJZAIC7AAoJEMQ+Dtp9ky28spQQAJCNtpI6doJpA5Q4DzUdAX5B
+KMk8niDFSDFvAMlCqhPTw3AaKA0MwZ5paXTmGsAGwok/gSzkvfmRssA61LcL78cD
+/CjdfGqFlxDHUr4TXq6AmC2htuJnM/N0ibs4Seg9t8qSLM0PUiKJ525ZsEseFGUo
+PPM0tlPx8Yi73cgupZxP+LDlRLSE+4PBSsbNAr7yqCc/ZyPfR41NSPx+0jgbWJcu
+bs2NMHhXQXa+JaykU91yub8MsvDTyL348P6R9OMMo1d+nEfeh/kg0MpLtlCEAyfs
+4Bb0+dn7dItbQlvW3JiorY0UhWYOMTzSkiUAviFrpxhWlDAIPFRZHDfJt2JXFrkL
+Uxh5VoIMA9+RDP6DDNo2onsYZEpkCFIiXxtpniZqHTd/qDsUbqyMQXAA5ijSMuDY
+RRaLTM3OJuXFXUPBighAcKtSYsbI+4iw642AO5A3xkJ+RE2OVE2OYBLqTOxnNjBa
+gCMVw0HdMiK12/dfUEYRLvcN/VhzOqkWiJyD23vP0uJe07Mii1u5GGYItTboqVEL
+fxCsgFGQAk9iefnzL/FNHvXjmKSV5azDEkp1bnRTq+LHy7mFyJwBVm8y+trPrpMT
+JP2Oe5v+PMeBgbp1aTv2mGK1SmRmRCJ0mOIELHNyjgIxvdCDuNrn7hN0IZF1S6Uf
+1gZX/N1jDkxLixnCIl9u
+=MlsT
 -----END PGP SIGNATURE-----
