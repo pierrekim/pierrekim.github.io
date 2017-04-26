@@ -59,22 +59,23 @@ specific development around GoAhead is responsible for the cause of vulnerabilit
 <strong>which allow to execute root commands against 1250+ camera models with a pre-auth vulnerability</strong>.</p>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
-<li><a href="#backdoor-account">Backdoor account</a></li>
-<li><a href="#rsa-lulz">RSA key and certificates</a></li>
-<li><a href="#pre-auth-info-leak-goahead">Pre-Auth Info Leak (credentials) within the custom http server</a></li>
+<li><a href="#backdoor-account">CVE-2017-8224 - Backdoor account</a></li>
+<li><a href="#rsa-lulz">CVE-2017-8222 - RSA key and certificates</a></li>
+<li><a href="#pre-auth-info-leak-goahead">CVE-2017-8225 - Pre-Auth Info Leak (credentials) within the custom http server</a></li>
 <li><a href="#root-rce">Authenticated RCE as root</a></li>
 <li><a href="#pre-auth-root-rce">Pre-Auth RCE as root</a></li>
-<li><a href="#open-streaming">Misc - Streaming without authentication</a></li>
-<li><a href="#cloud">Misc - "Cloud" (Aka Botnet)</a></li>
+<li><a href="#open-streaming">CVE-2017-8223 - Misc - Streaming without authentication</a></li>
+<li><a href="#cloud">CVE-2017-8221 - Misc - "Cloud" (Aka Botnet)</a></li>
 </ol>
 <p><strong>The vulnerabilities in the Cloud management affect a lot of P2P or "Cloud" cameras.</strong></p>
 <p><strong>My tests have shown that the InfoLeak affecting the custom http server running on the camera affects at least 1250+ camera models. It can be used to execute the RCE as root.
 Thus, these cameras are likely affected by a pre-auth RCE as root:</strong></p>
-<pre><code>Update (Mar 16, 2017): Following the strong requests from a specific vendor, the complete list of 1250 affected camera models has been removed.
+<pre><code>Update (Mar 16, 2017): Following the strong requests from a specific vendor,
+the complete list of 1250 affected camera models has been removed.
 </code></pre>
 <p><a href="https://www.shodan.io/search?query=GoAhead+5ccc069c403ebaf9f0171e9517f40e41">Shodan lists 185 000 vulnerable cameras</a>.</p>
 <p><a id="backdoor-account"></a></p>
-<h2>Details - Backdoor account</h2>
+<h2>Details - CVE-2017-8224 - Backdoor account</h2>
 <p>By default, telnetd is running on the camera.</p>
 <pre><code>user@kali$ telnet 192.168.1.107
 Trying 192.168.1.107...
@@ -92,7 +93,7 @@ user@kali$
 <pre><code>root:$1$ybdHbPDn$ii9aEIFNiolBbM9QxW9mr0:0:0::/root:/bin/sh
 </code></pre>
 <p><a id="rsa-lulz"></a></p>
-<h2>Details - RSA key and certificates</h2>
+<h2>Details - CVE-2017-8222 - RSA key and certificates</h2>
 <p>The <code>/system/www/pem/ck.pem</code> contains an Apple certificate with a private RSA key:</p>
 <pre><code>/ # cat /system/www/pem/ck.pem 
 Bag Attributes
@@ -112,7 +113,7 @@ Key Attributes: &lt;No Attributes&gt;
 -----END RSA PRIVATE KEY-----
 </code></pre>
 <p><a id="pre-auth-info-leak-goahead"></a></p>
-<h2>Details - Pre-Auth Info Leak (credentials) within the custom http server</h2>
+<h2>Details - CVE-2017-8225 - Pre-Auth Info Leak (credentials) within the custom http server</h2>
 <p>The HTTP interface is provided by a custom http server. This HTTP server is in fact based on GoAhead and
 was modified by the OEM vendor of the cameras (which resulted in the listed vulnerabilities).
 It allows 2 kinds of authentication:</p>
@@ -594,7 +595,7 @@ PID   USER     TIME   COMMAND
 
 <p>Alternatively, you can fetch it at <a href="https://pierrekim.github.io/advisories/expl-goahead-camera.c">https://pierrekim.github.io/advisories/expl-goahead-camera.c</a>.</p>
 <p><a id="open-streaming"></a></p>
-<h2>Details -- Misc - Streaming without authentication</h2>
+<h2>Details -- CVE-2017-8223 - Misc - Streaming without authentication</h2>
 <p>An attacker can use the authenticated-less RTSP server running on the camera on port <code>10554/tcp</code> to watch the streaming without authentication.</p>
 <pre><code>user@kali$ vlc rstp://192.168.1.107:10554/tcp/av0_1
 </code></pre>
@@ -602,7 +603,7 @@ PID   USER     TIME   COMMAND
 <pre><code>user@kali$ vlc rstp://192.168.1.107:10554/tcp/av0_0
 </code></pre>
 <p><a id="cloud"></a></p>
-<h2>Details -- Misc - "Cloud" (Aka Botnet)</h2>
+<h2>Details -- CVE-2017-8221 -- Misc - "Cloud" (Aka Botnet)</h2>
 <p>By default, the camera uses a 'Cloud' functionality.</p>
 <p>You can tcpdump the traffic of the camera, which is very scary:</p>
 <pre><code>12:09:21.410947 IP 192.168.1.107.46958 &gt; 8.8.8.8.53: 60806+ A? openapi.xg.qq.com.gateway. (43)
@@ -871,6 +872,7 @@ Complete trace is:</p>
 <li>Mar 08, 2017: A public advisory is sent to security mailing lists.</li>
 <li>Mar 08, 2017: Following exchanges with Embedthis Software, it appears <strong>the vulnerabilities are not located inside GoAhead but from custom and proprietary development by the Chinese OEM vendor</strong>.</li>
 <li>Mar 08, 2017: The advisory is updated.</li>
+<li>Apr 25, 2017: MITRE provides CVE-2017-8221, CVE-2017-8222, CVE-2017-8223, CVE-2017-8224, CVE-2017-8225.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>

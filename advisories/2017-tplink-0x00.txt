@@ -241,11 +241,11 @@ drwxr-xr-x    3         0 Wireless
 drwxrwxrwx    2         0 usbdisk
 drwxrwxrwx    2         0 dev
 drwxr-xr-x    5         0 samba
-- - -rw-r--r--    1       132 passwd
+- - - -rw-r--r--    1       132 passwd
 drwxrwxrwx    2         0 3G
 drwxrwxrwx    2         0 l2tp
 drwxrwxrwx    7         0 vsftp
-- - -rw-------    1    348160 core-httpd-506-11-1482798208
+- - - -rw-------    1    348160 core-httpd-506-11-1482798208
 drwxr-xr-x   13       177 ..
 drwxr-xr-x   13         0 .
 /var #
@@ -332,7 +332,7 @@ would need to have valid credentials.
 * Jan 24, 2017: TP-Link Korea contacts Pierre Kim about the vulnerabilities.
 * Jan 27, 2017: Pierre sends a final draft to TP-Link.
 * Feb 09, 2017: A public advisory is sent to security mailing lists.
-* Apr 25, 2017: MITRE provides CVE-2017-8217 - CVE-2017-8218 - CVE-2017-8219 - CVE-2017-8220
+* Apr 25, 2017: MITRE provides CVE-2017-8217, CVE-2017-8218, CVE-2017-8219, CVE-2017-8220.
 
 
 
@@ -357,17 +357,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJZAIC7AAoJEMQ+Dtp9ky28spQQAJCNtpI6doJpA5Q4DzUdAX5B
-KMk8niDFSDFvAMlCqhPTw3AaKA0MwZ5paXTmGsAGwok/gSzkvfmRssA61LcL78cD
-/CjdfGqFlxDHUr4TXq6AmC2htuJnM/N0ibs4Seg9t8qSLM0PUiKJ525ZsEseFGUo
-PPM0tlPx8Yi73cgupZxP+LDlRLSE+4PBSsbNAr7yqCc/ZyPfR41NSPx+0jgbWJcu
-bs2NMHhXQXa+JaykU91yub8MsvDTyL348P6R9OMMo1d+nEfeh/kg0MpLtlCEAyfs
-4Bb0+dn7dItbQlvW3JiorY0UhWYOMTzSkiUAviFrpxhWlDAIPFRZHDfJt2JXFrkL
-Uxh5VoIMA9+RDP6DDNo2onsYZEpkCFIiXxtpniZqHTd/qDsUbqyMQXAA5ijSMuDY
-RRaLTM3OJuXFXUPBighAcKtSYsbI+4iw642AO5A3xkJ+RE2OVE2OYBLqTOxnNjBa
-gCMVw0HdMiK12/dfUEYRLvcN/VhzOqkWiJyD23vP0uJe07Mii1u5GGYItTboqVEL
-fxCsgFGQAk9iefnzL/FNHvXjmKSV5azDEkp1bnRTq+LHy7mFyJwBVm8y+trPrpMT
-JP2Oe5v+PMeBgbp1aTv2mGK1SmRmRCJ0mOIELHNyjgIxvdCDuNrn7hN0IZF1S6Uf
-1gZX/N1jDkxLixnCIl9u
-=MlsT
+iQIcBAEBCgAGBQJZAIVwAAoJEMQ+Dtp9ky28aTQP/0ivh9ZjIkaslqAFs5HcVV5D
+88FwP9O2byFw1CO2HgMxh3AaXMxsatvmbGlMcZH4VajItSwjbrbEnTrXY11nk1U1
+Nrvb0tYlPFYkP1/Tf3+85XzD7q1X23dJ4IaJ+P5kcpdxnLVLWjFjqRIS5mDH0fOp
+GTdCTgmrRRvvRp/zfCdO/NHEJcJhxaaNAwnoSBx120p/FfI324zlnffKQ8hgN7iM
+lo9YmSk7fLN+RPf3458qFJ+VX6Lsd4QlJrks8rML+cAoshwdKYKcUbNVgwCpClWV
+XYt2ZlHdy2tSK+8G9cHDx2p+2xMB+Q2Ll3aaIlKCX9yFDeLdZ1gHpwetUMUEgzsq
+r+El+cpjTXEwpjZWmWtqXsrUlKSrMS2TodC6ayEGOjI1uFqRNtsjwpFXUune49aD
+zTZvY1sKRQ3srqD930G5v9EqFA3QAGk+3/46R2Qw6bMC7+WTh3kahZOq9d7Q3pep
+IwHfhhKM2BKcamjCSiPPSshHC6rcPobTCJtPPSjI7jFGbwT8lJZHgicZtrox0Yg7
+J5/6kZxLOJUhoEpLfj3gxoBhqpzU9d5mNS8ocp6vp2Y4Af0UiugaDP5mlRL+G46H
+BumhKeyLNEocOxu0P/1q8je273yEtQWT7erKKQSmCcIYj4u1kBW0OrxbGI+no6zG
+W0kJS9ZRbC5p3QLvJdMA
+=8+29
 -----END PGP SIGNATURE-----

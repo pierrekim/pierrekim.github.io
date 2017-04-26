@@ -10,7 +10,7 @@ Blog URL: https://pierrekim.github.io/blog/2017-03-08-camera-goahead-0day.html
 Date published: 2017-03-08
 Vendors contacted: None
 Release mode: Released
-CVE: no current CVE
+CVE: CVE-2017-8221, CVE-2017-8222, CVE-2017-8223, CVE-2017-8224, CVE-2017-8225
 
 
 
@@ -45,13 +45,13 @@ which allow to execute root commands against 1250+ camera models with a pre-auth
 
 The summary of the vulnerabilities is:
 
-1. Backdoor account
-2. RSA key and certificates
-3. Pre-Auth Info Leak (credentials) within the custom http server
+1. CVE-2017-8224 - Backdoor account
+2. CVE-2017-8222 - RSA key and certificates
+3. CVE-2017-8225 - Pre-Auth Info Leak (credentials) within the custom http server
 4. Authenticated RCE as root
 5. Pre-Auth RCE as root
-6. Misc - Streaming without authentication
-7. Misc - "Cloud" (Aka Botnet)
+6. CVE-2017-8223 - Misc - Streaming without authentication
+7. CVE-2017-8221 - Misc - "Cloud" (Aka Botnet)
 
 
 The vulnerabilities in the Cloud management affect a lot of P2P or "Cloud" cameras.
@@ -66,7 +66,7 @@ Shodan lists 185 000 vulnerable cameras ( https://www.shodan.io/search?query=GoA
 
 
 
-## Details - Backdoor account
+## Details - CVE-2017-8224 - Backdoor account
 
 By default, telnetd is running on the camera.
 
@@ -89,7 +89,7 @@ One backdoor account exists in the camera:
 
 
 
-## Details - RSA key and certificates
+## Details - CVE-2017-8222 - RSA key and certificates
 
 The `/system/www/pem/ck.pem` contains an Apple certificate with a private RSA key:
 
@@ -113,14 +113,14 @@ The `/system/www/pem/ck.pem` contains an Apple certificate with a private RSA ke
 
 
 
-## Details - Pre-Auth Info Leak (credentials) within the custom http server
+## Details - CVE-2017-8225 - Pre-Auth Info Leak (credentials) within the custom http server
 
 The HTTP interface is provided by a custom http server. This HTTP server is in fact based on GoAhead and
 was modified by the OEM vendor of the cameras (which resulted in the listed vulnerabilities).
 It allows 2 kinds of authentication:
 
-- - htdigest authentication OR
-- - authentication using credentials in URI (`?loginuse=LOGIN&?loginpas=PASS`).
+- - - htdigest authentication OR
+- - - authentication using credentials in URI (`?loginuse=LOGIN&?loginpas=PASS`).
 
 
 By default, the web directory contains symbolic links to configuration files (`system.ini` and `system-b.ini` contain credentials):
@@ -630,7 +630,7 @@ Alternatively, you can fetch it at https://pierrekim.github.io/advisories/expl-g
 
 
 
-## Details -- Misc - Streaming without authentication
+## Details -- CVE-2017-8223 - Misc - Streaming without authentication
 
 An attacker can use the authenticated-less RTSP server running on the camera on port `10554/tcp` to watch the streaming without authentication.
 
@@ -642,7 +642,7 @@ And:
 
 
 
-## Details -- Misc - "Cloud" (Aka Botnet)
+## Details -- CVE-2017-8221 -- Misc - "Cloud" (Aka Botnet)
 
 By default, the camera uses a 'Cloud' functionality.
 
@@ -673,10 +673,10 @@ You can tcpdump the traffic of the camera, which is very scary:
 
 The camera tries to resolve `www.baidu.com`, `openapi.xg.qq.com`, contacts hardcoded IPs and hosts:
 
-- - `121.42.208.86:32100/udp` (CN: Alibaba),
-- - `54.221.213.97:32100/udp` (AWS US),
-- - `120.24.37.48:32100/udp` (CN: Alibaba),
-- - `www.baidu.com:80/tcp` (CN: Baidu).
+- - - `121.42.208.86:32100/udp` (CN: Alibaba),
+- - - `54.221.213.97:32100/udp` (AWS US),
+- - - `120.24.37.48:32100/udp` (CN: Alibaba),
+- - - `www.baidu.com:80/tcp` (CN: Baidu).
 
 It appears this is the 'Cloud' functionality, enabled by default. The security of this functionality is not proven.
 
@@ -830,20 +830,20 @@ Then, the attacker can just try to bruteforce credentials of the camera:
 
 This protocol appears to be common to a lot of Android applications, ie:
 
-- - object.p2pwificam.client (https://play.google.com/store/apps/details?id=object.p2pwificam.client)  (500.000 - 1.000.000 installations)
-- - hsl.p2pipcam (https://play.google.com/store/apps/details?id=hsl.p2pipcam) (100.000 - 500.000 installations)
-- - object.liouzx.client (https://play.google.com/store/apps/details?id=object.liouzx.client)  (100.000 - 500.000 installations)
-- - object.lioupp.client (https://play.google.com/store/apps/details?id=object.lioupp.client) (100.000 - 500.000 installations)
-- - com.g_zhang.myp2pcam (https://play.google.com/store/apps/details?id=com.g_zhang.myp2pcam) (100.000 - 500.000 installations)
-- - object.aisaidezx.client (https://play.google.com/store/apps/details?id=object.aisaidezx.client) (50.000 - 100.000 installations)
-- - hsl.cam360 (https://play.google.com/store/apps/details?id=hsl.cam360)  (10.000 - 50.000 installations)
-- - bravocam.p2pipcam (https://play.google.com/store/apps/details?id=bravocam.p2pipcam) (10.000 - 50.000 installations)
-- - xcam.p2pipcam (https://play.google.com/store/apps/details?id=xcam.p2pipcam) (10.000 - 50.000 installations)
-- - snugcam.p2pipcam (https://play.google.com/store/apps/details?id=snugcam.p2pipcam) (10.000 - 50.000 installations)
-- - myview.p2pipcam (https://play.google.com/store/apps/details?id=myview.p2pipcam) (5.000 - 10.000 installations) 
-- - object.weimaisizx.client (https://play.google.com/store/apps/details?id=object.weimaisizx.client) (10.000 - 50.000 installations)
-- - com.tutk.P2PCamLive.Pixord (https://play.google.com/store/apps/details?id=com.tutk.P2PCamLive.Pixord) (10.000 - 50.000 installations)
-- - object.p2pnetwork.client (https://play.google.com/store/apps/details?id=object.p2pnetwork.client) (5.000 - 10.000 installations)
+- - - object.p2pwificam.client (https://play.google.com/store/apps/details?id=object.p2pwificam.client)  (500.000 - 1.000.000 installations)
+- - - hsl.p2pipcam (https://play.google.com/store/apps/details?id=hsl.p2pipcam) (100.000 - 500.000 installations)
+- - - object.liouzx.client (https://play.google.com/store/apps/details?id=object.liouzx.client)  (100.000 - 500.000 installations)
+- - - object.lioupp.client (https://play.google.com/store/apps/details?id=object.lioupp.client) (100.000 - 500.000 installations)
+- - - com.g_zhang.myp2pcam (https://play.google.com/store/apps/details?id=com.g_zhang.myp2pcam) (100.000 - 500.000 installations)
+- - - object.aisaidezx.client (https://play.google.com/store/apps/details?id=object.aisaidezx.client) (50.000 - 100.000 installations)
+- - - hsl.cam360 (https://play.google.com/store/apps/details?id=hsl.cam360)  (10.000 - 50.000 installations)
+- - - bravocam.p2pipcam (https://play.google.com/store/apps/details?id=bravocam.p2pipcam) (10.000 - 50.000 installations)
+- - - xcam.p2pipcam (https://play.google.com/store/apps/details?id=xcam.p2pipcam) (10.000 - 50.000 installations)
+- - - snugcam.p2pipcam (https://play.google.com/store/apps/details?id=snugcam.p2pipcam) (10.000 - 50.000 installations)
+- - - myview.p2pipcam (https://play.google.com/store/apps/details?id=myview.p2pipcam) (5.000 - 10.000 installations) 
+- - - object.weimaisizx.client (https://play.google.com/store/apps/details?id=object.weimaisizx.client) (10.000 - 50.000 installations)
+- - - com.tutk.P2PCamLive.Pixord (https://play.google.com/store/apps/details?id=com.tutk.P2PCamLive.Pixord) (10.000 - 50.000 installations)
+- - - object.p2pnetwork.client (https://play.google.com/store/apps/details?id=object.p2pnetwork.client) (5.000 - 10.000 installations)
 
 This list is very far from being complete.
 
@@ -1005,6 +1005,7 @@ I advise to IMMEDIATELY DISCONNECT cameras to the Internet. Hundreds of thousand
 * Mar 08, 2017: A public advisory is sent to security mailing lists.
 * Mar 08, 2017: Following exchanges with Embedthis Software, it appears the vulnerabilities are not located inside GoAhead but from custom and proprietary development by the Chinese OEM vendor.
 * Mar 08, 2017: The advisory is updated.
+* Apr 25, 2017: MITRE provides CVE-2017-8221, CVE-2017-8222, CVE-2017-8223, CVE-2017-8224, CVE-2017-8225.
 
 
 
@@ -1031,17 +1032,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJYwJwJAAoJEMQ+Dtp9ky28rMQP/1e54ytdQp4RONJkckByFfOp
-qcGX5zOw5dUF/jqskiS0H35f7FYU2XNkzZjJk7SH2Ci5ZZgy08PoOM15QItROCeg
-zZXX8/Kkx6Ljm9UGmBBTrBoRhLWfVmPUNJgWV6UBBQibpWyDAuhxQkFP1U42KUGF
-Pz7uGujSJABkbSMEetPr1vmuNpbOYOM4RKXpo7WGlOe716f3HoS9ZcbDfLu/TeEj
-VAtmih19mok4oz3iHXD6ZYUymvkNlYsXrN0E9ZgZcxOruay0LAwm/jP1IzMBBP0v
-sV4v/dcc/Ruisl8qbDtaibZ6Z6MPyrhbQC5qhj2yViCrqtLb9JVWsOTO7wE6nJOL
-/ohJA0gP0vcHrOwVS1IbHAOI/AtwXgKNssM5AIN5i/omtmpzWxlHf9WiKwi07USb
-m2i0czs9LYOY2YtTykcF/jBmvVAbSmcy3gzgQ1jM0cxGU6LN/VVGUIfEbOS2ENh/
-eyuIKU4DlGasPCQ0QYwiglY1VFOWN18QMgquycaUcJMMhy7l7Uno285kelkOXCDZ
-NkPFLAIpL0NJ+AIXSacMu9DPzNZInyD3hqbZWsNehYyHW2XJi9wyHk1y/70BjpZw
-xu3HQ0k0VFkJpL/1eMMfaZ9mX1Gufv2pmT/iiwNPEFmg2y7uooxuB+PbeA7XZft2
-SQDWctBU6nLVsSKvPhl8
-=O86M
+iQIcBAEBCgAGBQJZAIV4AAoJEMQ+Dtp9ky28Tp8QAIoLli5nlUKKV15fKo0tlBDT
+fg17qoEaAGyDVwu1dViEoBYaHXHPdnXDw5/kxJ0Q2XuS36JW3c8TlfzIU15IAjQM
+z9qSr8XQsesLIVvOhk9WkePjbzQ6bcL5+AwK4L8ZlKGmYHOciYwnTiBVz9N/247K
+SnRDqibfaHxGM4CHWfES9vGf4LANhLdF7m4awc5QDsR7utU7lgz60NesUTUIKSyY
+cFT+bkJYkQqmXK9FG3r8pnF3BkT2Ht1KTZwnSSNxW2k93O+oLUlcT3VZqUfqnXXn
+f9LE2G6Er2fj5p8FQnhdfNVjJDOkrtA+WQIOMgtjAoV6CAiuw16pJH9x9nzIWhj5
+cnppfIfF9aYqj8mZPQa5ZU5mMQd3ssopI7oPgr8eJUZ5PtXw78SZJ4xuPkYJdoSW
+HFfGFmizSOoz0Q3FZDREKxwbJlwQB72Vh0R2f9/f4cgGBzNTCKLTc+HN45vpA/9T
+EIv7gEyBS2ToptG/7jtELPiUk+xuKDvnFOy9bfHo9MCL6cDuAdepX7sWndy6kGOU
+sX6qqlN8LN26GlY1e8+9xDarzpuf9eCLWbj7Jwe0HFkvahs+9L4cyqAXZzvQKn02
+4DFfGCll761+N3FvHP/BsbW9xRHGQl8L3ek6T6FPwxL1N3Pqt8FxnJpgZYfMfchB
+kNiHeMHJnKV1GECdzBBt
+=R04C
 -----END PGP SIGNATURE-----
