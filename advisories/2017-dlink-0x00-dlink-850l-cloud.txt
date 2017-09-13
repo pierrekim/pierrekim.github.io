@@ -10,7 +10,7 @@ Blog URL: https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0
 Date published: 2017-09-08
 Vendors contacted: None
 Release mode: Full-Disclosure
-CVE: -
+CVE: CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416, CVE-2017-14417, CVE-2017-14418, CVE-2017-14419, CVE-2017-14420, CVE-2017-14421, CVE-2017-14422, CVE-2017-14423, CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428, CVE-2017-14429, CVE-2017-14430.
 
 
 
@@ -443,8 +443,8 @@ All the traffic is sent over TCP to remote Amazon server without proper encrypti
 [please use the HTML version at https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html to see the image]
 
 There are 2 TCP relays:
-- - one with the HTTP server of the dlink router as an endpoint
-- - the other one with the HTTPS server of the dlink router as an endpoint.
+- - - one with the HTTP server of the dlink router as an endpoint
+- - - the other one with the HTTPS server of the dlink router as an endpoint.
 
 So, it appears, the router is reachable over this TCP tunnel using either HTTP and HTTPS.
 By default, you can see HTTP request AND HTTPS request from the browser (over the tunnel) to the router.
@@ -1095,17 +1095,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJZsclZAAoJEMQ+Dtp9ky28cCsP/1lxKgn0WX8EV9fEOpFRNZxP
-bWBbcjlKOJIHP+PYK0opXBtWfRdEhDPuNP55zJUsWpUdL4pnDlkWGK3+jPP3yIIa
-jx7yCxcORqtTqw6kBoixL/0SBAamVKXm/f4h570Ys5wRHApXsSSVBxgH4W6iw8pz
-RF8XdpJknMhSUYv0lEsluMtAtwpQEt/JGyuCNOoOdxPIEg7WBCtPKqr/3qdYjtEu
-SgDjUtqWIZOoNN3WcJ/Y0fnWZ2j4SCEXOve7Y3wTnTtXaUKylxY42JQcKOkdOppO
-OyUNyKH8wcV+HIObGuiKWYrTo9eL4oJKhqPyR+M+oMTM7d5LwOjW+qaQJtEEArGN
-Ct1s8vPQ2mOHZMQZOJyn012iVofHe/AMu6Ap9/pWGqz4kFEIwxaesWCDAogQK8/o
-c4YAX6OhQM+o4CtHEcIuoJpegN6Iqqkmsw25Vpp12fRpskvHdiNM6jm7HRAieFXz
-m5JgjOHBQTW9mklXIsQSUnYaBfh9IcCLeS21xlZymZiAqHQhsX7B0MQabYau8kLk
-IVXasEff5LLf6tcKnNEJk58IXsoux60toHch3yojgywdGMcRlkwVum/k9aWlovep
-Tn2mD6Ibf7RlFtMoFNyZqGpI58CYV8mUIGXO1HW+fKEWRkSx575xSQQR5JrICH7B
-JcW7TiajDhcOigJ5WHhX
-=qobU
+iQIcBAEBCgAGBQJZubbxAAoJEMQ+Dtp9ky28DEwP/jnMDWo1tXk5xWD0rbEl0pig
+UbDetHaZtVqxDhF45ev4iSoem+yC4SkPp1JzKMsmL2CSNto5bsNRTksq/PaqAPiU
+JcrF28kWck04ap7moPzFpQJIQouWEbmEs4CzgzuvbUkhOIGJTvvNJ8t4Akbo7yzw
+BnesIotfQw4EOmkdcL+A118y3ktLjIYsnS7bckIpuwV5wLm0H7SL8Ycwqd8Fbz9Q
+7EgE0TZAZXTFohzXU8wYkrHCK4ZMCTzQ3lPg//0oNAKHZFPD5kyMl6JIThF8NxzQ
+diI9VB4mTY00Vb2CPdftyXY98/xOKn9oItmM4lq12fJTUvB2n1OzyHADxsfVMzUf
+a3dl5A9Lvx+Ib5n3zSHau67ansJ6upousxiJSLSdARLb0RpVNYh61rcrNZWLQLV9
+PnbmsnHT0xzED21B6fzOcyL/GTp7OXGxn2Mjrc1dlh3ggx+xOPnJYtde8AJSsbGw
+56XmoEaQefTBsep1Z/gY2p5zIIAJAMmX5yUMWg32wLPpwAeM9MGBqQXtqwe+986M
+s+cpvUoAMk2oo0hY9crW5cSUEIOdO6R8AA2NttYj5NALB8B1UPSFsXBUKTmUwaPl
+ls5GZBd18fF5I64S0ZmhO4VmsfgkcqAb7gky5GqwChyBniSyEy3QZRw7mQeDlMi4
+z6fYhb+r+b03oLZErgsE
+=LlTy
 -----END PGP SIGNATURE-----

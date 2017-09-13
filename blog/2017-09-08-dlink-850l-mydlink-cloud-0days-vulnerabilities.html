@@ -57,15 +57,15 @@ Full-disclosure is applied this time</strong>.</p>
 <p>The summary of the vulnerabilities is: </p>
 <ol>
 <li><a href="#firmware-protection">Firmware "protection"</a></li>
-<li><a href="#xss">WAN &amp;&amp; LAN - revA - XSS</a></li>
-<li><a href="#rce-mydlink">WAN &amp;&amp; LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol</a></li>
-<li><a href="#mydlink-cloud-protocol">WAN        - revA and revB - Weak Cloud protocol</a></li>
-<li><a href="#backdoor">LAN        - revB - Backdoor access</a></li>
-<li><a href="#keys">WAN &amp;&amp; LAN - revA and revB - Stunnel private keys</a></li>
-<li><a href="#dns">WAN &amp;&amp; LAN - revA - Nonce bruteforcing for DNS configuration</a></li>
-<li><a href="#cleartext-passwords">Local      - revA and revB - Weak files permission and credentials stored in cleartext</a></li>
-<li><a href="#pre-auth-root-rces">WAN        - revB - Pre-Auth RCEs as root (L2)</a></li>
-<li><a href="#dos">LAN       - revA and revB - DoS against some daemons</a></li>
+<li><a href="#xss">WAN &amp;&amp; LAN - revA - XSS - CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416</a></li>
+<li><a href="#rce-mydlink">WAN &amp;&amp; LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol - CVE-2017-14417, CVE-2017-14418</a></li>
+<li><a href="#mydlink-cloud-protocol">WAN        - revA and revB - Weak Cloud protocol - CVE-2017-14419, CVE-2017-14420</a></li>
+<li><a href="#backdoor">LAN        - revB - Backdoor access - CVE-2017-14421</a></li>
+<li><a href="#keys">WAN &amp;&amp; LAN - revA and revB - Stunnel private keys - CVE-2017-14422</a></li>
+<li><a href="#dns">WAN &amp;&amp; LAN - revA - Nonce bruteforcing for DNS configuration - CVE-2017-14423</a></li>
+<li><a href="#cleartext-passwords">Local      - revA and revB - Weak files permission and credentials stored in cleartext - CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428</a></li>
+<li><a href="#pre-auth-root-rces">WAN        - revB - Pre-Auth RCEs as root (L2) - CVE-2017-14429</a></li>
+<li><a href="#dos">LAN       - revA and revB - DoS against some daemons - CVE-2017-14430</a></li>
 </ol>
 <p>revA targets the revision A of the router with the latest firmware available (<code>DIR850L_REVA_FW114WWb07_h2ab_beta1.bin</code>).</p>
 <p>revB targets the revision B of the router with the latest firmware images available (<code>DIR850LB1_FW207WWb05.bin</code> and <code>DIR850L_REVB_FW207WWb05_h1ke_beta1.bin</code> from <a href="http://support.dlink.com/ProductInfo.aspx?m=DIR-850L">http://support.dlink.com/ProductInfo.aspx?m=DIR-850L</a>, <code>DIR850LB1 FW208WWb02.bin</code> from <a href="http://support.dlink.com.au/Download/download.aspx?product=DIR-850L">http://support.dlink.com.au/Download/download.aspx?product=DIR-850L</a>).</p>
@@ -891,6 +891,7 @@ Their previous lack of consideration about security made me publish this researc
 <li>Jun 15, 2017: Vulnerabilities found.</li>
 <li>Jul 03, 2017: This advisory is written.</li>
 <li>Sep 08, 2017: A public advisory is sent to security mailing lists.</li>
+<li>Sep 13, 2017: MITRE provides CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416, CVE-2017-14417, CVE-2017-14418, CVE-2017-14419, CVE-2017-14420, CVE-2017-14421, CVE-2017-14422, CVE-2017-14423, CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428, CVE-2017-14429, CVE-2017-14430.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
