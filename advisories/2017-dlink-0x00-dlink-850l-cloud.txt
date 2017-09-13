@@ -45,15 +45,15 @@ full-disclosure is applied this time.
 The summary of the vulnerabilities is: 
 
 1. Firmware "protection"
-2. WAN && LAN - revA - XSS
-3. WAN && LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol
-4. WAN        - revA and revB - Weak Cloud protocol
-5. LAN        - revB - Backdoor access
-6. WAN && LAN - revA and revB - Stunnel private keys
-7. WAN && LAN - revA - Nonce bruteforcing for DNS configuration
-8. Local      - revA and revB - Weak files permission and credentials stored in cleartext
-9. WAN        - revB - Pre-Auth RCEs as root (L2)
-10. LAN       - revA and revB - DoS against some daemons
+2. WAN && LAN - revA - XSS - CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416
+3. WAN && LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol - CVE-2017-14417, CVE-2017-14418
+4. WAN        - revA and revB - Weak Cloud protocol - CVE-2017-14419, CVE-2017-14420
+5. LAN        - revB - Backdoor access - CVE-2017-14421
+6. WAN && LAN - revA and revB - Stunnel private keys - CVE-2017-14422
+7. WAN && LAN - revA - Nonce bruteforcing for DNS configuration - CVE-2017-14423
+8. Local      - revA and revB - Weak files permission and credentials stored in cleartext - CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428
+9. WAN        - revB - Pre-Auth RCEs as root (L2) - CVE-2017-14429
+10. LAN       - revA and revB - DoS against some daemons - CVE-2017-14430
 
 
 revA targets the revision A of the router with the latest firmware available (`DIR850L_REVA_FW114WWb07_h2ab_beta1.bin`).
@@ -443,8 +443,8 @@ All the traffic is sent over TCP to remote Amazon server without proper encrypti
 [please use the HTML version at https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html to see the image]
 
 There are 2 TCP relays:
-- - - one with the HTTP server of the dlink router as an endpoint
-- - - the other one with the HTTPS server of the dlink router as an endpoint.
+- - one with the HTTP server of the dlink router as an endpoint
+- - the other one with the HTTPS server of the dlink router as an endpoint.
 
 So, it appears, the router is reachable over this TCP tunnel using either HTTP and HTTPS.
 By default, you can see HTTP request AND HTTPS request from the browser (over the tunnel) to the router.
@@ -1064,6 +1064,7 @@ I advise to IMMEDIATELY DISCONNECT vulnerable routers from the Internet.
 * Jun 15, 2017: Vulnerabilities found.
 * Jul 03, 2015: This advisory is written.
 * Sep 08, 2017: A public advisory is sent to security mailing lists.
+* Sep 13, 2017: MITRE provides CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416, CVE-2017-14417, CVE-2017-14418, CVE-2017-14419, CVE-2017-14420, CVE-2017-14421, CVE-2017-14422, CVE-2017-14423, CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428, CVE-2017-14429, CVE-2017-14430.
 
 
 
@@ -1095,17 +1096,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJZubbxAAoJEMQ+Dtp9ky28DEwP/jnMDWo1tXk5xWD0rbEl0pig
-UbDetHaZtVqxDhF45ev4iSoem+yC4SkPp1JzKMsmL2CSNto5bsNRTksq/PaqAPiU
-JcrF28kWck04ap7moPzFpQJIQouWEbmEs4CzgzuvbUkhOIGJTvvNJ8t4Akbo7yzw
-BnesIotfQw4EOmkdcL+A118y3ktLjIYsnS7bckIpuwV5wLm0H7SL8Ycwqd8Fbz9Q
-7EgE0TZAZXTFohzXU8wYkrHCK4ZMCTzQ3lPg//0oNAKHZFPD5kyMl6JIThF8NxzQ
-diI9VB4mTY00Vb2CPdftyXY98/xOKn9oItmM4lq12fJTUvB2n1OzyHADxsfVMzUf
-a3dl5A9Lvx+Ib5n3zSHau67ansJ6upousxiJSLSdARLb0RpVNYh61rcrNZWLQLV9
-PnbmsnHT0xzED21B6fzOcyL/GTp7OXGxn2Mjrc1dlh3ggx+xOPnJYtde8AJSsbGw
-56XmoEaQefTBsep1Z/gY2p5zIIAJAMmX5yUMWg32wLPpwAeM9MGBqQXtqwe+986M
-s+cpvUoAMk2oo0hY9crW5cSUEIOdO6R8AA2NttYj5NALB8B1UPSFsXBUKTmUwaPl
-ls5GZBd18fF5I64S0ZmhO4VmsfgkcqAb7gky5GqwChyBniSyEy3QZRw7mQeDlMi4
-z6fYhb+r+b03oLZErgsE
-=LlTy
+iQIcBAEBCgAGBQJZubqlAAoJEMQ+Dtp9ky28GnIQAKbvFsmrgC1beRrR6k2Dx5x1
+5aXjeYpQmI58yA7ohwWdLiQOSPHDigElM4oX10lAKsAV3FBzq+KHQLkUO+Wlp/NQ
+UEauPDj9+j6bDJR81DarcRxxD2unlLzr+PtJeiC9vrS8SqnV3wtwd7bYk+nNkUkr
+drUdtDRyQ5wA9l+mrKYxrNbuMJ99cwbUcUPsM3c6rY0IIgtj/ImZiJdn0mIuau6E
+mC+Q9agd1hNhUqM1D5Gu8AGtmQqa+jVt6Z9TaSB6rogph9myFDPNUBouBmI+NoS/
+1rS0fTxPIuj9s2IR1MerTZMBP6fVO9kIxFyk8a2UIKZggS/wJHgBETbk4DEJ9FT3
+UsAgu7ipOBWUy+eGEk2Pt13RHG9SRFeyyOljNOUO7AjTr0zbxqB1DiW596qApcBP
+x8EqumsjZTehQZCH6/IQOEQjKVuUPgjblnUHP3FZaDB0YwoB7uy1/OyH9SuJMUyK
+Go0v4QiQHTPvXVMes7b3nI44i4M0pmTRhGCHrZegf5FRi84hibyFuJWMrKWWYRM0
+XUfQsKg6Nw7c0xJf81WKpKaiJYUcnTiPq//nZ2qhZSO8+z2V3j7J8t0H3r/XhCrG
+GoxcnjBUXNyDPh510q1cO7wWq5d6uTxpDIE7/51ikI9trto5klOojUSyLB8gLOtE
+Jl86Zoi21bICA8sF822p
+=nHvc
 -----END PGP SIGNATURE-----
