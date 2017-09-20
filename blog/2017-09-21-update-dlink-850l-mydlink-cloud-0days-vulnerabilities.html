@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Update - Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol - IT Security Research by Pierre</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
+<style>
+body {
+    font-family: sans-serif;
+    background-color: #fff;
+    font-size: 16px;
+}
+h1, h2, h3, h4 {
+    font-family: arial;
+}
+.container {
+    max-width: 900px;
+}
+.footer {
+    margin-top: 50px;
+    font-size: 12px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="hero-unit faq">
+        <div class="ac" style="text-align: center;">
+            <h1>IT Security Research by Pierre</h1>
+            <a href="../index.html">Home</a> &bull; <a href="about.html">About</a>  &bull; <a href="feed.xml">Feed</a>
+        </div>
+    </div>
+    
+<div class="hero-unit faq">
+    <div class="ac">
+        <h2>Update - Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol</h2>
+    </div>
+</div>
+
+<div>
+    <p>An update on the post "<a href="https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html">Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol</a>":</p>
+<p>MITRE was very effective and provided several CVEs for these vulnerabilities:</p>
+<p>CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416, CVE-2017-14417, CVE-2017-14418,
+CVE-2017-14419, CVE-2017-14420, CVE-2017-14421, CVE-2017-14422, CVE-2017-14423, CVE-2017-14424,
+CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428, CVE-2017-14429, CVE-2017-14430.</p>
+<p>D-Link provided firmware updates at: <a href="http://supportannouncement.us.dlink.com/announcement/publication.aspx?name=SAP10074">http://supportannouncement.us.dlink.com/announcement/publication.aspx?name=SAP10074</a>.</p>
+<p><strong>Full-Disclosure seems to work! It forced D-Link to provide working security patches to the public in a timely manner.</strong></p>
+<p>Only 14 CVEs (of 18 CVEs) are recognized in the list from the Security Announcement from D-Link. I verified myself that the vulnerabilities have been indeed patched or not - for all 18 CVEs - as shown below on a <strong>real router with the latest firmware</strong>.</p>
+<p><strong>This work was possible thanks to another pre-auth 0day exploit that I have not yet released and which still works against the latest revB firmware (<code>DIR850LB1_FW220WWb03.bin</code>).</strong></p>
+<pre><code>user@kali:~/petage-dlink$ ./pwn-dlink-850-003 192.168.0.1
+[...]
+# uname -ap
+Linux dlinkrouter 2.6.30.9 #1 Mon Sep 18 10:27:42 CST 2017 rlx GNU/Linux
+# busybox 
+BusyBox v1.14.1 (2017-09-18 20:18:33 CST) multi-call binary
+Copyright (C) 1998-2008 Erik Andersen, Rob Landley, Denys Vlasenko
+and others. Licensed under GPLv2.
+[...]
+#
+</code></pre>
+<h2>Firmware "protection"</h2>
+<p>The algorithm seems to have been updated. <a href="https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html#firmware-protection">The previous program</a> doesn't work anymore. <strong>Luckily, having a root shell on the device gives me some hints about how to decipher firmware images.</strong></p>
+<h2>WAN &amp;&amp; LAN - revA - XSS - CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416</h2>
+<p>Corrected - the vulnerable files have been removed, as shown below:</p>
+<pre><code># cd /htdocs/web
+# ls -la *php
+-rw-r--r--    1 root     root          143 Sep 18  2017 wiz_mydlink.php
+-rw-r--r--    1 root     root         3768 Sep 18  2017 vpnconfig.php
+-rw-r--r--    1 root     root          204 Sep 18  2017 version.php
+-rw-r--r--    1 root     root         1074 Sep 18  2017 getcfg.php
+-rw-r--r--    1 root     root         2661 Sep 18  2017 dnslog.php
+-rw-r--r--    1 root     root          149 Sep 18  2017 bsc_mydlink.php
+#
+</code></pre>
+<h2>WAN &amp;&amp; LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol - CVE-2017-14417, CVE-2017-14418</h2>
+<p>Corrected - the vulnerable file has been removed.</p>
+<pre><code># ls /htdocs/web/register_send.php
+ls: /htdocs/web/register_send.php: No such file or directory
+#
+</code></pre>
+<p>Note that the device still sends clear-text passwords to the Cloud protocol (www.mydlink.com).</p>
+<h2>WAN - revA and revB - Weak Cloud protocol - CVE-2017-14419, CVE-2017-14420</h2>
+<p>Not checked as this is going to be taking to much time.</p>
+<h2>LAN - revB - Backdoor access - CVE-2017-14421</h2>
+<p>Corrected.</p>
+<h2>WAN &amp;&amp; LAN - revA and revB - Stunnel private keys - CVE-2017-14422</h2>
+<p>Corrected - as shown below:</p>
+<pre><code># ls -la /etc/stunnel.key
+ls: /etc/stunnel.key: No such file or directory
+#
+</code></pre>
+<p>The new certificate (<code>/tmp/server.key</code> and <code>/tmp/server.crt</code>) is generated on-the-fly during the boot process by the <code>scripts/updatessl.sh</code> script. It's a self-signed certificate:</p>
+<pre><code># cat scripts/updatessl.sh
+[...]
+openssl req -new -newkey rsa:2048 -days $SSLDAYS -sha256 -nodes -x509 -subj "/C=TW/ST=Taiwan/L=Taipei/O=D-Link Corporation/OU=D-Link WRPD/CN=General Root CA/emailAddress=webmaster@localhost" -extensions usr_cert -keyout $TMPKEY -out $TMPPEM -config /etc/openssl.cnf -rand $TMPRAND
+[...]
+</code></pre>
+<p>This opens question about the security of the Cloud protocol.</p>
+<h2>WAN &amp;&amp; LAN - revA - Nonce bruteforcing for DNS configuration - CVE-2017-14423</h2>
+<p>Corrected - this file has been removed from the firmware image.</p>
+<h1>Local - revA and revB - Weak files permission and credentials stored in cleartext - CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428</h1>
+<p>Corrected - the passwords are replaced by 'x' everywhere:</p>
+<pre><code># cat /var/passwd
+"Admin" "x" "0"
+# cat /var/etc/hnapasswd
+Admin:x
+# ls -la /var/passwd
+-rw-rw-rw-    1 root     root           16 Jan  1 00:00 /var/passwd
+# cat /var/passwd
+"Admin" "x" "0"
+# ls -la /var/etc/hnapasswd
+-rw-rw-rw-    1 root     root            8 Jan  1 00:00 /var/etc/hnapasswd
+# cat /var/etc/hnapasswd
+Admin:x
+# cat /var/etc/hnapasswd
+Admin:x
+# ls -la /var/etc/hnapasswd
+-rw-rw-rw-    1 root     root            8 Jan  1 00:00 /var/etc/hnapasswd
+# ls -la /var/etc/passwd
+-rw-r--r--    1 root     root          146 Jan  1 00:00 /var/etc/passwd
+# cat /var/etc/passwd
+root:x:0:0:Linux User,,,:/home/root:/bin/sh
+nobody:x:1000:500:Linux User,,,:/home/nobody:/bin/sh
+Admin:x:1001:0:Linux User,,,:/home/Admin:/bin/sh
+# cat /var/etc/shadow
+root:!:10956:0:99999:7:::
+nobody:!:10956:0:99999:7:::
+Admin:!:10956:0:99999:7:::
+# ls -la /var/run/storage_account_root
+-rw-rw-rw-    1 root     root           12 Jan  1 00:00 /var/run/storage_account_root
+# cat /var/run/storage_account_root
+admin:x,:::
+# ls -la /var/run/hostapd*conf
+-rw-rw-rw-    1 root     root         1160 Jan  1 00:00 /var/run/hostapd-wlan1.conf
+-rw-rw-rw-    1 root     root         1170 Jan  1 00:00 /var/run/hostapd-wlan0.conf
+</code></pre>
+<h2>WAN - revB - Pre-Auth RCEs as root (L2) - CVE-2017-14429</h2>
+<p>Corrected - the variables are sanitized.</p>
+<h2>LAN - revA and revB - DoS against some daemons - CVE-2017-14430</h2>
+<p>Corrected? I don't think so.</p>
+<h2>Conclusion</h2>
+<p>I'm happily surprised by the results of dropping 0days without coordinated disclosure when it is about D-Link products. Should this be the only method with D-Link to get working security patches in a timely manner?</p>
+<p>Hopefully one day a coordinated disclosure could work in the same way.</p>
+<h2>Disclaimer</h2>
+<p>This research is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
+    <div>
+        <p class="text-muted">published on 2017-09-21 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>
