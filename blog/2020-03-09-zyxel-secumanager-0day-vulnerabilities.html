@@ -48,22 +48,22 @@ VPN Series that can be extended in the future.</p>
 <h2>Vulnerabilities Summary</h2>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
-<li><a href="#ssh-servers-keys">Hardcoded SSH server keys</a></li>
-<li><a href="#mysql-backdoor-accounts">Backdoors accounts in MySQL</a></li>
-<li><a href="#ejabberd-backdoors">Hardcoded certificate and backdoor access in Ejabberd</a></li>
-<li><a href="#open-zodb">Open ZODB storage without authentication</a></li>
+<li><a href="#ssh-servers-keys">Hardcoded SSH server keys - CVE-2020-15312, CVE-2020-15313, CVE-2020-15314, CVE-2020-15315, CVE-2020-15316, CVE-2020-15317, CVE-2020-15318, CVE-2020-15319</a></li>
+<li><a href="#mysql-backdoor-accounts">Backdoors accounts in MySQL - CVE-2020-15320, CVE-2020-15321, CVE-2020-15322</a></li>
+<li><a href="#ejabberd-backdoors">Hardcoded certificate and backdoor access in Ejabberd - CVE-2020-15323, CVE-2020-15324, CVE-2020-15325, CVE-2020-15326</a></li>
+<li><a href="#open-zodb">Open ZODB storage without authentication - CVE-2020-15327, CVE-2020-15328, CVE-2020-15329</a></li>
 <li><a href="#myzyxel-hardcoded-secret">MyZyxel 'Cloud' Hardcoded Secret</a></li>
-<li><a href="#hardcoded-secrets-apis">Hardcoded Secrets, APIs</a></li>
-<li><a href="#predefined-pwd-admins">Predefined passwords for admin accounts</a></li>
+<li><a href="#hardcoded-secrets-apis">Hardcoded Secrets, APIs - CVE-2020-15330, CVE-2020-15331, CVE-2020-15332</a></li>
+<li><a href="#predefined-pwd-admins">Predefined passwords for admin accounts - CVE-2020-15333</a></li>
 <li><a href="#insecure-cloud">Insecure management over the 'Cloud'</a></li>
-<li><a href="#xmpp-escape-seq-injection">xmppCnrSender.py log escape sequence injection</a></li>
-<li><a href="#xmpp-no-auth-cleartext">xmppCnrSender.py no authentication and clear-text communication</a></li>
+<li><a href="#xmpp-escape-seq-injection">xmppCnrSender.py log escape sequence injection - CVE-2020-15334</a></li>
+<li><a href="#xmpp-no-auth-cleartext">xmppCnrSender.py no authentication and clear-text communication - CVE-2020-15335, CVE-2020-15336, CVE-2020-15337, CVE-2020-15338</a></li>
 <li><a href="#zope-out-of-range">Incorrect HTTP requests cause out of range access in Zope</a></li>
-<li><a href="#xss">XSS on the web interface</a></li>
-<li><a href="#private-ssh-key">Private SSH key</a></li>
-<li><a href="#backdoor-apis">Backdoor APIs</a></li>
-<li><a href="#backdoor-management-rce">Backdoor management access and RCE</a></li>
-<li><a href="#pre-auth-rce">Pre-auth RCE with chrooted access</a></li>
+<li><a href="#xss">XSS on the web interface - CVE-2020-15339</a></li>
+<li><a href="#private-ssh-key">Private SSH key - CVE-2020-15340</a></li>
+<li><a href="#backdoor-apis">Backdoor APIs - CVE-2020-15341, CVE-2020-15342, CVE-2020-15343, CVE-2020-15344, CVE-2020-15345, CVE-2020-15346</a></li>
+<li><a href="#backdoor-management-rce">Backdoor management access and RCE - CVE-2020-15347</a></li>
+<li><a href="#pre-auth-rce">Pre-auth RCE with chrooted access - CVE-2020-15348</a></li>
 </ol>
 <p>Technical Note:</p>
 <p>The attack surface is very large and many different stacks are being used making it very interesting.
@@ -841,6 +841,7 @@ lost+found
 <ul>
 <li>Dec 20, 2019: Vulnerabilities found and this advisory was written.</li>
 <li>Mar 09, 2020: A public advisory is sent to security mailing lists.</li>
+<li>Jun 26, 2020: MITRE provides CVE-2020-15312, CVE-2020-15313, CVE-2020-15314, CVE-2020-15315, CVE-2020-15316, CVE-2020-15317, CVE-2020-15318, CVE-2020-15319, CVE-2020-15320, CVE-2020-15321, CVE-2020-15322, CVE-2020-15323, CVE-2020-15324, CVE-2020-15325, CVE-2020-15326, CVE-2020-15327, CVE-2020-15328, CVE-2020-15329, CVE-2020-15330, CVE-2020-15331, CVE-2020-15332, CVE-2020-15333, CVE-2020-15334, CVE-2020-15335, CVE-2020-15336, CVE-2020-15337, CVE-2020-15338, CVE-2020-15339, CVE-2020-15340, CVE-2020-15341, CVE-2020-15342, CVE-2020-15343, CVE-2020-15344, CVE-2020-15345, CVE-2020-15346, CVE-2020-15347, CVE-2020-15348.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>) and Alexandre Torres.</p>

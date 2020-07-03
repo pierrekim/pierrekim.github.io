@@ -10,7 +10,7 @@ Blog URL: https://pierrekim.github.io/blog/2020-03-09-zyxel-secumanager-0day-vul
 Date published: 2020-03-09
 Vendors contacted: None
 Release mode: Full-Disclosure
-CVE: None yet assigned
+CVE: CVE-2020-15312, CVE-2020-15313, CVE-2020-15314, CVE-2020-15315, CVE-2020-15316, CVE-2020-15317, CVE-2020-15318, CVE-2020-15319, CVE-2020-15320, CVE-2020-15321, CVE-2020-15322, CVE-2020-15323, CVE-2020-15324, CVE-2020-15325, CVE-2020-15326, CVE-2020-15327, CVE-2020-15328, CVE-2020-15329, CVE-2020-15330, CVE-2020-15331, CVE-2020-15332, CVE-2020-15333, CVE-2020-15334, CVE-2020-15335, CVE-2020-15336, CVE-2020-15337, CVE-2020-15338, CVE-2020-15339, CVE-2020-15340, CVE-2020-15341, CVE-2020-15342, CVE-2020-15343, CVE-2020-15344, CVE-2020-15345, CVE-2020-15346, CVE-2020-15347, CVE-2020-15348
 
 
 
@@ -28,22 +28,22 @@ Zyxel CNM SecuManager 3.1.0/3.1.1 (Nov 14, 2018) is the latest version.
 
 The summary of the vulnerabilities is:
 
-1. Hardcoded SSH server keys
-2. Backdoors accounts in MySQL
-3. Hardcoded certificate and backdoor access in Ejabberd
-4. Open ZODB storage without authentication
+1. Hardcoded SSH server keys - CVE-2020-15312, CVE-2020-15313, CVE-2020-15314, CVE-2020-15315, CVE-2020-15316, CVE-2020-15317, CVE-2020-15318, CVE-2020-15319
+2. Backdoors accounts in MySQL - CVE-2020-15320, CVE-2020-15321, CVE-2020-15322
+3. Hardcoded certificate and backdoor access in Ejabberd - CVE-2020-15323, CVE-2020-15324, CVE-2020-15325, CVE-2020-15326
+4. Open ZODB storage without authentication - CVE-2020-15327, CVE-2020-15328, CVE-2020-15329
 5. MyZyxel 'Cloud' Hardcoded Secret
-6. Hardcoded Secrets, APIs
-7. Predefined passwords for admin accounts
+6. Hardcoded Secrets, APIs - CVE-2020-15330, CVE-2020-15331, CVE-2020-15332
+7. Predefined passwords for admin accounts - CVE-2020-15333
 8. Insecure management over the 'Cloud'
-9. xmppCnrSender.py log escape sequence injection
-10. xmppCnrSender.py no authentication and clear-text communication
+9. xmppCnrSender.py log escape sequence injection - CVE-2020-15334
+10. xmppCnrSender.py no authentication and clear-text communication - CVE-2020-15335, CVE-2020-15336, CVE-2020-15337, CVE-2020-15338
 11. Incorrect HTTP requests cause out of range access in Zope
-12. XSS on the web interface
-13. Private SSH key
-14. Backdoor APIs
-15. Backdoor management access and RCE
-16. Pre-auth RCE with chrooted access
+12. XSS on the web interface - CVE-2020-15339
+13. Private SSH key - CVE-2020-15340
+14. Backdoor APIs - CVE-2020-15341, CVE-2020-15342, CVE-2020-15343, CVE-2020-15344, CVE-2020-15345, CVE-2020-15346
+15. Backdoor management access and RCE - CVE-2020-15347
+16. Pre-auth RCE with chrooted access - CVE-2020-15348
 
 Technical Note:
 
@@ -294,7 +294,7 @@ The access have been extracted from the previous mysql history file and several 
 
 These passwords are hardcoded by the vendor and used everywhere:
 
-- From collectd:
+- - From collectd:
 
     <Plugin mysql>
         <Database live>
@@ -306,7 +306,7 @@ These passwords are hardcoded by the vendor and used everywhere:
         </Database>
     </Plugin>
 
-- From Axess TR-069 solutions:
+- - From Axess TR-069 solutions:
 
     root@chopin:/opt# cat /opt/axess/etc/axess/TR69/Managers/_live/asynch/mysqlCPEStorage/db.txt
     [...]
@@ -937,6 +937,8 @@ On a side note, the solution also contains some SQLi, some references to ISPs in
 
 * Dec 20, 2019: Vulnerabilities found and this advisory was written.
 * Mar 09, 2020: A public advisory is sent to security mailing lists.
+* Jun 26, 2020: MITRE provides CVE-2020-15312, CVE-2020-15313, CVE-2020-15314, CVE-2020-15315, CVE-2020-15316, CVE-2020-15317, CVE-2020-15318, CVE-2020-15319, CVE-2020-15320, CVE-2020-15321, CVE-2020-15322, CVE-2020-15323, CVE-2020-15324, CVE-2020-15325, CVE-2020-15326, CVE-2020-15327, CVE-2020-15328, CVE-2020-15329, CVE-2020-15330, CVE-2020-15331, CVE-2020-15332, CVE-2020-15333, CVE-2020-15334, CVE-2020-15335, CVE-2020-15336, CVE-2020-15337, CVE-2020-15338, CVE-2020-15339, CVE-2020-15340, CVE-2020-15341, CVE-2020-15342, CVE-2020-15343, CVE-2020-15344, CVE-2020-15345, CVE-2020-15346, CVE-2020-15347, CVE-2020-15348.
+
 
 
 
@@ -962,17 +964,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
  
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl5l0sYACgkQxD4O2n2T
-Lbz5hQ/9GVKujOGnDzo6n7L7LW7ZV73qI0K3tYm17vXF3Q6D9d05NFpxGD9yRfTk
-1zvz+G7wsKEW/CIk7ZzpMMd0WlOWYTvgpfBFCh+5WOyMwDwmVdXVTSAoHKuDvZog
-Ws5CuF/UMlQ5oadHmWynaqMapH8ZPrTDpAoPNfABBy3X/26AA35hWJFif6sjW9Ui
-6YODigH5sT4/qy3G+vAVDR3er4D6vg97tEdSE2TwFAuYYqxYlN6P3bD2OSCKyAbv
-PlXr3mJJ7Of9BoRA3l/1bcHnT8o5IYpDUnDDPMnqHlPIPiPoIVezHxY17EZklQS1
-Jt+H+mEZMljNmSnaYeHAHvjcp0heIQLu6OKXv+bSu+sx50dshRcSTmfjZDe9N9ba
-2R4ZI346+VlY3BEOFzuDwQLkUSQNgBT1OJa9wYc6+ssqw0XTRQdIc5Vcubv26Kkp
-Jqk38/jciF+pvDLhXBmY5Us6Uw0xyQa4RKOyDDHyYfAdxkTdPyNMbJCjCMFljlst
-R6J9NoTtGivs+8oNnIkvfcYdPIolzz6tSBbWfMlOEvFWo/eijfKQzJ/ZO9wkOD9X
-7/7Nk1rU68a9reIBL9U/afA56cgPyxBmPF0wk4+b9+vNNI2LKRtweXtQeFC5e7uf
-rzE5/7nXwRAtn1EcA9+UTYBLd10T2IB7AqlY9ZS3bdOE//2hiJU=
-=YGYp
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl75hewACgkQxD4O2n2T
+Lbwq6w/9GSXMB5dLPJtvVhQalPmSdvwG6MZxtxqvCn74opnD55zuEYMIqy/w963N
+oV1F91vwG/9VABq03g/hg++xSI8QyBdVMd66PtF1jSyUeVbQHaKAVBur5pP8TSZD
+HuDoS2tKrEXsEF4rK9Z1Uk5B5d8ThgW6yHCgMHuRNvbUvS/ZqNw4gaLp4UG9qsRN
+vUnhobYJCZ7JALmka0hYWcfuBibbykYdvPkj3EYxJz37OV6m5TOG3T9Ko8C/WbYO
+nZxTGCUVMOS/Itqo/uGK19MtAAP6iJ9flu22j+JL4sAC7hM9LlKKp1MDgnIpLf+o
+edHb1aMu0kN38sVKt5cPw/fH1CGF+OX19Mz2lpd98bXwihnmIniCE7u0M3xeYz94
+7JzifbpRMEVC69eLufcKWigA28tmwtvNLBUvlYmEk/bhBE1QqK+8IoZyLqmYIEVc
+FdSvcHKhI0o6tp7PUxH/EGxQ7/0mw+3v6SZKqTkVP1SGhGj3p0zdzZyZBObWb6OB
+cGDLMQQc3cUBHt0NI1WItWZ3LD80ZU2hWrofsp0yEhkhSHxu1cG0h1Gx35zasbE/
+I2MiVvOCgh0ZIQ7cQOuehiGJJUG1ooVMYi/TH6VyD5J3SfTLbXvzMA80bf9pR7t4
+JReXjOKj0NNshJlCZIiWP4LzsxHMsxkgY4MAknKtZ4qy0JLq218=
+=gOso
 -----END PGP SIGNATURE-----
