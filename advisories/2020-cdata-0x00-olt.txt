@@ -16,7 +16,7 @@ CVE: None yet assigned
 
 ## Product Description
 
-The CDATA OLTs are OEM FTTH OLTs, sold under different brands (Cdata, OptiLink, V-SOL CN, BLIY), allowing to provide FTTH connectivity to a large number of clients (using ONTs).
+The CDATA OLTs are OEM FTTH OLTs, sold under different brands (Cdata, OptiLink, BLIY), allowing to provide FTTH connectivity to a large number of clients (using ONTs).
 Some of the devices support multiple 10-gigabit uplinks and provide Internet connectivity to up to 1024 ONTs (clients).
 
 We validated the vulnerabilities against FD1104B and FD1108SN OLTs in our lab environment with the latest firmware versions (V1.2.2 and 2.4.05_000, 2.4.04_001 and 2.4.03_000).
@@ -53,7 +53,7 @@ Using static analysis, these vulnerabilities also appear to affect all available
 - - FD8000
 
 
-- From the analyzed binaries, we extracted information about the OEM vendor:
+- - From the analyzed binaries, we extracted information about the OEM vendor:
 
     CDATA
     Flat 6, Bldg 4,South 2 of Honghualing Industrial Zone, Liuxian Road, Xili Town, Shenzhen, Guangdong, China(518055)
@@ -515,6 +515,7 @@ Full-disclosure is applied as we believe some backdoors are intentionally placed
 
 * Dec 27, 2019: Vulnerabilities found and this advisory was written.
 * Jul 07, 2020: A public advisory is sent to security mailing lists.
+* Jul 14, 2020: V-SOL removed.
 
 
 
@@ -539,17 +540,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl8BvkcACgkQxD4O2n2T
-LbwfiQ/+Kul1GvFr6xqPFFHnLvIimIFwco8PQk0olfOX/CNH6pCxOBFfYijw1a4o
-1aO7g56k3WQParV8AluF26tAVnzy/+Ittv53yIOo/qPojFefJ7fF3YmvxhxEzyD2
-fBgKw/NmiwXM9Pn9SFR+hLxeH/zdgHZvORUZ4c1wdmZmD/24nh/u+IUiHM3bIg75
-s4PGwCJFGurREcs1fbFkaOAYao3nEftjTQIsGBVDeObJags3jqx0OkOMuTnT3Kge
-HRJUiMsgmz6SehRrYvzsa47OqZNtXA2Tugmwmhy/iYTqX1LDAzP9uvvbfIPvyWbV
-xM5LmD1iIuBsCZQzkRmapaToqnPCtjCRnhTDbSMu63NCpeLt7QMC9TbYlb150eCv
-0EwnA4Y4rK2GfHIGinZm4/UBj+8M0alc17eLkzlzu67kagS7MDPJcq2zkf0Rj6e/
-uapS+5UPVeEWzoFjBWti735l/zdG5Goa+qLhxYKQM0wuj7z7d3iGuGq5PI0LbQpE
-YZ9p/I8AYfJF7MWxU4l8eyAnl00yVn8H/OW6HT+sQqmOgeFtpdEqWgI+jvLX/Q3A
-yW1SSBrWvAEVDcoB84cxoTtaWEWKoZuDx16wvxd+di1Mv/qmSiWfcIf/sX0r1Yr9
-V2SjsRZ0HnMRqCugk0fXInIFsC98pRZJHJ5+h7h7aSb0KRo8/zI=
-=ATix
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl8LNXcACgkQxD4O2n2T
+LbwolhAAnsOxa6FQ8TtTtRxJWrUKyi6eUNdzW9ssVMTt1K3N4p9eztDsZPWA1fpE
+G/9qf9fxuv2KaVNi3FHXqg1p3f2eBC7IRaAeOSTRDRc/QcFPyHaatxY7AZmmL1MI
+RDmM+rFr/Z2u9K0UswiYk4v8EbzH6a9B/m+ql+nkpurzBMfsrsl9rpIf8wNvpuGJ
+pQditbAfF9TNUI7v7RiHOhUUfEw3BgDzNp9XNFyTmcGUzhJlCRN6Bij1vAOjx7dg
+Z7J3n7WZ6fQ+m71iSBzIjUMySz+AsYoOvBwMVmReUDPWeYrKlV8vvAniMWh8XgaI
+pJUbHKekwVB5t+hn3tfn85vzhXyzHQHwH+sWTUxgjA3oQGx9DDNQ+c1NfjtnNpPz
+YLCGBpkrYOcM0JsNCN+zEIEq9MsIPGSCt7ZjjtZKN4TeJx3NgB5PLTGhFCeprFRh
+gS7LFK2ndqmwP6QsvQxX/N+cYkZT4Sut8zfn1qevDYj3brZN94Ns4mxUsYg34yFH
+Wk2KFsQxtytAtxau7f+HXvZZB44r1EDjR+eonGYoGdtpwMc+z2K8yjG6t5b5aoJ4
+OZaHKs4ccayMSdTFUA9PoDN6m8hP7OwTASqgH95pow0jAlps4YtqoL413TtEqZwU
+MIZWrHKNrqi7ibm2soYJ5wrupkZQ+//C95kEqHjfK2aYu2Ns6No=
+=xU5U
 -----END PGP SIGNATURE-----
