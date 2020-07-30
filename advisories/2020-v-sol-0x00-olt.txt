@@ -295,12 +295,19 @@ By default, the appliance can only be managed remotely with HTTP, HTTPS, telnet 
 
 Full-disclosure is applied as we believe some backdoors are intentionally placed by the vendor.
 
+The vendor reached me after the publication for more details about the vulnerabilities and started to provide new firmware images from July 14, 2020. The default hardcoded password has been removed in all the firmware images.
+
+Customers have been advised to update their devices with the latest firmware images. Patched firmware images are available at https://www.vsolcn.com/download/ .
+
 
 
 ## Report Timeline
 
 * Dec 29, 2019: Vulnerabilities found and this advisory was written.
 * Jul 14, 2020: A public advisory is sent to security mailing lists.
+* July 14, 2020: V-SOL reaches me asking for details about the vulnerabilities and confirms they are working to address security patches as soon as possible.
+* July 14, 2020: V-SOL starts to provide updated firmware images.
+* July 21, 2020: After analyzing all the updated firmware images, it is confirmed that the default hardcoded password has been removed.
 
 
 
@@ -325,17 +332,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl8MX4oACgkQxD4O2n2T
-LbymnBAArmUCDEI/WHC5ch31YfXxEhSZOTD1l5GOD7osIixteXT67jCns5EGdhBJ
-Lq66KLdjzG+60jhj1N/YHuZBupvF4ChtnTId/UYSjuvys8J17f6VweqsazxebYac
-WOcmBwN9Tqw20Bjhmqff3y2qaQ6YpfbkuiPciddLTUT1OGvM8b0wuUDF2grb5KLT
-cKJoFW//RaX9eQCZaB/5RoZIv06hZZSx2930ijOfC5kRqoVex5FkhV1dEzA4PBIM
-TV/lkYWnOxb6xO6GYwLFGq0xe4qVjd+En34ixgUMhBxsJAQ4HsNGInCgJZfitJKv
-0GgNlP5FRtVU+T7kk0e+Bmwl/vAmF3IbCEUacQoW08cahpiqHIJEIKzV+wdYrjlv
-q40Ia8pUHwcFEe5UyWn1+yxTU2WslAZQCbXoD0FYrzN6AhgctyZR5kfotSjycGU5
-GqxPV7j9HJqahf5rLutbF07onbOxXyU/YwLPx3kbHs3yJ68a1XKZox5o0B3NT/BU
-GEUlKnp5C2sZmNXMmdW7bh/MODIgAdK4vfjRgJP77QyHjCed1twqmEFTZ/fy5k+I
-gMZCzi/EZhuOAoRximq7Qoxn3TvedmTorCtUrbClMEijQ8weuSxKCUK+joPGmkmv
-I46u4GKyS2wmm+2DfQmxSXTZKX689YckXAihgr7bpSDk3yBz12w=
-=DOib
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl8iW60ACgkQxD4O2n2T
+LbwK5A//T2yqpRt+nf8cl+zOz917AyfeHI65lM7xusdDq8eU7GjJAOwl7aQRYTiV
+EQyLTbyBSnlZlWQ9zVKpA9Lw7hRgpgqDdm1Gu5kMjec8kBg7+DnSiO38f2stU1T6
+Qd34ou1qqRW6irR2XXFoZqeKy4398CTsv531IuK4VsudR+WhQC/0rEslvsW3UtHz
+ffq6TwDbRqS4PU3jJZuiIU8uGgxutRla910644tn+2uoUUWilOoMZ7n4a0a/HOFD
+T3YyMvce59Mo6HH6IX23Knn09Ox/WBmirb2dqrJgMDEWi7hHbIAUMNYnKPR76rdz
+Tpmlk1Y3Ii38qQ3oZN41zLgQBi55+L63Lkry034JFM3liOuR/K6VuoK7w6CauJPD
+1wOFdlOwnk8qjXsCW+CYG0rUkn6qjtBq7KAzn3DwVtJzevhFgOCfjF62kXaic2WK
+EZnTa1U4UZfEVo8gcLe6UKkUJtwWODInJEan8xwUfk6m0i/zDkKEDfFMcLFBNiMp
+1s9SYZEZlfoXrNggw6LclWqKOqPoAUF9BD4YnGsyJ8k22YaPh/sAbg3GWmeV1a4i
+bEAKQWikpvtYZGI9u7FK8ASS6O3h2vA6BFgKDZaB6coG5xSMQzHLpyISRkZ63EbG
+e2hG2Lo0dp0S91Kzx0aVhccpyFPeCVkrPtjuoLYpHe9arc6PYkM=
+=cRQF
 -----END PGP SIGNATURE-----
