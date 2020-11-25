@@ -1,7 +1,6 @@
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
 
-
 ## Advisory Information
 
 Title: Multiple vulnerabilities found in CDATA OLTs
@@ -67,13 +66,13 @@ For explanation about FTTH architecture, you can check my previous research at h
 ## Vulnerabilities Summary
 
 The summary of the vulnerabilities is:
-1. Backdoor Access with telnet
-2. Credentials infoleak and credentials in clear-text (telnet)
-3. Escape shell with root privileges
-4. Pre-Auth Remote DoS
-5. Credentials infoleak and credentials in clear-text (HTTP)
-6. Weak encryption algorithm
-7. Insecure management interfaces
+1. Backdoor Access with telnet - CVE-2020-29059, CVE-2020-29060, CVE-2020-29061, CVE-2020-29062
+2. Credentials infoleak and credentials in clear-text (telnet) - CVE-2020-29054
+3. Escape shell with root privileges - CVE-2020-29056
+4. Pre-Auth Remote DoS - CVE-2020-29057
+5. Credentials infoleak and credentials in clear-text (HTTP) - CVE-2020-29058
+6. Weak encryption algorithm - CVE-2020-29063
+7. Insecure management interfaces - CVE-2020-29055
 
 
 
@@ -516,6 +515,7 @@ Full-disclosure is applied as we believe some backdoors are intentionally placed
 * Dec 27, 2019: Vulnerabilities found and this advisory was written.
 * Jul 07, 2020: A public advisory is sent to security mailing lists.
 * Jul 14, 2020: V-SOL removed.
+* Nov 24, 2020: MITRE provides CVE-2020-29054, CVE-2020-29055, CVE-2020-29056, CVE-2020-29057, CVE-2020-29058, CVE-2020-29059, CVE-2020-29060, CVE-2020-29061, CVE-2020-29062, CVE-2020-29063.
 
 
 
@@ -540,17 +540,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl8LNXcACgkQxD4O2n2T
-LbwolhAAnsOxa6FQ8TtTtRxJWrUKyi6eUNdzW9ssVMTt1K3N4p9eztDsZPWA1fpE
-G/9qf9fxuv2KaVNi3FHXqg1p3f2eBC7IRaAeOSTRDRc/QcFPyHaatxY7AZmmL1MI
-RDmM+rFr/Z2u9K0UswiYk4v8EbzH6a9B/m+ql+nkpurzBMfsrsl9rpIf8wNvpuGJ
-pQditbAfF9TNUI7v7RiHOhUUfEw3BgDzNp9XNFyTmcGUzhJlCRN6Bij1vAOjx7dg
-Z7J3n7WZ6fQ+m71iSBzIjUMySz+AsYoOvBwMVmReUDPWeYrKlV8vvAniMWh8XgaI
-pJUbHKekwVB5t+hn3tfn85vzhXyzHQHwH+sWTUxgjA3oQGx9DDNQ+c1NfjtnNpPz
-YLCGBpkrYOcM0JsNCN+zEIEq9MsIPGSCt7ZjjtZKN4TeJx3NgB5PLTGhFCeprFRh
-gS7LFK2ndqmwP6QsvQxX/N+cYkZT4Sut8zfn1qevDYj3brZN94Ns4mxUsYg34yFH
-Wk2KFsQxtytAtxau7f+HXvZZB44r1EDjR+eonGYoGdtpwMc+z2K8yjG6t5b5aoJ4
-OZaHKs4ccayMSdTFUA9PoDN6m8hP7OwTASqgH95pow0jAlps4YtqoL413TtEqZwU
-MIZWrHKNrqi7ibm2soYJ5wrupkZQ+//C95kEqHjfK2aYu2Ns6No=
-=xU5U
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl++PbIACgkQxD4O2n2T
+Lbydqg//UpAPjm6LvbB+saH/kvYKaV9Q5vHI1IOV3k6FH0fuvqMbl7jsmiX+kJwS
+o1uhVbKnbVpalNmLjo29V+fkqvx23aMcgYSIUvfa12+gw/MKB3VGvpBfrIX1xY7F
+6tdNm+a86anJjk3alBLdP1cCvmaaSKgWuAKMQrL1xjn4Q1LiLJqyNerQRMm9zjPT
+shDjPoaZGMiK0oh99RqHO6SC1Op7lbtMkRyj9wBhYxIfShZRb7Vy6fDq8Pb9XJHn
+rkR9IXMAsqABCCvxiweFg/twsWQQ/WI09wVeJQun1XKfBzdUkK3MJ9mwl4551Isq
+2KWNkmWVvdCgrz3ghAbS21fJnn2hdSHS5M7nfSTziJnOmo5+4BJGNGnK0crgPinN
+0xxn70fZLNl3qUIMlm9GjFVe0qeZImAoLs9iupBMUYPW4LCm/Ru3nUOxBqmcLDOU
+AULKO+g58UirY+9DIsrCTaLSv3QeWj0d/3lT5VZYeTlt35GvE8ehjNtDmW5zhW8G
+AhyibqcjNm0BJFFJtx0Xx292dWgUSdAwHTwhWOh4wO+4CMyUuEFCqQPjcSs8B0pi
+MexULsvA28ulR4whK42TaPHXen9I9dGVkFUsXU0VHA6Pz2G0VNvOHATactVz1+aD
+dVdjYGqpC/3V5L24Lt41tS1A3tJCsRhUrcfEiUm44ZZZLHTEVIA=
+=TRQf
 -----END PGP SIGNATURE-----
