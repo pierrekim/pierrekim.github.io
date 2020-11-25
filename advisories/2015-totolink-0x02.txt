@@ -9,7 +9,7 @@ Blog URL: https://pierrekim.github.io/blog/2015-07-16-backdoor-and-RCE-found-in-
 Date published: 2015-07-16
 Vendors contacted: None
 Release mode: 0days, Released
-CVE: no current CVE
+CVE: CVE-2015-9550, CVE-2015-9551
 
 
 
@@ -44,7 +44,7 @@ We estimate there are =~ 50 000 routers affected by this backdoor.
 
 
 
-## Details - backdoor
+## Details - backdoor - CVE-2015-9550
 
 The init.d script executes the /bin/skt binary when the router starts:
 
@@ -117,7 +117,7 @@ To detect a vulnerable router:
     if you see "GET / HTTP/1.1" in the answer, you likely detected a vulnerable router.
 
 
-## Details - RCE in the management interface
+## Details - RCE in the management interface - CVE-2015-9551
 
 A hidden form in the latest firmware allows an attacker to execute commands as root by sending a HTTP request:
 
@@ -157,6 +157,7 @@ TOTOLINK was not contacted in regard of this case.
 * Jun 26, 2015: Working PoCs with RCE.
 * Jul 13, 2015: Updated firmwares confirmed vulnerable.
 * Jul 16, 2015: A public advisory is sent to security mailing lists.
+* Nov 24, 2020: MITRE provides CVE-2015-9550, CVE-2015-9551.
 
 
 
@@ -180,19 +181,18 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
 
-iQIcBAEBCgAGBQJVq/MLAAoJEMQ+Dtp9ky28bGEQAKcXghQtecYt4bSd+isQ7zh8
-8z6Q05F5fiReKaXSR2dFlBhulsq6o5TjIQsGB2mG/2GOthqn7KHNYwVMSGrdYNd6
-lmOD3yPnGl3c2SyuiabUEYk7FvoyZ2g71mxxyie4/dV7I3jir2DGToInjEp0IXgU
-hM6CeTFoTO5y9Z6VYHaaxI2POgqD9OojmL+1oE7h3bMiMoOftXeDh1IUSLpQddHa
-wBDHWhLXXJYNxv2vWubJaefv6gRomeaapLjODCMiMJX0Br4EZ9gzpzonOEGG+I8z
-gRwl+JO0CrxDhysiyMayU5uPsifomcWVXaEEZRdTMWDfWH0qB/f0/2zbFVMVzCVk
-17AedQyoPXWELhS7i9afZ2JCylcEHLgMhQeDQG48lQf4SCFxCyKD09pVnG13lsUC
-Ee2EQB5A7FkqcwAbq7xRnZuMd/Lpl/RuSKIby7VbqfcI1MDnKoKt9XQ9lLIulQvk
-WRnMgUxoyQ8fFzFn265qvb3a3RSWc+Yl8xRUky4IZ3jd+nbEqHdPWCKSG4D2C45J
-NHpyeY+aZ2p/hxCfJckJtzYdcZGXSVfO2FU0rr94K9XAeWXj3+RP3DOKGoTRLZCT
-7OxaHVHiB7aLXS2qta4EBYyjFVHJZOmlcyjYcKY/RhMGomWvoUegG3z7eAbjaoj0
-k2ILiaGzfv4z+aJ/iI05
-=z70S
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl++OdcACgkQxD4O2n2T
+Lbz8zRAAga2nvBSzFOEoLZUZHhO94zSzM5ev3sK80F+kSJ/I5skw0wrf77VEDq8x
+j0WegWm9f4XqdU9kezMV9NT6vMfWi+MRES18VhtsP2P6YfmX03fYmYVnsav5D5Os
+ezyg8P+42h6lgEkypgIUZ6I5T6BxUf0VnF1AwOr5nLvS0kS+OXYUSeTv0YK5Xt/e
+ew+g1Glvm5PNjiiQKK+zVsb6gA6Z3cwpP3vlyqPXLG3tLNkUrRKHcpSYf5t3Gf06
+E9LbjvyTMleJM658aLRWgTdh2zy32cMpP/+CIY4kvHH+DGU0ArxfkYGxvHHTR68V
+lKncaVweE9vwmG713zCV8o9AielnsKEgucUa1MHpHR0YkKpQ7QiznSD+0Zaw5shT
+vMvJz1N3FrIsQbcpjrOIwFWH1hA5ntj6phgcPX5MOdsuBcFt19tuYvfrHVnuIVLS
+3sCUfl0ABLPwTT7KGQKTkfzJqH9TAwOtUNFPwo/lY+CtvwnX1WiNhptItLjTMq9m
+B0W5FscMmAfWd93+1KX6a0Au+Ry5MV6O8BaAGQZwrS1hSf9audvtGNQQaDuUnjVp
+ZVmupY4yYDNDziFoVyMU0xXF7R8HsVeDNPGU8r1dRX+z7o2JnT2IjWMKqg3vwI8/
+42mWfDVr2zurJwfr5gmM2gViv5Y5Iv7wFEf/o+vm/a0FLTBx8IQ=
+=xPLQ
 -----END PGP SIGNATURE-----
