@@ -30,6 +30,8 @@ I validated the vulnerabilities against HG6245D, RP2602:
     Basic part version : RP2602
     Generate time : Apr  1 2019 19:38:05
 
+**UPDATE Feb 7, 2021 - the latest firmware version (RP2613) is also vulnerable. The vulnerabilities have been confirmed in the latest firmware image (RP2613).**
+
 Some vulnerabilities have been tested successfully against another fiberhome device (AN5506-04-FA, firmware RP2631, 4 April 2019). The fiberhome devices have quite a similar codebase, so it is likely all other fiberhome devices (AN5506-04-FA, AN5506-04-FAT, AN5506-04-F) are also vulnerable.
 
 
@@ -122,7 +124,7 @@ All the services are binding to both `br0` and `wan0`.
 
 It is trivial to reach services from the WAN (Internet), by contacting IPv6 used by `br0` or `wan0`:
 
-- From the WAN:
+- - From the WAN:
 
     rasp-wan-olt% telnet [ipv6] 26
     Trying [ipv6]...
@@ -304,7 +306,7 @@ In order to reach the telnetd CLI server, it is also possible to reach a backdoo
 
 This backdoor can be found inside the `webs` binary:
 
-- From `sub_C46F8()` (called from main()):
+- - From `sub_C46F8()` (called from main()):
 
 [please use the HTML version at https://pierrekim.github.io/blog/2021-01-12-fiberhome-ont-0day-vulnerabilities.html to see the image]
 
@@ -833,6 +835,7 @@ Full-disclosure is applied as it is believed that some backdoors have been inten
 * Aug 2020: Found the lack of IPv6 firewall.
 * Jan 9, 2021: Vulnerabilities checked again and the advisory was rewritten.
 * Jan 12, 2021: A public advisory is sent to security mailing lists.
+* Feb 7, 2021: The latest firmware version (RP2613) is confirmed to be vulnerable.
 
 
 
@@ -857,17 +860,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAl/5sJsACgkQxD4O2n2T
-LbyPqw/9GUqpwf47Y3kn0PP8nlhhseRakIOPvLbhPcrB0erTg1vSja7wjqTrbHun
-5jDuVV8anLIIHfyR4p1BU0qgUzU29JcGl41t1+wQhG8mt5pvFofZlIlwUwhe2tJg
-fFMvGA3/YyGbKAKNRZQibbjnARCS9WYqZBWy/l3P1VUSY32mR1ifroENABG6s7Q+
-FnAtIzRufiFjOYe0iOPXeqKOe4z/JRtjznSc2YFhLid0TQC+rmh37mN+b8yPwmyX
-x01wMC904JF88qLQBym8VSLZkRuzyyrnsSZd5/BX1M6J8GQkxzyfUn2FBof2OnMJ
-i28qLmSxGd6TprhtB2XM9V6snomss/b9zvYXtdVjzCgDZ8/P07NvJf0Sxo5pOMJC
-60CHTsfQk0vREdHtibjiVR/XCEJkACkW+PDFo+Fvs4By3yJFhqar1cK4mujvwYe5
-392yAc77z96WXI0dwD/nxdNNyPM635hTuyFECMK8FTjnYBjSNjmYDmBRF2T3fxda
-oytz1qNnLT/JnPSZhByCz04ok1BSN/HQcUL9rFXmDGMKL12YmcgB/WpHF61CAw0q
-XKKKY6OtL1u3kB+EmEuCljiSZzV2zumN43Y3V5OewHDeQ+lZI+GSpWngcipcTy8y
-Xdj6+ehDf2Xd8AG9dDlO7yDUEO3gVRt+XAcbav7WW0JeFt4wwPg=
-=YoWf
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmASxP0ACgkQxD4O2n2T
+Lbz08hAAh9+txymPVm0XMBvoiUKQsL2GNY2GCXM4h6vGWf4TEO4CF7qBT7yyi+1H
+fG7W8N6uXo8h3kLR6edZu+xZv9qq2hZL3IsBx1ZygDDG07Hnfx5SFa900aWvQd1d
+oz5rGL7Y0NQoFii5xoFC3oqOe0kcU39ujKjYOxpJsRm/9mACZI1094zPyjF8UeGR
+wIaOpErODXR8Znof/VkKCcMO8JxigkvTcxQAEX3kLHG/fyDlTB8Em37bnQfKKExz
+ET9AHOqvXDIkQkq4EqzzXkb0n7EjCn4sT2M0KuJUh371V7KMWLZ9/zI5bbG8WV+C
+7HDmpDHwS6T6ctus2pt5Ch1MWf0TomaTUVLNGmRgWebtH+44iUis6mUD8zgsF8LV
+C2E1pwSnkwGvZQF/bNJQvrzz0Y+hW/Q0xSsIqLsOWu3/X7w1bqSkZWFLMarlhnn/
+duXgvKKoaqH9RsWWionIuZrav+SjMmFBz+aEOMqgntWau6HVF3WmldrnH3VS/VCU
+qJCRmdTWrD3PwaWZzjwbmz5bdW5XfWizw+4CCyI3TupoZCad3r/AOLbxeY3rDfbi
+8yflzZ2drKE9OAuCJrSw+bWMrnQ+6ww7xMNfHsK0neOIdjKnzMIXSKmm0z+Hk9Zw
+Er6o+JskaYTrR3Yp5zKclTfEADKIPIPwfn/HAfFl42csisRrZKc=
+=WBVr
 -----END PGP SIGNATURE-----
