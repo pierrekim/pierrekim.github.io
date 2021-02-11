@@ -73,22 +73,22 @@ Also, it is public knowledge from 2019 that Fiberhome devices have weak password
 
 The summary of the vulnerabilities is:
 
-1. Insecure IPv6 connectivity
-2. HTTP Server - Passwords in HTTP logs
-3. HTTP Server - Harcoded SSL certificates
-4. HTTP server - Pre-auth InfoLeak
-5. HTTP Server - Backdoor allowing telnet access
-6. HTTP Server - Hardcoded credentials
+1. Insecure IPv6 connectivity - CVE-2021-27170
+2. HTTP Server - Passwords in HTTP logs - CVE-2021-27140
+3. HTTP Server - Harcoded SSL certificates - CVE-2021-27142
+4. HTTP server - Pre-auth InfoLeak - CVE-2021-27139
+5. HTTP Server - Backdoor allowing telnet access - CVE-2021-27173
+6. HTTP Server - Hardcoded credentials - CVE-2021-27143 - CVE-2021-27144 - CVE-2021-27145 - CVE-2021-27146 - CVE-2021-27147 - CVE-2021-27148 - CVE-2021-27149 - CVE-2021-27150 - CVE-2021-27151 - CVE-2021-27152 - CVE-2021-27153 - CVE-2021-27154 - CVE-2021-27155 - CVE-2021-27156 - CVE-2021-27157 - CVE-2021-27158 - CVE-2021-27159 - CVE-2021-27160 - CVE-2021-27161 - CVE-2021-27162 - CVE-2021-27163 - CVE-2021-27164
 7. HTTP Server - TR-069 hardcoded credentials
-8. HTTP Server - Credentials decryption algorithm
-9. Telnet server (Linux) - Hardcoded credentials
-10. Telnet server (CLI) - Hardcoded credentials
-11. Telnet server (CLI) - Privilege escalation
-12. Telnet server (CLI) - Authentication bypass
+8. HTTP Server - Credentials decryption algorithm - CVE-2021-27141
+9. Telnet server (Linux) - Hardcoded credentials - CVE-2021-27172
+10. Telnet server (CLI) - Hardcoded credentials - CVE-2021-27165 - CVE-2021-27166 - CVE-2021-27167 - CVE-2021-27168 - CVE-2021-27169
+11. Telnet server (CLI) - Privilege escalation - CVE-2021-27171
+12. Telnet server (CLI) - Authentication bypass - CVE-2021-27177
 13. Telnet server (CLI) - Authentication bypass to start the Linux telnetd
-14. Telnet server (CLI) - DoS
-15. System - Credentials stored in clear-text
-16. System - Passwords stored in clear-text in nvram
+14. Telnet server (CLI) - DoS - CVE-2021-27179
+15. System - Credentials stored in clear-text - CVE-2021-27174 - CVE-2021-27175 - CVE-2021-27176
+16. System - Passwords stored in clear-text in nvram - CVE-2021-27178
 17. Misc - Remote stack overflow in the HTTP server (AN5506-04-FA / RP2631)
 
 I removed several DoS and strange technical details (linked to undisclosed vulnerabilities) for clarity.
@@ -836,6 +836,7 @@ Full-disclosure is applied as it is believed that some backdoors have been inten
 * Jan 9, 2021: Vulnerabilities checked again and the advisory was rewritten.
 * Jan 12, 2021: A public advisory is sent to security mailing lists.
 * Feb 7, 2021: The latest firmware version (RP2613) is confirmed to be vulnerable.
+* Feb 10, 2021: MITRE provides CVE-2021-27139, CVE-2021-27140, CVE-2021-27141, CVE-2021-27142, CVE-2021-27143, CVE-2021-27144, CVE-2021-27145, CVE-2021-27146, CVE-2021-27147, CVE-2021-27148, CVE-2021-27149, CVE-2021-27150, CVE-2021-27151, CVE-2021-27152, CVE-2021-27153, CVE-2021-27154, CVE-2021-27155, CVE-2021-27156, CVE-2021-27157, CVE-2021-27158, CVE-2021-27159, CVE-2021-27160, CVE-2021-27161, CVE-2021-27162, CVE-2021-27163, CVE-2021-27164, CVE-2021-27165, CVE-2021-27166, CVE-2021-27167, CVE-2021-27168, CVE-2021-27169, CVE-2021-27170, CVE-2021-27171, CVE-2021-27172, CVE-2021-27173, CVE-2021-27174, CVE-2021-27175, CVE-2021-27176, CVE-2021-27177, CVE-2021-27178, CVE-2021-27179.
 
 
 
@@ -860,17 +861,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmASxP0ACgkQxD4O2n2T
-Lbz08hAAh9+txymPVm0XMBvoiUKQsL2GNY2GCXM4h6vGWf4TEO4CF7qBT7yyi+1H
-fG7W8N6uXo8h3kLR6edZu+xZv9qq2hZL3IsBx1ZygDDG07Hnfx5SFa900aWvQd1d
-oz5rGL7Y0NQoFii5xoFC3oqOe0kcU39ujKjYOxpJsRm/9mACZI1094zPyjF8UeGR
-wIaOpErODXR8Znof/VkKCcMO8JxigkvTcxQAEX3kLHG/fyDlTB8Em37bnQfKKExz
-ET9AHOqvXDIkQkq4EqzzXkb0n7EjCn4sT2M0KuJUh371V7KMWLZ9/zI5bbG8WV+C
-7HDmpDHwS6T6ctus2pt5Ch1MWf0TomaTUVLNGmRgWebtH+44iUis6mUD8zgsF8LV
-C2E1pwSnkwGvZQF/bNJQvrzz0Y+hW/Q0xSsIqLsOWu3/X7w1bqSkZWFLMarlhnn/
-duXgvKKoaqH9RsWWionIuZrav+SjMmFBz+aEOMqgntWau6HVF3WmldrnH3VS/VCU
-qJCRmdTWrD3PwaWZzjwbmz5bdW5XfWizw+4CCyI3TupoZCad3r/AOLbxeY3rDfbi
-8yflzZ2drKE9OAuCJrSw+bWMrnQ+6ww7xMNfHsK0neOIdjKnzMIXSKmm0z+Hk9Zw
-Er6o+JskaYTrR3Yp5zKclTfEADKIPIPwfn/HAfFl42csisRrZKc=
-=WBVr
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmAlQysACgkQxD4O2n2T
+LbxDCg//XR1GW1NzsnLNAipzcNmP7FbZsYTy8lOrfNc77HeXiPtn3IBaMklR8PEM
+CXMAw9vKhkBagCOOQGK+A//K5MRfj0QNWF+Yz5XvABsB7AWv9Di8hWwZDlH5iRq9
+3YnhW+c8nqX1ZmzJmgkUYS+DLLgjaoftv7Cv81ppHJWR4H4omiTHwXLbr1qRiQ1o
+YaRpp5j8uArUkDtJ+JB8735r2SWFGFje+pMUCI0AEi+ZjYQQ4r5RoRykx9fYZrEo
+OASJmcnBAmTNw7tdUjDFND/VMzXGHSY0NMvrnIYWFpMfKoD/aYAFtZZKFwYFswTJ
+Lyrl7ye+GBwnPba6eWHuTYEQ/0dvnrDypicoFRqckfJoydg6PSv1nxOJnxL7mXxX
+N0ohUp1VNhHuQH713CLx8orVKKgvErCoAq3TGgYsTunUcKMWj9lpIpPH03f+EN6w
+k/OphCMFPa/GLaqMqw62x0Y8335ad7b87RSG9N8gt9/jmS6U0z2Flh3A4EDdluPG
+JxdfbQTdhUvbHIHeQjjxY+jLB70Qmr74qwbFcwG8XllCZL8pLqfssCr+Xf1PStvw
+7IvYJwUwzR5Dwr3kSXQOx8saAMEHc5t7ChDOARblK8nkznWZmcsCyvOXZ83xWDMW
+Z3smwFn1NrFsQ31xYWHuPGg062iQrfk/N/Og7gsyqfBP6zdEh80=
+=WL0z
 -----END PGP SIGNATURE-----

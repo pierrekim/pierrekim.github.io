@@ -94,22 +94,22 @@ uid=0(root) gid=0 groups=0 # game over
 <h2>Vulnerabilities Summary</h2>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
-<li><a href="#insecure-ipv6">Insecure IPv6 connectivity</a></li>
-<li><a href="#httpd-passwords-logs">HTTP Server - Passwords in HTTP logs</a></li>
-<li><a href="#httpd-ssl-certificates">HTTP Server - Harcoded SSL certificates</a></li>
-<li><a href="#httpd-infoleak">HTTP server - Pre-auth InfoLeak</a></li>
-<li><a href="#httpd-backdoor-telnet">HTTP Server - Backdoor allowing telnet access</a></li>
-<li><a href="#httpd-hardcoded-credentials">HTTP Server - Hardcoded credentials</a></li>
+<li><a href="#insecure-ipv6">Insecure IPv6 connectivity - CVE-2021-27170</a></li>
+<li><a href="#httpd-passwords-logs">HTTP Server - Passwords in HTTP logs - CVE-2021-27140</a></li>
+<li><a href="#httpd-ssl-certificates">HTTP Server - Harcoded SSL certificates- CVE-2021-27142</a></li>
+<li><a href="#httpd-infoleak">HTTP server - Pre-auth InfoLeak - CVE-2021-27139</a></li>
+<li><a href="#httpd-backdoor-telnet">HTTP Server - Backdoor allowing telnet access - CVE-2021-27173</a></li>
+<li><a href="#httpd-hardcoded-credentials">HTTP Server - Hardcoded credentials - CVE-2021-27143 - CVE-2021-27144 - CVE-2021-27145 - CVE-2021-27146 - CVE-2021-27147 - CVE-2021-27148 - CVE-2021-27149 - CVE-2021-27150 - CVE-2021-27151 - CVE-2021-27152 - CVE-2021-27153 - CVE-2021-27154 - CVE-2021-27155 - CVE-2021-27156 - CVE-2021-27157 - CVE-2021-27158 - CVE-2021-27159 - CVE-2021-27160 - CVE-2021-27161 - CVE-2021-27162 - CVE-2021-27163 - CVE-2021-27164</a></li>
 <li><a href="#httpd-tr09-hardcoded-credentials">HTTP Server - TR-069 hardcoded credentials</a></li>
-<li><a href="#httpd-decryption-algorithm">HTTP Server - Credentials decryption algorithm</a></li>
-<li><a href="#telnet-linux-hardcoded-credentials">Telnet server (Linux) - Hardcoded credentials</a></li>
-<li><a href="#telnet-cli-hardcoded-credentials">Telnet server (CLI) - Hardcoded credentials</a></li>
-<li><a href="#telnet-cli-privilege-escalation">Telnet server (CLI) - Privilege escalation</a></li>
-<li><a href="#telnet-cli-auth-bypass">Telnet server (CLI) - Authentication bypass</a></li>
+<li><a href="#httpd-decryption-algorithm">HTTP Server - Credentials decryption algorithm - CVE-2021-27141</a></li>
+<li><a href="#telnet-linux-hardcoded-credentials">Telnet server (Linux) - Hardcoded credentials - CVE-2021-27172</a></li>
+<li><a href="#telnet-cli-hardcoded-credentials">Telnet server (CLI) - Hardcoded credentials - CVE-2021-27165 - CVE-2021-27166 - CVE-2021-27167 - CVE-2021-27168 - CVE-2021-27169</a></li>
+<li><a href="#telnet-cli-privilege-escalation">Telnet server (CLI) - Privilege escalation - CVE-2021-27171</a></li>
+<li><a href="#telnet-cli-auth-bypass">Telnet server (CLI) - Authentication bypass - CVE-2021-27177</a></li>
 <li><a href="#telnet-cli-auth-bypass-linux-telnetd">Telnet server (CLI) - Authentication bypass to start the Linux telnetd</a></li>
-<li><a href="#telnet-cli-dos">Telnet server (CLI) - DoS</a></li>
-<li><a href="#system-credentials-clear-text-files">System - Credentials stored in clear-text</a></li>
-<li><a href="#system-credentials-clear-text-nvram">System - Passwords stored in clear-text in nvram</a></li>
+<li><a href="#telnet-cli-dos">Telnet server (CLI) - DoS - CVE-2021-27179</a></li>
+<li><a href="#system-credentials-clear-text-files">System - Credentials stored in clear-text - CVE-2021-27174 - CVE-2021-27175 - CVE-2021-27176</a></li>
+<li><a href="#system-credentials-clear-text-nvram">System - Passwords stored in clear-text in nvram - CVE-2021-27178</a></li>
 <li><a href="#misc-remote-stack-overflow-an5506">Misc - Remote stack overflow in the HTTP server (AN5506-04-FA / RP2631)</a></li>
 </ol>
 <p>I removed several DoS and strange technical details (linked to undisclosed vulnerabilities) for clarity.</p>
@@ -724,6 +724,7 @@ I found no CVE or public research about this vulnerability so it may have been s
 <li>Jan 9, 2021: Vulnerabilities checked again and the advisory was rewritten.</li>
 <li>Jan 12, 2021: A public advisory is sent to security mailing lists.</li>
 <li>Feb 7, 2021: The latest firmware version (RP2613) is confirmed to be vulnerable.</li>
+<li>Feb 10, 2021: MITRE provides CVE-2021-27139, CVE-2021-27140, CVE-2021-27141, CVE-2021-27142, CVE-2021-27143, CVE-2021-27144, CVE-2021-27145, CVE-2021-27146, CVE-2021-27147, CVE-2021-27148, CVE-2021-27149, CVE-2021-27150, CVE-2021-27151, CVE-2021-27152, CVE-2021-27153, CVE-2021-27154, CVE-2021-27155, CVE-2021-27156, CVE-2021-27157, CVE-2021-27158, CVE-2021-27159, CVE-2021-27160, CVE-2021-27161, CVE-2021-27162, CVE-2021-27163, CVE-2021-27164, CVE-2021-27165, CVE-2021-27166, CVE-2021-27167, CVE-2021-27168, CVE-2021-27169, CVE-2021-27170, CVE-2021-27171, CVE-2021-27172, CVE-2021-27173, CVE-2021-27174, CVE-2021-27175, CVE-2021-27176, CVE-2021-27177, CVE-2021-27178, CVE-2021-27179.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
