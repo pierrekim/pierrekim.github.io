@@ -5,7 +5,7 @@ Hash: SHA512
 
 Title: Multiple vulnerabilities in Dell OpenManage Enterprise
 Advisory URL: https://pierrekim.github.io/advisories/2021-dell-openmanage-enterprise-0x00.txt
-Blog URL: https://pierrekim.github.io/blog/2021-01-19-dell-openmanage-enterprise-0day-vulnerabilities.html
+Blog URL: https://pierrekim.github.io/blog/2021-07-19-dell-openmanage-enterprise-0day-vulnerabilities.html
 Date published: 2021-07-19
 Vendors contacted: Dell
 Release mode: Coordinated-Disclosure
@@ -1186,7 +1186,7 @@ These vulnerabilities were found by Pierre Kim (@PierreKimSec) and Alexandre Tor
 
 https://pierrekim.github.io/advisories/2021-dell-openmanage-enterprise-0x00.txt
 
-https://pierrekim.github.io/blog/2021-01-19-dell-openmanage-enterprise-0day-vulnerabilities.html
+https://pierrekim.github.io/blog/2021-07-19-dell-openmanage-enterprise-0day-vulnerabilities.html
 
 
 
@@ -1196,17 +1196,17 @@ This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD1NekACgkQxD4O2n2T
-LbwesA/8Ddd870BbCyW3rC19J0FSZf16AX5DJJ6wzgWPI100TwIRusA736Jmi4Z6
-ZFRqFDDYL5hiopV785UB1+9W7WJlKFZJByQpg97/Czwpn+bHh+B9TZOKXCNtHuqx
-ttBk/4TWRDmbePkOz69DgPaeRna34mn+mdZEkr9X9JObLFZwHCPkxolrGxd87TDv
-yRyms4WAh65ez2LNe/cNO87temJ9bQd48EaFE4UEi+Rd6k8xKWzi/ph4xeV/obHg
-7C0ronfddBRkJEngGCCnvLsAK6uSzcQreFnXkkzBCPL6ulcxtQkJgGfLTgrisL3z
-mf99cJOV2FIsC3VzqmWQqvz61+iYbbQ81KU8/qTsLc06WfFN7r+l8mHMC1yzbPtg
-0tavO/dzFQau3sd5PVZfUsyD0BCYP4D2L3KYMkt/mdgeTnpU+IBznvybuwIOdD57
-u4X2HKCAAZX9PtQw+DVDkQVExmtQfoRl5Bf407lefMoo3BY+R4Hjt/SGVQdJQejz
-z8BIMis5+7H+NTijjt+31ZHtGi61aSsxflswZzGGbTz4Aw/UFrA2wT/OACMecogN
-CJxugUMyGU/TIWSG4ivGt1mFsoJf52jbTXuGXz01XpM9lqf/jFGL7lVdk4BmwMpS
-BI2ihNjA8ja54dPwMHC/jxnCUWAj0hQsLCv4x0pWB/ohqoiSOo4=
-=J5lh
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD1N98ACgkQxD4O2n2T
+LbwjHQ//QUoKdFDiNuEnLqkLR5OQ0I3KLWbRHPnPw5Pi+N4eetPIefDFuJOb8y1Z
+7X6I+cLL8zOyjk7Mzhr2aAyvVydWc77xA+d1XJejwoIcr+YsaefPZQUxPgwRiXkB
+EqlRNKx1NeJyIOpnYWtUmpwYz/q0MneNCVboL4ORs4vB38KPpwtN2kkR735lcp8J
+Z6aJg95ggv5z8bwmz9IgSTaPlFc4tqXqd9PlYUI6hINjb1JNDNyzzq+v071FYpUB
+eh/AYYD/5k9ARVh9P5miteCeFeBuOFoE5D8xzURA0VJaMmYviJkFbz7Ml1WnDB+E
+bSv2aAymH10L4or3xY0OPJgpyZ4Rz3Czg2Ha+dQoV2843CM0wE3dLlku8in6+Fn7
+3Z7P28fe69YmD6W41TIs8SQxP/HTjfu5dtvXDPZmAVgC3ScMUP2u6pB0G1qDr9ej
+JpIrcJCEwHuKVzmCoGi3L5Kby09Ghvpt2V8oGqD1PW50g13WpDVhwQ2TOtpdxVxa
+jiFVbQmFgmrD20GTHB4WUiSqI72eswsIjigVRcntgf1w26q4uHqF+qWoCjsMvAJ6
+uYX1eVCZKoksEMhkdkatKpHe1lPjPkqqjnb6l+oU6Vy9K3UZ2+IsG/Z0cDyAGgRy
+Eq9Xriw+NsiW1QiAY4GpnZSxeVAGoJQ7iDXWUhQyOfCokIAn4lY=
+=kP1M
 -----END PGP SIGNATURE-----
