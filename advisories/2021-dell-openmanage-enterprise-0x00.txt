@@ -734,9 +734,9 @@ Also from dump.sql:
 
 When trying to add a `system` account:
 
-[please use the HTML version at 2021-01-12-dell-openmanage-enterprise-0day-vulnerabilities.html to see the image]
+[please use the HTML version at https://pierrekim.github.io/blog/2021-07-19-dell-openmanage-enterprise-0day-vulnerabilities.html]
 
-[please use the HTML version at 2021-01-12-dell-openmanage-enterprise-0day-vulnerabilities.html to see the image]
+[please use the HTML version at https://pierrekim.github.io/blog/2021-07-19-dell-openmanage-enterprise-0day-vulnerabilities.html]
 
 This account doesn't seem to be documented but we were unable to use it to login into the web service.
 
@@ -1196,17 +1196,17 @@ This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD1N98ACgkQxD4O2n2T
-LbwjHQ//QUoKdFDiNuEnLqkLR5OQ0I3KLWbRHPnPw5Pi+N4eetPIefDFuJOb8y1Z
-7X6I+cLL8zOyjk7Mzhr2aAyvVydWc77xA+d1XJejwoIcr+YsaefPZQUxPgwRiXkB
-EqlRNKx1NeJyIOpnYWtUmpwYz/q0MneNCVboL4ORs4vB38KPpwtN2kkR735lcp8J
-Z6aJg95ggv5z8bwmz9IgSTaPlFc4tqXqd9PlYUI6hINjb1JNDNyzzq+v071FYpUB
-eh/AYYD/5k9ARVh9P5miteCeFeBuOFoE5D8xzURA0VJaMmYviJkFbz7Ml1WnDB+E
-bSv2aAymH10L4or3xY0OPJgpyZ4Rz3Czg2Ha+dQoV2843CM0wE3dLlku8in6+Fn7
-3Z7P28fe69YmD6W41TIs8SQxP/HTjfu5dtvXDPZmAVgC3ScMUP2u6pB0G1qDr9ej
-JpIrcJCEwHuKVzmCoGi3L5Kby09Ghvpt2V8oGqD1PW50g13WpDVhwQ2TOtpdxVxa
-jiFVbQmFgmrD20GTHB4WUiSqI72eswsIjigVRcntgf1w26q4uHqF+qWoCjsMvAJ6
-uYX1eVCZKoksEMhkdkatKpHe1lPjPkqqjnb6l+oU6Vy9K3UZ2+IsG/Z0cDyAGgRy
-Eq9Xriw+NsiW1QiAY4GpnZSxeVAGoJQ7iDXWUhQyOfCokIAn4lY=
-=kP1M
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD1OmYACgkQxD4O2n2T
+Lbw2HA/9FcwRyBfvOZT+8a5kfvY2q0doMkSp4UIBHw5NENSbjRsnOs2VYt/cN+zb
+YNw1MD3SWVd0r2c3U2jbAT0REppNDa4m5A83TKsbzunadBnEoJTDpjBp0TXnyJ9c
+M0ghSi0EvvjGm0DmjOD9nUsYpJZftJWuVsTqTeuhSyFyvxaMUHUzKiTcZQS1gKiw
++eeseUhlzFilUicz6IUeV7e5zGZ/lKun8viurPXaxyLY29yWmV77tKCBuP16G60R
+Z4JS6I5EOiYsupxckLsY1IRsrmQ3P7SymjEygxwWiQpOdRwu8soe+bXYCruEYG8V
+ff6i9pNkgvkdLg3Jm9usXDwBj3+vy0zqHC742p+FeUwgPtLLqvY90GDmw7VkdUNF
+KUbeVSfzPB7p0xaxGQ+egxyrOIZBHRBIl29vvP7hdeKvGjyo7035x0Xs04n6kaQM
+T71m1qSb+LU6Fd5tm8rD2yXe9e6REUI0Xas7sRPP3WWvYyJNStR9v/bURUdg6GtE
+kw7w3siyfGCgoQ8Ct1qWz+v9MCj1anmMih5SI2cm/8WUa7Kk3Zgq0F6tqzlhtXM8
+52lUZn2g0gZiXiQ34CxEm9jbslbltGVLDDWV6WVzdmpQN/gsWQ6agPCEW/+KPyIj
++ruWritELTnbKdosXfCV0wRxHxEOEIwl9UQEhOan/hFsjsqMDbs=
+=rTFH
 -----END PGP SIGNATURE-----
