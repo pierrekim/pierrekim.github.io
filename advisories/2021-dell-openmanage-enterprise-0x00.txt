@@ -19,7 +19,7 @@ Dell EMC OpenManage Enterprise is an intuitive infrastructure management console
 OpenManage Enterprise is a system management and monitoring application that provides
 a comprehensive view of the Dell EMC servers, chassis, storage, and network switches on the enterprise network.
 
-- From https://www.dell.com/support/kbdoc/en-sg/000175879/support-for-openmanage-enterprise:
+- - From https://www.dell.com/support/kbdoc/en-sg/000175879/support-for-openmanage-enterprise:
 Secure: Security is a top priority
 
 
@@ -220,7 +220,7 @@ These files don't exist anymore in version 3.5.
 
 Interestingly, `Dell123$` is the provided password in the documentation files:
 
-- From `/opt/dell/omc/webapps/omc/console/omcOnlineHelp/en/GUID-0A8DECB1-C2E7-4904-A071-FEC75D6A54C7.html`:
+- - From `/opt/dell/omc/webapps/omc/console/omcOnlineHelp/en/GUID-0A8DECB1-C2E7-4904-A071-FEC75D6A54C7.html`:
 
     Must contain at least one character in: uppercase, lowercase, digit, and special character. For example, Dell123$
 
@@ -278,7 +278,7 @@ SELinux policy:
 
 Nonetheless, the password of the keystore is hardcoded:
 
-- From `/opt/dell/omc/scripts/runonce/update_keystorepassword_runonce.sh`:
+- - From `/opt/dell/omc/scripts/runonce/update_keystorepassword_runonce.sh`:
 
     [root@openmanage-enterprise /]# cat /opt/dell/omc/scripts/runonce/update_keystorepassword_runonce.sh
     [...]
@@ -311,7 +311,7 @@ We can also find the original password `changeit` for the keystore inside the `/
 
 ## Details - Permissive ACL for Postgres
 
-- From the files `/opt/dell/mcsi/lib/db/data/pg_hba.conf.core` and `/opt/dell/mcsi/lib/db/data/pg_hba.conf.trust`,
+- - From the files `/opt/dell/mcsi/lib/db/data/pg_hba.conf.core` and `/opt/dell/mcsi/lib/db/data/pg_hba.conf.trust`,
 the entire docker IP range (`169.254.255.1/24`) has a full access to postgres, without password (`trust`)
 
     [root@openmanage-enterprise /]# cat /opt/dell/mcsi/lib/db/data/pg_hba.conf.trust
@@ -955,7 +955,7 @@ Sending correct data will trigger the authentication:
     HTTP request sent, awaiting response... 400 Bad Request
     2021-05-16 12:57:17 ERROR 400: Bad Request.
 
-- From the logs:
+- - From the logs:
 
     [ERROR] 2021-05-16 12:57:15.158 [ajp-bio-8009-exec-1] JobsController - org.springframework.web.client.HttpClientErrorException: 401 Unauthorized
 
@@ -977,7 +977,7 @@ Or with `wget`:
 
 And from the logs, no more "401 Unauthorized" but some deserialization errors:
 
-- From `/var/log/dell/mcsi/tomcat/application.log`:
+- - From `/var/log/dell/mcsi/tomcat/application.log`:
 
     [ERROR] 2021-05-16 12:58:39.554 [ajp-bio-8009-exec-4] BaseController - org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Cannot deserialize value of type `java.lang.Integer` from String "a": not a valid Integer value; nested exception is com.fasterxml.jackson.databind.exc.InvalidFormatException: Cannot deserialize value of type `java.lang.Integer` from String "a": not a valid Integer value
      at [Source: (PushbackInputStream); line: 1, column: 13] (through reference chain: com.dell.enterprise.model.omc.RemoteCommandTask["targets"]->java.util.ArrayList[0])
@@ -1009,7 +1009,7 @@ but it is still possible to generate deserialization errors (post-auth):
     
     {"oidcServerIds":[a1]}
 
-- From `/var/log/dell/mcsi/tomcat/application.log`:
+- - From `/var/log/dell/mcsi/tomcat/application.log`:
 
     [ERROR] 2021-05-16 13:12:15.356 [ajp-bio-8009-exec-4] BaseController - org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Unrecognized token 'a1': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false'); nested exception is com.fasterxml.jackson.databind.JsonMappingException: Unrecognized token 'a1': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
      at [Source: (PushbackInputStream); line: 1, column: 24] (through reference chain: com.dell.enterprise.model.ui.OIDCRegistrationStatusList["oidcServerIds"])
@@ -1172,7 +1172,8 @@ These are credentials to access an internal CIFS share / not a user that can log
 * June 28, 2021: Dell attributes PSRC-15668
 * Jul 14, 2021: Dell replies it is doing final reviews of their advisory and ask to coordinate disclosure to July 19
 * Jul 16, 2021: Pierre replies confirms July 19 and asks Dell to confirm the "Vendor Response" text
-* Jul 19, 2021: A public advisory is sent to security mailing lists.
+* Jul 19, 2021: A public advisory is sent to security mailing lists
+* Jul 19, 2021: Dell provides CVE-2021-21596
 
 
 
@@ -1196,17 +1197,17 @@ This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD1OmYACgkQxD4O2n2T
-Lbw2HA/9FcwRyBfvOZT+8a5kfvY2q0doMkSp4UIBHw5NENSbjRsnOs2VYt/cN+zb
-YNw1MD3SWVd0r2c3U2jbAT0REppNDa4m5A83TKsbzunadBnEoJTDpjBp0TXnyJ9c
-M0ghSi0EvvjGm0DmjOD9nUsYpJZftJWuVsTqTeuhSyFyvxaMUHUzKiTcZQS1gKiw
-+eeseUhlzFilUicz6IUeV7e5zGZ/lKun8viurPXaxyLY29yWmV77tKCBuP16G60R
-Z4JS6I5EOiYsupxckLsY1IRsrmQ3P7SymjEygxwWiQpOdRwu8soe+bXYCruEYG8V
-ff6i9pNkgvkdLg3Jm9usXDwBj3+vy0zqHC742p+FeUwgPtLLqvY90GDmw7VkdUNF
-KUbeVSfzPB7p0xaxGQ+egxyrOIZBHRBIl29vvP7hdeKvGjyo7035x0Xs04n6kaQM
-T71m1qSb+LU6Fd5tm8rD2yXe9e6REUI0Xas7sRPP3WWvYyJNStR9v/bURUdg6GtE
-kw7w3siyfGCgoQ8Ct1qWz+v9MCj1anmMih5SI2cm/8WUa7Kk3Zgq0F6tqzlhtXM8
-52lUZn2g0gZiXiQ34CxEm9jbslbltGVLDDWV6WVzdmpQN/gsWQ6agPCEW/+KPyIj
-+ruWritELTnbKdosXfCV0wRxHxEOEIwl9UQEhOan/hFsjsqMDbs=
-=rTFH
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmD2jOUACgkQxD4O2n2T
+Lbwfdg/8CrRtldUwuA3I8/RCRzm0n23AltDGRtLEJ1UB4/dmKLZ06kag+QLtq2eq
+Jysryvy3oV1demikLnlptRm11Wi8Jcz24sqp3fQIntvdV3dIbPNnqpYC6yH5LGx1
+roeCEdyR7Tvi4BXzKeRKHlnVp8nhWLpJ+KS6AIxMR+0jPJNCJq2eo/BWTeCWN+Lw
+j6XKg6K7hLDOn2AsQ5wE3Ucvsc4hud7VFHMX7AjU3OkRC2asY9ossvrZHuvOPk0w
+T2YDSFtOwtv5G4bW2aOiw3sdnI8WQFwPQZKCu3K1awBHga88wvQTsqiS6cU2fHAl
+K6io6b7SANr6YJsMnsAGFuM1QshzdvjNO9qQH1qgZ0X4XwfA5X21DhXjB9fMQsoc
+YZnImH4YNKF0khKv70ypj4fA1kB1RI9StdWXnV/ccp3rQbBh1YdmLls0sVVFq89x
+3udzYgRsCSC+zwxMd9yiDsBEEUwwyd2XoM/LsDiFms9ke3G0Tbt9V610bQMemQQa
+ba1Kl/SENRVKLpfOmZoi70eviVoBaiwowHcBbA0lHg0oVFKWy912xY6Y/YIhWmAc
+W6ZsV2OMaT6rlqCCIul02bLqZVlCOStub0Eb7H/FR2fLAHqxR4uDyWOS5cE5McGJ
+DxoIYYFGcxypoBAPAvG1ms9l31fHFYijq9HsTc1hfC/AxkM5Lxg=
+=PlXp
 -----END PGP SIGNATURE-----
