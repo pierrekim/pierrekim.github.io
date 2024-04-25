@@ -52,21 +52,21 @@ SANnav Management Portal transforms information about SAN behavior and performan
 <p>Vulnerable versions: all versions up to 2.3.0 (included).</p>
 <p>The summary of the vulnerabilities is:</p>
 <ol>
-<li><a href="#incorrect-firewall-rules">non-assigned CVE vulnerability - Incorrect firewall rules</a></li>
+<li><a href="#incorrect-firewall-rules">CVE-2024-4159 - Incorrect firewall rules</a></li>
 <li><a href="#lack-of-encryption-for-management-protocol-http">non-assigned CVE vulnerability - Lack of encryption for management protocol (HTTP)</a></li>
-<li><a href="#syslog-traffic-sent-in-clear-text">non-assigned CVE vulnerability - Syslog traffic sent in clear-text</a></li>
+<li><a href="#syslog-traffic-sent-in-clear-text">CVE-2024-4161 - Syslog traffic sent in clear-text</a></li>
 <li><a href="#insecure-root-access">CVE-2024-29966 - Insecure root access</a></li>
 <li><a href="#insecure-sannav-access">non-assigned CVE vulnerability - Insecure sannav access</a></li>
 <li><a href="#insecure-ssh-configuration">CVE-2024-2859 - Insecure SSH configuration</a></li>
-<li><a href="#suspicious-network-traffic-ignite.apache.org">non-assigned CVE vulnerability - Suspicious network traffic (ignite.apache.org)</a></li>
+<li><a href="#suspicious-network-traffic-ignite.apache.org">CVE-2024-29961 - Suspicious network traffic (ignite.apache.org)</a></li>
 <li><a href="#lack-of-authentication-in-postgres">non-assigned CVE vulnerability - Lack of authentication in Postgres</a></li>
-<li><a href="#insecure-postgres-docker-instance">non-assigned CVE vulnerability - Insecure Postgres Docker instance</a></li>
+<li><a href="#insecure-postgres-docker-instance">CVE-2024-29967 - Insecure Postgres Docker instance</a></li>
 <li><a href="#insecure-docker-instances">CVE-2024-29967 - Insecure Docker instances</a></li>
 <li><a href="#insecure-docker-architecture-and-configuration">CVE-2024-29964 - Insecure Docker architecture and configuration</a></li>
 <li><a href="#insecure-backup-process">CVE-2024-29965 - Insecure Backup process</a></li>
-<li><a href="#inconsistency-in-firewall-rules">non-assigned CVE vulnerability - Inconsistency in firewall rules</a></li>
+<li><a href="#inconsistency-in-firewall-rules">CVE-2024-4159 - Inconsistency in firewall rules</a></li>
 <li><a href="#insecure-file-permissions">CVE-2024-29962 - Insecure file permissions</a></li>
-<li><a href="#kafka-reachable-on-the-wan-interface-and-lack-of-authentication">non-assigned CVE vulnerability - Kafka reachable on the WAN interface and Lack of authentication</a></li>
+<li><a href="#kafka-reachable-on-the-wan-interface-and-lack-of-authentication">CVE-2024-4173 - Kafka reachable on the WAN interface and Lack of authentication</a></li>
 <li><a href="#hardcoded-ssh-keys">CVE-2024-29960 - Hardcoded SSH Keys</a></li>
 <li><a href="#suspicious-network-traffic-www.gridgain.com">CVE-2024-29961 - Suspicious network traffic (www.gridgain.com)</a></li>
 <li><a href="#hardcoded-docker-keys">CVE-2024-29963 - Hardcoded Docker Keys</a></li>
@@ -1866,6 +1866,9 @@ Pierre's comments: An additional report was also provided to Brocade in Septembe
 <h2>References</h2>
 <p><a href="https://pierrekim.github.io/blog/2024-04-24-brocade-sannav-18-vulnerabilities.html">https://pierrekim.github.io/blog/2024-04-24-brocade-sannav-18-vulnerabilities.html</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23245">CVE-2024-2859 - Root access permitted by default and several insecure options set</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23286">CVE-2024-4173 - Brocade SANnav ova versions exposes Kafka in the wan interface</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23284">CVE-2024-4161 - Syslog traffic sent in clear-text</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23282">CVE-2024-4159 - Protection mechanisms</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23244">CVE-2024-29960 - Hard Coded and identical SSH keys inside the OVA image</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23246">CVE-2024-29961 - Ping at regular intervals</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23248">CVE-2024-29962 - Insecure file permission setting that makes files world-readable</a></p>
@@ -1874,6 +1877,8 @@ Pierre's comments: An additional report was also provided to Brocade in Septembe
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23250">CVE-2024-29965 - A local attacker can recover backup files, restore them to a new malicious appliance, and retrieve the passwords of all the switches</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23255">CVE-2024-29966 - hard-coded credential in the documentation that appear as the root password</a></p>
 <p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23254">CVE-2024-29967 - Docker instances inside the appliance have insecure mount points, allowing reading and writing access to sensitive files</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23285">no CVE - Insecure sannav access using undocumented Brocade SANnav user sannav</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23283">no CVE - HTTPS configuration between Brocade SANnav Management Portal and Brocade SAN switches</a></p>
 <h2>Disclaimer</h2>
 <p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
 Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
