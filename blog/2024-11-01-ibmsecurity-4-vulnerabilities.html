@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>4 vulnerabilities in ibmsecurity - IT Security Research by Pierre</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
+<style>
+body {
+    font-family: sans-serif;
+    background-color: #fff;
+    font-size: 16px;
+}
+h1, h2, h3, h4 {
+    font-family: arial;
+}
+.container {
+    max-width: 900px;
+}
+.footer {
+    margin-top: 50px;
+    font-size: 12px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="hero-unit faq">
+        <div class="ac" style="text-align: center;">
+            <h1>IT Security Research by Pierre</h1>
+            <a href="../index.html">Home</a> &bull; <a href="about.html">About</a>  &bull; <a href="feed.xml">Feed</a>
+        </div>
+    </div>
+    
+<div class="hero-unit faq">
+    <div class="ac">
+        <h2>4 vulnerabilities in ibmsecurity</h2>
+    </div>
+</div>
+
+<div>
+    <h2>Product description</h2>
+<blockquote>
+<p>This repository contains Python code to manage IBM Security Appliances using their respective REST APIs. ISAM appliance has the most mature code.</p>
+<p>From <a href="https://github.com/IBM-Security/ibmsecurity">https://github.com/IBM-Security/ibmsecurity</a></p>
+</blockquote>
+<h2>Vulnerability Summary</h2>
+<p>Vulnerable versions: ibmsecurity &lt; v2024.4.5.</p>
+<p>The summary of the vulnerabilities is as follows:</p>
+<ol>
+<li><a href="#insecure-communications-1">CVE-2024-31871 - Insecure communications 1/2</a></li>
+<li><a href="#insecure-communications-2">CVE-2024-31872 - Insecure communications 2/2</a></li>
+<li><a href="#hardcoded-passwords">CVE-2024-31873 - Hardcoded passwords</a></li>
+<li><a href="#uninitialized-variables">CVE-2024-31874 - Uninitialized variables</a></li>
+</ol>
+<p>TL;DR: An attacker located on the network can MITM TLS connections to IBM Security Verify Access (ISVA) appliances, recover credentials and compromise the entire IBM Security Verify Access infrastructure. IBM Security Verify Access is a SSO solution mainly used by banks, Fortune 500 companies and governmental entities.</p>
+<p><em>Miscellaneous notes</em>:</p>
+<p>The vulnerabilities were found in February 2023 and were communicated to IBM in March 2023. They ultimately were patched in April 2024 (after 13 months).</p>
+<p>Communications with IBM was difficult. At first, IBM support had confirmed that they would patch the vulnerabilities found in the ibmsecurity library. Then, in April 2024, IBM advised that the only way to get security patches is to go Full-disclosure and open a github issue containing all technical details. Although this was unusual, I created a github issue, which <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">was subsequently redacted by IBM</a>.</p>
+<p><em>Impacts</em></p>
+<p>An attacker can compromise the entire authentication infrastructure based on IBM Security Verify Access by intercepting admin credentials on the network.</p>
+<p><em>Recommendations</em></p>
+<ul>
+<li>Apply security patches.</li>
+<li>Enable certificate validation (not enabled by default).</li>
+</ul>
+<p><a id="insecure-communications-1"></a></p>
+<h2>Details - Insecure communications 1/2</h2>
+<p>The ibmsecurity package has been partially audited as it provides the underlying Python APIs used to communicate with IBM Security Verify Access (ISVA).</p>
+<p>Unfortunately, the security of the ibmsecurity package is very poor and, by default, all the SSL/TLS connections to the remote ISVA server are configured in an insecure way.</p>
+<p>The latest version of the ibmsecurity library (<code>ibmsecurity-2022.8.22.0</code>) has been downloaded using pip in order for the source code to be reviewed:</p>
+<pre><code>kali% pip download ibmsecurity
+Collecting ibmsecurity
+Using cached ibmsecurity-2022.8.22.0-py3-none-any.whl (391 kB)
+Collecting requests
+Using cached requests-2.28.1-py3-none-any.whl (62 kB)
+Collecting charset-normalizer&lt;3,&gt;=2
+Using cached charset_normalizer-2.1.1-py3-none-any.whl (39 kB)
+Collecting urllib3&lt;1.27,&gt;=1.21.1
+Using cached urllib3-1.26.12-py2.py3-none-any.whl (140 kB)
+Collecting certifi&gt;=2017.4.17
+Using cached certifi-2022.9.24-py3-none-any.whl (161 kB)
+Collecting idna&lt;4,&gt;=2.5
+Using cached idna-3.4-py3-none-any.whl (61 kB)
+Saved ./ibmsecurity-2022.8.22.0-py3-none-any.whl
+Saved ./requests-2.28.1-py3-none-any.whl
+Saved ./certifi-2022.9.24-py3-none-any.whl
+Saved ./charset_normalizer-2.1.1-py3-none-any.whl
+Saved ./idna-3.4-py3-none-any.whl
+Saved ./urllib3-1.26.12-py2.py3-none-any.whl
+Successfully downloaded ibmsecurity requests certifi charset-normalizer idna urllib3
+kali%
+</code></pre>
+<p>The <code>invoke_*</code> functions in the ibmsecurity library will use by default the <code>_suppress_ssl_warning()</code> method that will remove any security related to SSL/TLS.</p>
+<p>For example, the method <code>invoke_put()</code> is defined in the file <code>ibmsecurity/appliance/isamappliance.py</code>, as shown below on line 402:</p>
+<p>Content of <code>ibmsecurity/appliance/isamappliance.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+  <span style="color: #666666">3</span> <span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">requests.packages.urllib3.exceptions</span> <span style="color: #008000; font-weight: bold">import</span> InsecureRequestWarning
+<span style="color: #666666">...</span>
+ <span style="color: #666666">17</span> <span style="color: #008000; font-weight: bold">class</span> <span style="color: #0000FF; font-weight: bold">ISAMAppliance</span>(IBMAppliance):
+<span style="color: #666666">...</span>
+ <span style="color: #666666">45</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">_suppress_ssl_warning</span>(<span style="color: #008000">self</span>):
+ <span style="color: #666666">46</span>         <span style="color: #408080; font-style: italic"># Disable https warning because of non-standard certs on appliance</span>
+ <span style="color: #666666">47</span>         <span style="color: #008000; font-weight: bold">try</span>:
+ <span style="color: #666666">48</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>logger<span style="color: #666666">.</span>debug(<span style="color: #BA2121">&quot;Suppressing SSL Warnings.&quot;</span>)
+ <span style="color: #666666">49</span>             requests<span style="color: #666666">.</span>packages<span style="color: #666666">.</span>urllib3<span style="color: #666666">.</span>disable_warnings(InsecureRequestWarning) <span style="color: #408080; font-style: italic"># [1] &lt;- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</span>
+ <span style="color: #666666">50</span>         <span style="color: #008000; font-weight: bold">except</span> <span style="color: #D2413A; font-weight: bold">AttributeError</span>:
+ <span style="color: #666666">51</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>logger<span style="color: #666666">.</span>warning(<span style="color: #BA2121">&quot;load requests.packages.urllib3.disable_warnings() failed&quot;</span>)
+<span style="color: #666666">...</span>
+<span style="color: #666666">402</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">invoke_put</span>(<span style="color: #008000">self</span>, description, uri, data, ignore_error<span style="color: #666666">=</span><span style="color: #008000">False</span>, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>, requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">403</span>                    warnings<span style="color: #666666">=</span>[], requires_model<span style="color: #666666">=</span><span style="color: #008000">None</span>):
+<span style="color: #666666">404</span>         <span style="color: #BA2121">&quot;&quot;&quot; </span>
+<span style="color: #BA2121">405         Send a PUT request to the LMI.</span>
+<span style="color: #BA2121">406         &quot;&quot;&quot;</span> 
+<span style="color: #666666">407</span> 
+<span style="color: #666666">408</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_log_request(<span style="color: #BA2121">&quot;PUT&quot;</span>, uri, description)
+<span style="color: #666666">409</span>         response <span style="color: #666666">=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>_invoke_request(<span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>put, description, uri,
+<span style="color: #666666">410</span>                                         ignore_error, data,
+<span style="color: #666666">411</span>                                         requires_modules<span style="color: #666666">=</span>requires_modules, requires_version<span style="color: #666666">=</span>requires_version,
+<span style="color: #666666">412</span>                                         requires_model<span style="color: #666666">=</span>requires_model, warnings<span style="color: #666666">=</span>warnings)
+<span style="color: #666666">413</span>         <span style="color: #008000; font-weight: bold">return</span> response
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>The method <code>_invoke_request()</code> called on line 409 inside the <code>invoke_put()</code> method will disable any SSL/TLS security on line 334 by calling the method <code>_suppress_ssl_warning()</code> previously defined on line 45:</p>
+<p>Content of <code>ibmsecurity/appliance/isamappliance.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">305</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">_invoke_request</span>(<span style="color: #008000">self</span>, func, description, uri, ignore_error, data<span style="color: #666666">=</span>{}, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">306</span>                         requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>, warnings<span style="color: #666666">=</span>[], requires_model<span style="color: #666666">=</span><span style="color: #008000">None</span>):
+<span style="color: #666666">307</span>         <span style="color: #BA2121">&quot;&quot;&quot;</span>
+<span style="color: #BA2121">308         Send a request to the LMI.  This function is private and should not be</span>
+<span style="color: #BA2121">309         used directly.  The invoke_get/invoke_put/etc functions should be used instead.</span>
+<span style="color: #BA2121">310         &quot;&quot;&quot;</span>
+<span style="color: #666666">...</span>
+<span style="color: #666666">334</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_suppress_ssl_warning() <span style="color: #408080; font-style: italic"># &lt;- insecure SSL/TLS connection to the remote ISVA instance</span>
+<span style="color: #666666">...</span>
+<span style="color: #666666">336</span>         <span style="color: #008000; font-weight: bold">try</span>:
+<span style="color: #666666">337</span>             <span style="color: #008000; font-weight: bold">if</span> func <span style="color: #666666">==</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>get <span style="color: #AA22FF; font-weight: bold">or</span> func <span style="color: #666666">==</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>delete:
+<span style="color: #666666">338</span>             
+<span style="color: #666666">339</span>                 <span style="color: #008000; font-weight: bold">if</span> data <span style="color: #666666">!=</span> {}:
+<span style="color: #666666">340</span>                     r <span style="color: #666666">=</span> func(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri), data<span style="color: #666666">=</span>json_data, verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+<span style="color: #666666">341</span>                 <span style="color: #008000; font-weight: bold">else</span>:
+<span style="color: #666666">342</span>                     r <span style="color: #666666">=</span> func(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri), verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+<span style="color: #666666">343</span>             <span style="color: #008000; font-weight: bold">else</span>:
+<span style="color: #666666">344</span>                 r <span style="color: #666666">=</span> func(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri), data<span style="color: #666666">=</span>json_data,
+<span style="color: #666666">345</span>                          verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+<span style="color: #666666">346</span> 
+<span style="color: #666666">347</span>             <span style="color: #008000; font-weight: bold">if</span> func <span style="color: #666666">!=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>get:
+<span style="color: #666666">348</span>                 return_obj[<span style="color: #BA2121">&#39;changed&#39;</span>] <span style="color: #666666">=</span> <span style="color: #008000">True</span>  <span style="color: #408080; font-style: italic"># Anything but GET should result in change</span>
+<span style="color: #666666">349</span> 
+<span style="color: #666666">350</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>_process_response(return_obj<span style="color: #666666">=</span>return_obj, http_response<span style="color: #666666">=</span>r, ignore_error<span style="color: #666666">=</span>ignore_error)
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Execution flow: The <code>invoke_put()</code> method is defined on the line 402 of the <code>ibmsecurity/appliance/isamappliance.py</code> file. This method will then use the <code>_invoke_request()</code> method, defined on line 305. This <code>_invoke_request()</code> method will call the <code>suppress_ssl_warning()</code> method on line 334. The <code>suppress_ssl_warning()</code> method is defined on line 45: any security related to SSL/TLS will be then removed.</p>
+<p>These methods defined in <code>ibmsecurity/appliance/isamappliance.py</code> are insecure:</p>
+<ul>
+<li>invoke_post_files (line 148)</li>
+<li>invoke_put_files (line 203)</li>
+<li>invoke_get_file (line 246)</li>
+<li>_invoke_request (line 305)</li>
+<li>_invoke_request_with_headers (line 355)</li>
+<li>invoke_post_snapshot_id (line 427)</li>
+<li>invoke_request (line 516)</li>
+</ul>
+<p>These methods defined in <code>ibmsecurity/appliance/isdsappliance.py</code> are also insecure:</p>
+<ul>
+<li>invoke_post_files (line 135)</li>
+<li>invoke_put_files (line 184)</li>
+<li>invoke_get_file (line 228)</li>
+<li>_invoke_request (line 288)</li>
+</ul>
+<p>In the <code>ibmsecurity/appliance/isdsappliance.py</code> Python file, we can find again the same <code>suppress_ssl_warning()</code> method which is also used by other methods (e.g. <code>invoke_post_files()</code> as shown below):</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  <span style="color: #666666">3</span> <span style="color: #008000; font-weight: bold">from</span> <span style="color: #0000FF; font-weight: bold">requests.packages.urllib3.exceptions</span> <span style="color: #008000; font-weight: bold">import</span> InsecureRequestWarning
+<span style="color: #666666">...</span>
+ <span style="color: #666666">17</span> <span style="color: #008000; font-weight: bold">class</span> <span style="color: #0000FF; font-weight: bold">ISDSAppliance</span>(IBMAppliance):
+<span style="color: #666666">...</span>
+ <span style="color: #666666">39</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">_suppress_ssl_warning</span>(<span style="color: #008000">self</span>):
+ <span style="color: #666666">40</span>         <span style="color: #408080; font-style: italic"># Disable https warning because of non-standard certs on appliance</span>
+ <span style="color: #666666">41</span>         <span style="color: #008000; font-weight: bold">try</span>:
+ <span style="color: #666666">42</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>logger<span style="color: #666666">.</span>debug(<span style="color: #BA2121">&quot;Suppressing SSL Warnings.&quot;</span>)
+ <span style="color: #666666">43</span>             requests<span style="color: #666666">.</span>packages<span style="color: #666666">.</span>urllib3<span style="color: #666666">.</span>disable_warnings(InsecureRequestWarning)
+ <span style="color: #666666">44</span>         <span style="color: #008000; font-weight: bold">except</span> <span style="color: #D2413A; font-weight: bold">AttributeError</span>:
+ <span style="color: #666666">45</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>logger<span style="color: #666666">.</span>warning(<span style="color: #BA2121">&quot;load requests.packages.urllib3.disable_warnings() failed&quot;</span>)
+<span style="color: #666666">...</span>
+<span style="color: #666666">135</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">invoke_post_files</span>(<span style="color: #008000">self</span>, description, uri, fileinfo, data, ignore_error<span style="color: #666666">=</span><span style="color: #008000">False</span>, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">136</span>                           requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>, warnings<span style="color: #666666">=</span>[], json_response<span style="color: #666666">=</span><span style="color: #008000">True</span>):
+<span style="color: #666666">...</span>
+<span style="color: #666666">166</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_suppress_ssl_warning()
+<span style="color: #666666">167</span> 
+<span style="color: #666666">168</span>         <span style="color: #008000; font-weight: bold">try</span>:
+<span style="color: #666666">169</span>             r <span style="color: #666666">=</span> requests<span style="color: #666666">.</span>post(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri<span style="color: #666666">=</span>uri), data<span style="color: #666666">=</span>data, auth<span style="color: #666666">=</span>(<span style="color: #008000">self</span><span style="color: #666666">.</span>user<span style="color: #666666">.</span>username, <span style="color: #008000">self</span><span style="color: #666666">.</span>user<span style="color: #666666">.</span>password),
+<span style="color: #666666">170</span>                               files<span style="color: #666666">=</span>files, verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+<span style="color: #666666">171</span>             return_obj[<span style="color: #BA2121">&#39;changed&#39;</span>] <span style="color: #666666">=</span> <span style="color: #008000">True</span>  <span style="color: #408080; font-style: italic"># POST of file would be a change</span>
+<span style="color: #666666">172</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>_process_response(return_obj<span style="color: #666666">=</span>return_obj, http_response<span style="color: #666666">=</span>r, ignore_error<span style="color: #666666">=</span>ignore_error)
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>These methods are used everywhere in the ibmsecurity library to communicate with the remote ISVA infrastructure. 1162 calls to insecure methods have been identified:</p>
+<pre><code>kali% rgrep invoke_ ibmsecurity
+ibmsecurity/isds/server.py: return isdsAppliance.invoke_get("Retrieving Server Status", "/widgets/server")
+ibmsecurity/isds/server.py: return isdsAppliance.invoke_post("Restarting the service " + serverID,
+ibmsecurity/isds/server.py: return isdsAppliance.invoke_post("Restarting the service " + serverID,
+ibmsecurity/isds/server.py: return isdsAppliance.invoke_post("Restarting the service " + serverID,
+ibmsecurity/isds/server.py: return isdsAppliance.invoke_post("Restarting the service " + serverID,
+ibmsecurity/isds/available_updates.py: return isdsAppliance.invoke_get("Retrieving available updates",
+ibmsecurity/isds/available_updates.py: return isdsAppliance.invoke_get("Discover available updates",
+ibmsecurity/isds/available_updates.py: return isdsAppliance.invoke_post_files(
+ibmsecurity/isds/available_updates.py: ret_obj = isdsAppliance.invoke_post("Install Available Update",
+ibmsecurity/isds/fixpack.py: return isdsAppliance.invoke_get("Retrieving fixpacks",
+ibmsecurity/isds/fixpack.py: return isdsAppliance.invoke_post_files(
+[...]
+kali% rgrep invoke_ ibmsecurity | wc -l
+1162
+kali%
+</code></pre>
+<p>The ibmsecurity Python library massively uses insecure methods to communicate with the remote ISVA infrastructure, with 1162 calls to insecure functions.</p>
+<p><a id="insecure-communications-2"></a></p>
+<h2>Details - Insecure communications 2/2</h2>
+<p>The ibmsecurity package has been partially audited as it provides the underlying Python APIs used to communicate with IBM Security Verify Access (ISVA).</p>
+<p>Unfortunately, the security of the ibmsecurity package is very poor, and, by default, all the SSL/TLS connections to the remote ISVA server are insecure due to the insecure option (<code>Verify=false</code>) used with the methods provided by the <code>requests</code> module (to send HTTPS requests to the remote ISVA infrastructure).</p>
+<p>For example, the method <code>invoke_post_snapshot_id()</code> will use <code>Verify=false</code> in the HTTPS request on line 455 to disable any verification of the remote SSL certificate (in addition to the previous insecure <code>_suppress_ssl_warning()</code> method found in <a href="#insecure-communications-1">Insecure communications 1/2</a>).</p>
+<p>Content of <code>ibmsecurity/appliance/isamappliance.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">429</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">invoke_post_snapshot_id</span>(<span style="color: #008000">self</span>, description, uri, data, ignore_error<span style="color: #666666">=</span><span style="color: #008000">False</span>, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">430</span>                                 requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>, warnings<span style="color: #666666">=</span>[], requires_model<span style="color: #666666">=</span><span style="color: #008000">None</span>):
+<span style="color: #666666">431</span>         <span style="color: #BA2121">&quot;&quot;&quot; </span>
+<span style="color: #BA2121">432         Send a POST request to the LMI.  Snapshot id is part of the uri.</span>
+<span style="color: #BA2121">433         Requires different headers to normal post.</span>
+<span style="color: #BA2121">434         &quot;&quot;&quot;</span> 
+<span style="color: #666666">...</span>
+<span style="color: #666666">452</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_suppress_ssl_warning()
+<span style="color: #666666">453</span>
+<span style="color: #666666">454</span>         <span style="color: #008000; font-weight: bold">try</span>:                                                       <span style="color: #408080; font-style: italic"># VVVVVVVVVVVV</span>
+<span style="color: #666666">455</span>             r <span style="color: #666666">=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>post(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri<span style="color: #666666">=</span>uri), data<span style="color: #666666">=</span>data, verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+<span style="color: #666666">456</span>             return_obj[<span style="color: #BA2121">&#39;changed&#39;</span>] <span style="color: #666666">=</span> <span style="color: #008000">False</span>  <span style="color: #408080; font-style: italic"># POST of snapshot id would not be a change</span>
+<span style="color: #666666">457</span>             <span style="color: #008000">self</span><span style="color: #666666">.</span>_process_response(return_obj<span style="color: #666666">=</span>return_obj, http_response<span style="color: #666666">=</span>r, ignore_error<span style="color: #666666">=</span>ignore_error)
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Similar vulnerabilities can be found everywhere in the Python sources.</p>
+<p>For example, in the method <code>invoke_request()</code> inside <code>ibmsecurity/appliance/isamappliance.py</code> and <code>invoke_get_file()</code> inside <code>ibmsecurity/appliance/isdsappliance.py</code>:</p>
+<p>Content of <code>ibmsecurity/appliance/isamappliance.py</code> (line 555):</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">518</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">invoke_request</span>(<span style="color: #008000">self</span>, description, method, uri, filename<span style="color: #666666">=</span><span style="color: #008000">None</span>, ignore_error<span style="color: #666666">=</span><span style="color: #008000">False</span>, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">519</span>                        requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">520</span>                        warnings<span style="color: #666666">=</span>[], requires_model<span style="color: #666666">=</span><span style="color: #008000">None</span>, <span style="color: #666666">**</span>kwargs):
+<span style="color: #666666">...</span>
+<span style="color: #666666">551</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_suppress_ssl_warning()
+<span style="color: #666666">...</span>
+<span style="color: #666666">555</span>             r <span style="color: #666666">=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>request(method, url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri), verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, <span style="color: #666666">**</span>args)
+</pre></div>
+
+<p>Content of <code>ibmsecurity/appliance/isdsappliance.py</code> (line 254):</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">228</span>     <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">invoke_get_file</span>(<span style="color: #008000">self</span>, description, uri, filename, no_headers<span style="color: #666666">=</span><span style="color: #008000">False</span>, ignore_error<span style="color: #666666">=</span><span style="color: #008000">False</span>, requires_modules<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">229</span>                         requires_version<span style="color: #666666">=</span><span style="color: #008000">None</span>, warnings<span style="color: #666666">=</span>[]):
+<span style="color: #666666">230</span>         <span style="color: #BA2121">&quot;&quot;&quot; </span>
+<span style="color: #BA2121">231         Invoke a GET request and download the response data to a file</span>
+<span style="color: #BA2121">232         &quot;&quot;&quot;</span> 
+<span style="color: #666666">...</span>
+<span style="color: #666666">251</span>         <span style="color: #008000">self</span><span style="color: #666666">.</span>_suppress_ssl_warning()
+<span style="color: #666666">252</span> 
+<span style="color: #666666">253</span>         <span style="color: #008000; font-weight: bold">try</span>:
+<span style="color: #666666">254</span>             r <span style="color: #666666">=</span> requests<span style="color: #666666">.</span>get(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri<span style="color: #666666">=</span>uri), auth<span style="color: #666666">=</span>(<span style="color: #008000">self</span><span style="color: #666666">.</span>user<span style="color: #666666">.</span>username, <span style="color: #008000">self</span><span style="color: #666666">.</span>user<span style="color: #666666">.</span>password), verify<span style="color: #666666">=</span><span style="color: #008000">False</span>,
+<span style="color: #666666">255</span>                              stream<span style="color: #666666">=</span><span style="color: #008000">True</span>, headers<span style="color: #666666">=</span>headers)
+</pre></div>
+
+<p>Vulnerable functions identified in <code>ibmsecurity/appliance/isdsappliance.py</code>:</p>
+<ul>
+<li>invoke_post_files vulnerability present on line 170;</li>
+<li>invoke_put_files vulnerability present on line 214;</li>
+<li>invoke_get_file vulnerability present on line 254;</li>
+<li>_invoke_request vulnerabilities present on lines 322, 325 and 329;</li>
+</ul>
+<p>Vulnerable functions identified in <code>ibmsecurity/appliance/isamappliance.py</code>:</p>
+<ul>
+<li>invoke_post_files vulnerabilities present on lines 187 and 189;</li>
+<li>invoke_put_files vulnerability present on line 232;</li>
+<li>invoke_get_file vulnerability present on line 272;</li>
+<li>_invoke_request vulnerabilities present on lines 338, 340 and 343;</li>
+<li>_invoke_request_with_headers vulnerabilities present on lines 383, 385 and 388;</li>
+<li>invoke_post_snapshot_id vulnerability present on line 453;</li>
+<li>invoke_request vulnerability present on line 553.</li>
+</ul>
+<p>The vulnerable library can also be found in Github (<a href="https://github.com/IBM-Security/ibmsecurity/blob/master/ibmsecurity/appliance/isamappliance.py#L187">https://github.com/IBM-Security/ibmsecurity/blob/master/ibmsecurity/appliance/isamappliance.py#L187</a>):</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>        <span style="color: #008000; font-weight: bold">try</span>:
+            <span style="color: #008000; font-weight: bold">if</span> data_as_files <span style="color: #AA22FF; font-weight: bold">is</span> <span style="color: #008000">False</span>:
+                r <span style="color: #666666">=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>post(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri<span style="color: #666666">=</span>uri), data<span style="color: #666666">=</span>data, files<span style="color: #666666">=</span>files, verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+            <span style="color: #008000; font-weight: bold">else</span>:
+                r <span style="color: #666666">=</span> <span style="color: #008000">self</span><span style="color: #666666">.</span>session<span style="color: #666666">.</span>post(url<span style="color: #666666">=</span><span style="color: #008000">self</span><span style="color: #666666">.</span>_url(uri<span style="color: #666666">=</span>uri), files<span style="color: #666666">=</span>files, verify<span style="color: #666666">=</span><span style="color: #008000">False</span>, headers<span style="color: #666666">=</span>headers)
+</pre></div>
+
+<p>The ibmsecurity Python library massively uses insecure methods to communicate with the remote ISVA infrastructure, with 1162 calls to insecure functions.</p>
+<p><a id="hardcoded-passwords"></a></p>
+<h2>Details - Hardcoded passwords</h2>
+<p>It was observed that the ibmsecurity library contains hardcoded users and passwords:</p>
+<p>Content of <code>ibmsecurity/isam/web/reverse_proxy/federation_configuration.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">7</span> <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">config</span>(isamAppliance, instance_id, federation_id<span style="color: #666666">=</span><span style="color: #008000">None</span>, federation_name<span style="color: #666666">=</span><span style="color: #008000">None</span>, hostname<span style="color: #666666">=</span><span style="color: #BA2121">&#39;127.0.0.1&#39;</span>,
+  port<span style="color: #666666">=</span><span style="color: #BA2121">&#39;443&#39;</span>, username<span style="color: #666666">=</span><span style="color: #BA2121">&#39;easuser&#39;</span>,
+<span style="color: #666666">8</span> password<span style="color: #666666">=</span><span style="color: #BA2121">&#39;passw0rd&#39;</span>, reuse_certs<span style="color: #666666">=</span><span style="color: #008000">False</span>, reuse_acls<span style="color: #666666">=</span><span style="color: #008000">False</span>, check_mode<span style="color: #666666">=</span><span style="color: #008000">False</span>, force<span style="color: #666666">=</span><span style="color: #008000">False</span>):
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Similar vulnerabilities can be found in the source codes.</p>
+<p>For example, in the method <code>invoke_request()</code> inside <code>ibmsecurity/appliance/isamappliance.py</code> and <code>invoke_get_file()</code> inside <code>ibmsecurity/appliance/isdsappliance.py</code>, we can find hardcoded credentials:</p>
+<p>Content of <code>ibmsecurity/isam/web/reverse_proxy/oauth_configuration.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">10</span> <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">config</span>(isamAppliance, instance_id, hostname<span style="color: #666666">=</span><span style="color: #BA2121">&#39;127.0.0.1&#39;</span>, port<span style="color: #666666">=443</span>, username<span style="color: #666666">=</span><span style="color: #BA2121">&#39;easuser&#39;</span>, password<span style="color: #666666">=</span><span style="color: #BA2121">&#39;passw0rd&#39;</span>,
+<span style="color: #666666">11</span> junction<span style="color: #666666">=</span><span style="color: #BA2121">&quot;/mga&quot;</span>, reuse_certs<span style="color: #666666">=</span><span style="color: #008000">False</span>, reuse_acls<span style="color: #666666">=</span><span style="color: #008000">False</span>, api<span style="color: #666666">=</span><span style="color: #008000">False</span>, browser<span style="color: #666666">=</span><span style="color: #008000">False</span>, auth_register<span style="color: #666666">=</span><span style="color: #008000">None</span>, fapi_compliant<span style="color: #666666">=</span><span style="color: #008000">None</span>,
+<span style="color: #666666">12</span> check_mode<span style="color: #666666">=</span><span style="color: #008000">False</span>, force<span style="color: #666666">=</span><span style="color: #008000">False</span>):
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Content of <code>ibmsecurity/isam/web/reverse_proxy/aac_configuration.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">9</span> <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">config</span>(isamAppliance, instance_id, hostname<span style="color: #666666">=</span><span style="color: #BA2121">&#39;127.0.0.1&#39;</span>, port<span style="color: #666666">=443</span>, username<span style="color: #666666">=</span><span style="color: #BA2121">&#39;easuser&#39;</span>, password<span style="color: #666666">=</span><span style="color: #BA2121">&#39;passw0rd&#39;</span>,
+<span style="color: #666666">10</span> junction<span style="color: #666666">=</span><span style="color: #BA2121">&quot;/mga&quot;</span>, reuse_certs<span style="color: #666666">=</span><span style="color: #008000">False</span>, reuse_acls<span style="color: #666666">=</span><span style="color: #008000">False</span>, check_mode<span style="color: #666666">=</span><span style="color: #008000">False</span>, force<span style="color: #666666">=</span><span style="color: #008000">False</span>):
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Attacker can use hardcoded passwords to compromise installations.</p>
+<p><a id="uninitialized-variables"></a></p>
+<h2>Details - Uninitialized variables</h2>
+<p>It was observed that the ibmsecurity library uses variables before they are initialized in:</p>
+<ul>
+<li>ibmsecurity/isam/aac/attribute_matchers.py</li>
+<li>ibmsecurity/isam/aac/risk_profiles.py</li>
+</ul>
+<p>The <code>json_data</code> variable is used on line 106 but is only defined on line 108:</p>
+<p>Content of <code>ibmsecurity/isam/aac/attribute_matchers.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+ <span style="color: #666666">98</span> <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">_check</span>(isamAppliance, description, properties):
+ <span style="color: #666666">99</span>     <span style="color: #BA2121">&quot;&quot;&quot;</span>
+<span style="color: #BA2121">100     Check and return True if update needed</span>
+<span style="color: #BA2121">101     &quot;&quot;&quot;</span>
+<span style="color: #666666">102</span>     update_required <span style="color: #666666">=</span> <span style="color: #008000">False</span>
+<span style="color: #666666">103</span>     ret_obj <span style="color: #666666">=</span> get(isamAppliance, description)
+<span style="color: #666666">104</span>     <span style="color: #008000; font-weight: bold">if</span> ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>] <span style="color: #666666">==</span> {}:
+<span style="color: #666666">105</span>         logger<span style="color: #666666">.</span>warning(<span style="color: #BA2121">&quot;Attribute Matcher not found, returning no update required.&quot;</span>)
+<span style="color: #666666">106</span>         <span style="color: #008000; font-weight: bold">return</span> <span style="color: #008000">None</span>, update_required, json_data
+<span style="color: #666666">107</span>     <span style="color: #008000; font-weight: bold">else</span>:
+<span style="color: #666666">108</span>         json_data <span style="color: #666666">=</span> {
+<span style="color: #666666">109</span>             <span style="color: #BA2121">&quot;properties&quot;</span>: properties,
+<span style="color: #666666">110</span>             <span style="color: #BA2121">&quot;predefined&quot;</span>: ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>][<span style="color: #BA2121">&#39;predefined&#39;</span>],
+<span style="color: #666666">111</span>             <span style="color: #BA2121">&quot;supportedDatatype&quot;</span>: ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>][<span style="color: #BA2121">&#39;supportedDatatype&#39;</span>],
+<span style="color: #666666">112</span>             <span style="color: #BA2121">&quot;uri&quot;</span>: ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>][<span style="color: #BA2121">&#39;uri&#39;</span>]
+<span style="color: #666666">113</span>         }
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>Content of <code>ibmsecurity/isam/aac/risk_profiles.py</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">...</span>
+<span style="color: #666666">152</span> <span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">_check</span>(isamAppliance, name, active, description, attributes, predefined):
+<span style="color: #666666">153</span>     <span style="color: #BA2121">&quot;&quot;&quot;</span>
+<span style="color: #BA2121">154     Check and return True if update needed</span>
+<span style="color: #BA2121">155     &quot;&quot;&quot;</span>
+<span style="color: #666666">156</span>     update_required <span style="color: #666666">=</span> <span style="color: #008000">False</span>
+<span style="color: #666666">157</span>     ret_obj <span style="color: #666666">=</span> get(isamAppliance, name)
+<span style="color: #666666">158</span>     <span style="color: #008000; font-weight: bold">if</span> ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>] <span style="color: #666666">==</span> {}:
+<span style="color: #666666">159</span>         logger<span style="color: #666666">.</span>warning(<span style="color: #BA2121">&quot;Risk Profile not found, returning no update required.&quot;</span>)
+<span style="color: #666666">160</span>         <span style="color: #008000; font-weight: bold">return</span> <span style="color: #008000">None</span>, update_required, json_data
+<span style="color: #666666">161</span>     <span style="color: #008000; font-weight: bold">else</span>:   
+<span style="color: #666666">162</span>         <span style="color: #008000; font-weight: bold">if</span> ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>][<span style="color: #BA2121">&#39;predefined&#39;</span>] <span style="color: #AA22FF; font-weight: bold">is</span> <span style="color: #008000">True</span>:
+<span style="color: #666666">163</span>             logger<span style="color: #666666">.</span>warning(<span style="color: #BA2121">&quot;Predefined Risk Profiles can NOT be updated, returning no update required.&quot;</span>)
+<span style="color: #666666">164</span>             <span style="color: #008000; font-weight: bold">return</span> ret_obj[<span style="color: #BA2121">&#39;data&#39;</span>][<span style="color: #BA2121">&#39;id&#39;</span>], update_required, {}
+<span style="color: #666666">165</span>         <span style="color: #008000; font-weight: bold">else</span>:
+<span style="color: #666666">166</span>             json_data <span style="color: #666666">=</span> {
+<span style="color: #666666">167</span>                 <span style="color: #BA2121">&quot;name&quot;</span>: name,
+<span style="color: #666666">168</span>                 <span style="color: #BA2121">&quot;active&quot;</span>: active,
+<span style="color: #666666">169</span>                 <span style="color: #BA2121">&quot;predefined&quot;</span>: predefined
+<span style="color: #666666">170</span>             }
+<span style="color: #666666">171</span>             <span style="color: #008000; font-weight: bold">if</span> attributes <span style="color: #AA22FF; font-weight: bold">is</span> <span style="color: #AA22FF; font-weight: bold">not</span> <span style="color: #008000">None</span>:
+<span style="color: #666666">172</span>                 json_data[<span style="color: #BA2121">&#39;attributes&#39;</span>] <span style="color: #666666">=</span> attributes
+<span style="color: #666666">...</span>
+</pre></div>
+
+<p>The Python code can crash.</p>
+<h2>Vendor Response</h2>
+<p>IBM provided a security bulletin:</p>
+<p><a href="https://www.ibm.com/support/pages/node/7147932">Security Bulletin: Multiple Security Vulnerabilities were found in Open Source libraries used to deploy IBM Security Verify Access Appliances (CVE-2024-31871, CVE-2024-31872, CVE-2024-31873, CVE-2024-31874)</a>:</p>
+<ul>
+<li>CVE-2024-31871: IBM Security Verify Access Appliance could allow a malicious actor to conduct a man in the middle attack when deploying Python scripts due to improper certificate validation.</li>
+<li>CVE-2024-31872: IBM Security Verify Access Appliance could allow a malicious actor to conduct a man in the middle attack when deploying Open Source scripts due to missing certificate validation.</li>
+<li>CVE-2024-31873: IBM Security Verify Access Appliance contains hard-coded credentials which it uses for its own inbound authentication that could be obtained by a malicious actor.</li>
+<li>CVE-2024-31874: IBM Security Verify Access Appliance uses uninitialized variables when deploying that could allow a local user to cause a denial of service.</li>
+</ul>
+<p><a id="timeline"></a></p>
+<h2>Report Timeline</h2>
+<p>This security assessment was reported to IBM along with the security assessment of IBM Security Verify Access. Please find the complete timeline below:</p>
+<ul>
+<li>October 2022: Security assessment performed on IBM Security Verify Access.</li>
+<li>Feb 12, 2023: A complete report was sent to IBM.</li>
+<li>Feb 13, 2023: IBM acknowledged the reception of the security assessment and said that scan tools usually report a lot of issues so I have to check the status of detected CVEs by browsing RedHat webpages and create an issue for each CVE.</li>
+<li>Feb 13, 2023: Replied to IBM saying that the security assessment was not done using a scanner.</li>
+<li>Feb 14, 2023: Asked for an update.</li>
+<li>Feb 14, 2023: IBM confirmed that the report was shared with L3 and "IBM hacking team".</li>
+<li>Feb 22, 2023: IBM said they were still assessing the report.</li>
+<li>Mar 13, 2023: An additional report on ibmsecurity was sent to IBM.</li>
+<li>Mar 13, 2023: IBM confirmed that the second report was shared with L3 team.</li>
+<li>Mar 15, 2023: IBM wanted to organize a meeting about the findings.</li>
+<li>Mar 15, 2023: I replied that I would like to have a written feedback for each reported vulnerability in order to have constructive discussion.</li>
+<li>Apr 4, 2023: I asked again IBM to confirm the vulnerabilities</li>
+<li>Apr 5, 2023: IBM shared the analysis (VulnerabilityResponse.xlsx), confirming several vulnerabilities.</li>
+<li>Apr 11, 2023: I provided my comments (VulnerabilityResponse-comments-Pierre.xlsx) and asked to organize a meeting.</li>
+<li>Apr 11, 2023: IBM confirmed a meeting is possible.</li>
+<li>Apr 18, 2023: I asked to organize a meeting on Apr 19, 2023.</li>
+<li>Apr 18, 2023: IBM confirmed a meeting is possible.</li>
+<li>Apr 19, 2023: I asked to have a meeting where every party (dev team, support and myself) can be present.</li>
+<li>Apr 19, 2023: IBM confirmed a meeting would take place on Apr 20, 2023.</li>
+<li>Apr 20, 2023: Meeting with IBM regarding ISVA. IBM confirmed they would recheck some of the issues and would provide CVEs for the vulnerabilities.</li>
+<li>Apr 23, 2023: I asked to have a second meeting about ibmsecurity.</li>
+<li>Apr 23, 2023: IBM confirmed they will organize a meeting on ibmsecurity.</li>
+<li>Apr 24, 2023: I asked the timeline to get security patches.</li>
+<li>Apr 24, 2023: IBM confirmed there are no ETA to get security patches.</li>
+<li>Apr 27, 2023: Meeting with IBM regarding ibmsecurity. IBM confirmed they will fix all the issues.</li>
+<li>May 10, 2023: I asked for CVE identifiers to track the vulnerabilities.</li>
+<li>May 11, 2023: IBM said that PSIRT records have been opened and the scoring is in progress.</li>
+<li>May 15, 2023: I reached IBM because I found a CVE (CVE-2023-25927) and a security bulletin likely corresponding to a vulnerability I reported, thanks to <a href="https://twitter.com/CVEnew">@CVEnew</a> on Twitter: <a href="https://www.ibm.com/support/pages/node/6989653">https://www.ibm.com/support/pages/node/6989653</a>. I asked if this was one of the reported vulnerabilities.</li>
+<li>Jul 7, 2023: IBM said the dev team was still working on the final list of issues and that everything would be fixed in the 10.0.7 release.</li>
+<li>Jul 10, 2023: I asked when the 10.0.7 release would be available. I asked again more details about the previous advisory.</li>
+<li>Jul 11, 2023: IBM said that the 10.0.7 release would be published on Dec 23, 2023. Regarding the CVEs, IBM replied they would need to discuss with the dev team.</li>
+<li>Jul 12, 2023: I asked IBM to confirm if CVE-2023-25927 was one of the reported vulnerabilities.</li>
+<li>Jul 12, 2023: IBM said that they do not credit security researchers.</li>
+<li>Jul 13, 2023: I provided several IBM security bulletins where security researchers were credited, e.g. <a href="https://www.ibm.com/support/pages/security-bulletin-vulnerabilities-exist-ibm-data-risk-manager-cve-2020-4427-cve-2020-4428-cve-2020-4429-and-cve-2020-4430">https://www.ibm.com/support/pages/security-bulletin-vulnerabilities-exist-ibm-data-risk-manager-cve-2020-4427-cve-2020-4428-cve-2020-4429-and-cve-2020-4430</a>.</li>
+<li>Jul 14, 2023: IBM confirmed that they would forward the information to L3 team and asked what I would want to do with this case.</li>
+<li>Jul 14, 2023: I said that (1) I was still waiting for information about CVE-2023-25927, (2) I did not have any information regarding security patches for ibmsecurity and (3) I asked IBM to provide me with the final list of vulnerabilities that would be patched in the 10.0.7. Since the list of confirmed vulnerabilities was quite long, I wanted to confirm that nothing was missed.</li>
+<li>Jul 28, 2023: IBM said that they did not know if CVE-2023-25927 is one of the reported vulnerabilities and in any case, it is impossible to edit the security bulletin and give credits.</li>
+<li>Aug 16, 2023: IBM asked if additional assistance was required [NB: IBM likely wanted to close this ticket while no security patches were published].</li>
+<li>Aug 17, 2023: I asked again information about ibmsecurity and CVE-2023-25927.</li>
+<li>Oct 20, 2023: IBM said they were still analysing the requests (final list of patched vulnerabilties, security patches of ibmsecurity and status of CVE-2023-25927).</li>
+<li>Oct 25, 2023: IBM asked to organize a meeting.</li>
+<li>Oct 25, 2023: I replied that I was still waiting for the final list of vulnerabilities that would be fixed in version 10.0.7. There was also no information regarding security patches for ibmsecurity.</li>
+<li>Oct 25, 2023: IBM replied they wanted to discuss about the vulnerabilities in a meeting.</li>
+<li>Oct 29, 2023: IBM asked to organize a meeting again.</li>
+<li>Oct 30, 2023: I accepted the meeting and I asked IBM to provide the list of vulnerabilities that would be patched with their current status. I also asked the status of ibmsecurity.</li>
+<li>Oct 30, 2023: IBM asked to have a meeting on Nov 7, 2023.</li>
+<li>Nov 2, 2023: I confirmed my presence to the meeting.</li>
+<li>Nov 5, 2023: IBM confirmed the meeting.</li>
+<li>Nov 7, 2023: Meeting with IBM. IBM provided me with a new report containing new feedbacks for several vulnerabilities. Also IBM confirmed that several vulnerabilities would be patched in 2024 and ibmsecurity would be patched in December 2023. IBM asked me to review a specific vulnerability that appears to be invalid (<em>V-[REDACTED] - Insecure SSLv3 connections to the DSC servers</em>).</li>
+<li>Nov 21, 2023: IBM asked me to review the new report shared by IBM.</li>
+<li>Nov 28, 2023: IBM asked for updates.</li>
+<li>Dec 4, 2023: I answered that I did not have anymore access to the test infrastructure and IBM had to wait for my analysis until I get again access to the test infrastructure.</li>
+<li>Dec 4, 2023: IBM asked me to check the vulnerabilities as soon as possible.</li>
+<li>Dec 21, 2023: I got access to a test infrastructure and reviewed some vulnerabilities.</li>
+<li>Dec 21, 2023: I sent a new analysis to IBM, containing details of 4 vulnerabilities.</li>
+<li>Dec 27, 2023: IBM confirmed the reception of the new analysis.</li>
+<li>Jan 15, 2024: IBM asked me to update ISVA and recheck all the vulnerabilities.</li>
+<li>Jan 16, 2024: I asked IBM if ibmsecurity was also patched.</li>
+<li>Jan 16, 2024: IBM confirmed that a new case must be opened for ibmsecurity to get security patches(!).</li>
+<li>Jan 22, 2024: IBM wanted to organize a new meeting.</li>
+<li>Jan 22, 2024: I replied that I failed to understand the issue with the ibmsecurity library and that I had a written confirmation by IBM that security patches would be provided. The vulnerabilities found in ibmsecurity were reported in March 2023 (10 months ago).</li>
+<li>Jan 22, 2024: I informed IBM that I discovered(!) a new security bulletin thanks to <a href="https://twitter.com/CVEnew">@CVEnew</a>: <a href="https://www.ibm.com/support/pages/node/7106586">https://www.ibm.com/support/pages/node/7106586</a>, but only 15 vulnerabilities were listed instead of the 35 vulnerabilities confirmed by IBM. I asked IBM to clarify the situation as it looked like less than half of vulnerabilities were indeed patched.</li>
+<li>Jan 24, 2024: IBM created a new case for ibmsecurity.</li>
+<li>Jan 29, 2024: IBM confirmed that 5 vulnerabilities had not been patched in the latest version (10.0.7).</li>
+<li>Jan 29, 2024: I reached IBM to get the status of 15 unpatched vulnerabilities. I provided the updated analysis to IBM.</li>
+<li>Feb 7, 2024: IBM confirmed that some of the vulnerabilities were "being processed" and that some of vulnerabilities had been also silently patched and no security bulletins had been published.</li>
+<li>Feb 20, 2024: IBM asked for updates.</li>
+<li>Feb 20, 2024: I asked when would be the release date for ISVA 10.0.8 and the complete list of vulnerabilities that would be patched in this release.</li>
+<li>Feb 20, 2024: IBM confirmed that the 10.0.8 release would be published in mid-2024.</li>
+<li>Feb 23, 2024: I sent a new vulnerability to IBM "Authentication Bypass on IBM Security Verify Runtime".</li>
+<li>Feb 23, 2024: IBM confirmed the reception of the vulnerability and asked to close the ticket.</li>
+<li>Feb 23, 2024: I said that since some vulnerabilities had not been patched, the ticket must stay open.</li>
+<li>Feb 23, 2024: IBM said that they cannot keep the ticket open and they needed to close it.</li>
+<li>Feb 23, 2024: I explained that the vulnerabilities were reported over a year ago and IBM confirmed they had not fully fixed in the latest version and that some vulnerabilities were also still under evaluation. I said that I would agree to close this ticket if IBM could confirm that all vulnerabilities reported in the ticket had been correctly fixed in the latest version. I also asked IBM to provide the corresponding security bulletins.</li>
+<li>Feb 27, 2024: Regarding the authentication bypass, IBM replied that the runtime was supposed to be in the intranet zone.</li>
+<li>Feb 28, 2024: I asked IBM to clarify where in the documentation specified that the runtime should not be exposed. For example, in <a href="https://www.ibm.com/docs/en/sva/10.0.7?topic=support-docker-image-verify-access-runtime">https://www.ibm.com/docs/en/sva/10.0.7?topic=support-docker-image-verify-access-runtime</a>, it was not explained that exposing this runtime on the network was a high security risk.</li>
+<li>Mar 4, 2024: Regarding the vulnerabilities found in ibmsecurity, IBM said that any security vulnerability found in ibmsecurity must be reported by opening an issue in the Github repository.</li>
+<li>Mar 8, 2024: IBM confirmed they were able to reproduce the authentication bypass vulnerability.</li>
+<li>Mar 12, 2024: IBM confirmed they would add an optional MTLS authentication in the next release (10.0.8) and they would update the ISVA documentation to block any attempt of the authentication bypass vulnerability.</li>
+<li>Mar 29, 2024: IBM published a new security bulletin: <a href="https://www.ibm.com/support/pages/node/7145400">https://www.ibm.com/support/pages/node/7145400</a>.</li>
+<li>Mar 29, 2024: IBM confirmed that any security vulnerability found in ibmsecurity must be reported by opening an issue in the Github repository.</li>
+<li>Apr 1, 2024: Creation of <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">https://github.com/IBM-Security/ibmsecurity/issues/416</a>.</li>
+<li>Apr 2, 2024: IBM confirmed the reception of the report <a href="https://github.com/IBM-Security/ibmsecurity/issues/416#issuecomment-2032110397">https://github.com/IBM-Security/ibmsecurity/issues/416#issuecomment-2032110397</a>.</li>
+<li>Apr 3, 2024: <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">https://github.com/IBM-Security/ibmsecurity/issues/416</a> was entirely redacted by IBM.</li>
+<li>Apr 5, 2024: I asked if the vulnerabilities would be patched in the <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">#416 issue</a>.</li>
+<li>Apr 6, 2024: Issue <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">#416</a> closed.</li>
+<li>Apr 6, 2024: I added again the content of <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">https://github.com/IBM-Security/ibmsecurity/issues/416</a> and asked if CVEs would be published.</li>
+<li>Apr 10, 2024: Security bulletin for ibm security published: <a href="https://www.ibm.com/support/pages/node/7147932">https://www.ibm.com/support/pages/node/7147932</a>.</li>
+<li>Apr 10, 2024: I reached IBM regarding a new security bulletin, with a potential vulnerability I reported <a href="https://www.ibm.com/support/pages/node/7145828">https://www.ibm.com/support/pages/node/7145828</a>.</li>
+<li>Apr 10, 2024: IBM said this security bulletin was unrelated to the vulnerabilities I reported.</li>
+<li>Apr 15, 2024: IBM confirmed that the final vulnerabilities would be fixed in ISVA 10.0.8.</li>
+<li>Apr 15, 2024: I provided a list of unfixed vulnerabilities and asked for more information.</li>
+<li>Apr 16, 2024: IBM confirmed that all the unfixed vulnerabilities would be fixed in ISVA 10.0.8 and asked to close the ticket.</li>
+<li>Apr 16, 2024: I confirmed that this ticket can be closed only when the security patches are available.</li>
+<li>Apr 16, 2024: IBM confirmed they wanted to close the ticket because nothing would be updated before mid-2024.</li>
+<li>Apr 17, 2024: I replied that "It makes no sense to close this ticket until the vulnerabilities have been fixed. The fact that the vulnerabilities are fixed mid-year is a decision made by IBM. IBM was made aware of these vulnerabilities over a year ago, and yet we are still waiting for security patches. If this ticket is closed, I would consider that the vulnerabilities have been fixed and it is perfectly fine to publish the technical analysis."</li>
+<li>May 6, 2024: IBM closed the existing ticket and opened new tickets for the remaining vulnerabilities.</li>
+<li>May 6, 2024: I contacted IBM PSIRT asking if it was fine to publish the vulnerabilities since the ticket was closed by IBM.</li>
+<li>May 7, 2024: I reopened the ticket stating that some of the patched vulnerabilities did not receive a CVE and there were also some unpatched vulnerabilities. I asked IBM to provide me with the CVE assigned to each vulnerability. I also asked IBM to confirm that, since this ticket had been closed by IBM, all the vulnerabilities had been fixed and that I would be able to publish the technical details.</li>
+<li>May 8, 2024: IBM said they would review the list of vulnerabilities.</li>
+<li>May 10, 2024: IBM PSIRT asked me not to publish technical details of unpatched vulnerabilities.</li>
+<li>May 17, 2024: IBM provided me with an incomplete list of CVEs, with different vulnerabilities under the same CVE identifier and asked to close the ticket.</li>
+<li>May 20, 2024: IBM asked for my comments on the list of CVEs.</li>
+<li>May 20, 2024: I confirmed that several CVEs were missing and the list was incomplete.</li>
+<li>May 21, 2024: IBM provided me with an explanation regarding the missing CVEs.</li>
+<li>May 21, 2024: I asked IBM to quote their explanation in the security advisory.</li>
+<li>May 21, 2024: IBM asked to have a meeting.</li>
+<li>May 22, 2024: I replied that I would prefer written communication since it was very difficult to track the status of the vulnerabilities with (1) CVEs obtained only several months after the release of security bulletins, (2) tickets closed by IBM for unpatched vulnerabilities, (3) vulnerabilities in ibmsecurity which could be corrected by IBM and which could then no longer be managed by IBM, and (4) missing CVEs.</li>
+<li>May 22, 2024: IBM asked to have a meeting to remove any confusion.</li>
+<li>May 23, 2024: I replied that there's not much confusion except missing CVEs for silently patched vulnerabilities and lack of communication from IBM when releasing security patches. I asked IBM to share the CVEs with the corresponding vulnerabilities and indicate the security bulletins with the list of corresponding vulnerabilities.</li>
+<li>May 24, 2024: IBM stated they would provide me with additional CVEs.</li>
+<li>May 30, 2024: I confirmed that the creation of additional CVEs is fair.</li>
+<li>Jun 2, 2024: IBM confirmed 3 new CVEs in a new security bulletin: <a href="https://www.ibm.com/support/pages/node/7155356">https://www.ibm.com/support/pages/node/7155356</a>.</li>
+<li>Jun 3, 2024: I asked IBM the release date of the 10.0.8 version.</li>
+<li>Jun 3, 2024: IBM confirmed that the exact date was not yet decided.</li>
+<li>Jun 6, 2024: IBM asked if I had comments about the remaining vulnerabilities.</li>
+<li>Jun 8, 2024: I asked IBM the status of a previously patched vulnerability.</li>
+<li>Jun 10, 2024: IBM confirmed that this vulnerability had not been previously patched and would be patched in the 10.0.8 release.</li>
+<li>Jun 11, 2024: IBM asked to create separate cases for the remaining vulnerabilities.</li>
+<li>Jun 19, 2024: IBM asked if I needed assistance.</li>
+<li>Jun 23, 2024: IBM confirmed that the 10.0.8 version was released and that they would close the ticket tracking the vulnerabilities.</li>
+<li>Jun 26, 2024: I asked IBM to provide the corresponding CVEs and the link of the security bulletin.</li>
+<li>Jun 27, 2024: IBM provided me with the link to the security bulletin: <a href="https://www.ibm.com/support/pages/node/7158790">https://www.ibm.com/support/pages/node/7158790</a> and said that the 10.0.8 version was released with all the patched vulnerabilities. IBM closed the ticket.</li>
+<li>Jul 3, 2024: I reopened the ticket and asked IBM to provide me with the list of vulnerabilities with the corresponding CVEs since I was not able to correctly map the CVEs to the vulnerabilities I reported.</li>
+<li>Jul 8, 2024: IBM provided me with the list of CVEs. IBM closed the ticket.</li>
+<li>Sep 7, 2024: I sent an email to IBM PSIRT stating that I was going to publish the security advisory and that some CVEs were still missing. I also stated that CVE-2023-38371 seemed to be an error since it was confirmed not to be a vulnerability according to our previous email exchanges.</li>
+<li>Sep 9, 2024: I asked IBM to provide me with an official link regarding the runtime authentication bypass, to publish it in the security advisory.</li>
+<li>Sep 13, 2024: IBM PSIRT provided me with (1) links regarding the runtime authentication bypass and (2) additional CVEs. They also confirmed that at least one vulnerability was not fixed and asked me not to disclose this finding until it was patched. No information was provided when this vulnerability would be patched.</li>
+<li>Nov 1, 2024: A security advisory is published.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Barre aka Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/blog/2024-11-01-ibmsecurity-4-vulnerabilities.html">https://pierrekim.github.io/blog/2024-11-01-ibmsecurity-4-vulnerabilities.html</a></p>
+<p><a href="https://pierrekim.github.io/advisories/2024-ibmsecurity.txt">https://pierrekim.github.io/advisories/2024-ibmsecurity.txt</a></p>
+<p><a href="https://pierrekim.github.io/blog/2024-11-01-ibm-security-verify-access-32-vulnerabilities.html">https://pierrekim.github.io/blog/2024-11-01-ibm-security-verify-access-32-vulnerabilities.html</a></p>
+<p><a href="https://pierrekim.github.io/advisories/2024-ibm-security-verify-access.txt">https://pierrekim.github.io/advisories/2024-ibm-security-verify-access.txt</a></p>
+<p><a href="https://www.ibm.com/support/pages/node/7147932">https://www.ibm.com/support/pages/node/7147932</a></p>
+<p><a href="https://github.com/IBM-Security/ibmsecurity/issues/416">https://github.com/IBM-Security/ibmsecurity/issues/416</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
+    <div>
+        <p class="text-muted">published on 2024-11-01 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>
