@@ -93,7 +93,7 @@ The vulnerabilities were patched progressively in the 10.0.6, 10.0.7 and 10.0.8 
 
 Other issues had been reported but ultimately were dismissed (e.g. hard-to-trigger crashes and I did not have any time left for this security assessment).
 
-Communications with IBM was difficult since IBM closed the tickets used to track the vulnerabilities multiple times without releasing any security patches. The timeline provided at the later part of this advisory provides an overview of the interactions I have had with IBM. IBM PSIRT redirected queries to IBM support and IBM support provided extremely disappointing answers to vulnerabilities. When I went back to IBM PSIRT with these answers, IBM PSIRT refused them and provided opposite answers. Reporting vulnerabilities to IBM was also inefficient. When I asked IBM for missing CVEs in September 2024, IBM PSIRT confirmed that patches were missing. All the tickets were already closed in June 2024 by IBM and I previously received confirmation that all the vulnerabilities had been patched.
+Communication with IBM was difficult since IBM closed the tickets used to track the vulnerabilities multiple times without releasing any security patches. The timeline provided at the later part of this advisory provides an overview of the interactions I have had with IBM. IBM PSIRT redirected queries to IBM support and IBM support provided extremely disappointing answers to vulnerabilities. When I went back to IBM PSIRT with these answers, IBM PSIRT refused them and provided opposite answers. Reporting vulnerabilities to IBM was also inefficient. When I asked IBM for missing CVEs in September 2024, IBM PSIRT confirmed that patches were missing. All the tickets were already closed in June 2024 by IBM and I previously received confirmation that all the vulnerabilities had been patched.
 
 Security bulletins were mainly found by following @CVEnew (https://twitter.com/CVEnew) and I had to guess the patched vulnerabilities from the CVE descriptions. After some requests, thankfully, IBM sent me a list of CVEs corresponding to the vulnerabilities I reported.
 
@@ -3683,17 +3683,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmckp4oACgkQxD4O2n2T
-Lbzm0A//QymzN/m52ZLBbM/X1bBBrbmXPvWTt1b8cHNFViP2wO/iDA4oSmau9zU+
-f0dNsvWpds+i5xiWqg93RHPKQ0WLML1F1a9ygHUwzL1P7NroWs+tBdYDCtY9Pmge
-iJsQSdgup+gwBb3LciiCSq0wLrptf8wTmVvnm4HV084Yhe6kvBLBxw6RsyIVJ6Gn
-e89Ss5CwCNNWbAHf1sWnI+r6na38Q2FebzyNAN2SOhwfWj3hE3F7pLqwa8aCzDG4
-gVaBMP56fymzldMOx1w3W3RNqI1FzZBuHu9CNy5QXm4NnxQQVCS0xXcd1qrBxg+U
-bDkqL762y8NSvx3ZGN/9+bVvMfv78mfo4pq/8Tt7qsFiZITSnnvnmwIBji2a3cM+
-tKXDrLyOmcFXFzmuoQi4lUQOwSM+WJ4gZBmIbwfIjKhqfv1HfFw6Tbh5vKlvTFcL
-KPB/vWQxKkOmfieDK1YDCBmXWHUb7rqChQhr5srkVgbrp9C3CYEUnw8AvxAWGXxz
-mLaQ5eJ+9aRtauWt2NX/zm8V2d18qDlHemdL1mep7aPv+nx94JTEXtq0rYV0ve5z
-hjpZEQuhDszH8iTMxQtB2/RCr04PjH/8/zJ19c3OLunSDsLHmwx+mfowzjHbPWYu
-c6CI2k47nQtYMSZnr8aZWeTo9PewDl1EOhwOT3AVsjjK2yOWnnM=
-=WGL4
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmckrf4ACgkQxD4O2n2T
+LbzphQ//dkcrCH8Q+yNrjdYoxvY/wXwc1JfgXxmLK7Ns3N5qFJVT70Uea6HjIoHz
+eJQurricioTP8jG48J2uzIt7l4G4Kgv0zP+aPN/KXjfYghu46N4G29458OgXTHVe
+ecOmouy/za1DG6qtST+sbicDhX5oku4VtdQ+NtDXaoLUAkADp/wJ3rLv5Fdw7gxQ
+VR0OMUTsy50Vv1bRN2R77ZAs/odAY67pQfTw8QpKLDDLBZveeAwBLgc66rQ+KZjq
+mPbLUULFlZp3+EYnR+XyZXu2nNGZDhTVMKAYCGzuqr3/boIz1BF7rifK07tL8+EE
++NQQK3kzauWuQ/Sl5X20kfvdC91g7d/G93Me+Uz9iSfB9cyDfAdCLNf6fyYi/xjE
+qz6HNe2capSG7GBeCK6Q8ffb95kojjKrmyL2eKj2Yz5ZCWuDXa0L6pLwHZ9KSyjj
+24kykmiHI4bCKBCXazBVYcdguk+6PCcenAGxLIpKdmTcMvaUUbN/c2jUenjV8/As
++akcA48mNjuITE+Qei9kn7R5huTSCZffws9j4r0P86dst0ZkYfNSWgThatk2NRwC
+V8D2DOXdxpXThuOAMfN4b9ViLYTeHm2/JGvl0RLQNyNSv2rWeeEch6Z69NsS/Fq7
+Y7L55juYeCFtkTrdYA+tkaUHlvX8uQC9GoKkcUOfYV6utGQ4fnU=
+=3Ax6
 -----END PGP SIGNATURE-----

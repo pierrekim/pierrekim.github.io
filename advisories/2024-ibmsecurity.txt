@@ -38,7 +38,7 @@ _Miscellaneous notes_:
 
 The vulnerabilities were found in February 2023 and were communicated to IBM in March 2023. They ultimately were patched in April 2024 (after 13 months).
 
-Communications with IBM was difficult. At first, IBM support had confirmed that they would patch the vulnerabilities found in the ibmsecurity library. Then, in April 2024, IBM advised that the only way to get security patches is to go Full-disclosure and open a github issue containing all technical details. Although this was unusual, I created a github issue, which was subsequently redacted by IBM - https://github.com/IBM-Security/ibmsecurity/issues/416.
+Communication with IBM was difficult. At first, IBM support had confirmed that they would patch the vulnerabilities found in the ibmsecurity library. Then, in April 2024, IBM advised that the only way to get security patches is to go Full-disclosure and open a github issue containing all technical details. Although this was unusual, I created a github issue, which was subsequently redacted by IBM - https://github.com/IBM-Security/ibmsecurity/issues/416.
 
 _Impacts_
 
@@ -594,17 +594,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmckp4QACgkQxD4O2n2T
-Lbx2oA//W6shPvtlofAf7E4yuCyfRnCl8LOW1f9YsrG1pewASbo/6oesdina7eXR
-4QO3YROmTr8yj7pcHtvLxaQMYiOig45vGyVA0Sl+YIr72GPXduaP2DndcjcDFTkN
-qN+n8k0sBnLO8jHjsbNnInpsEswT52RnIc9Iv9t29uksLIXpmBJseHJ1deBh+3bE
-lgCDo5EktWiW8nMn/PBvNN34LDxYnTKYePA3tDP6qBg0OfwXMk4MFTPNJ9+FFGz+
-0kdrvHH4/Kuh+5bi6qNfJOaCUqbnAc4u5LnokJTvkjLZruFgRALoe32kos1w+gjv
-8zp2luod45JpGgW9ndnnkBDw3D0BqxhEsSjmDtzIqXA0RrTyE59eTLPFwMyjRZ8b
-w6UeJoWqhL50nAfDPBCDkjFfoTpxlw64XK0J7kYGOFi4dLDk6LhaGYDt2dcsD2P/
-aZE7B2bWiz0GU1nCc7Kn+qDPFKSzcmjvvwBpqBoCmkYxfyHGb57i2k/0EtVrayXc
-ibAi8jrENFAXv2jUfXCweFE/7+Yt//gzyigKMIc1lCEaS0Jq8RpmuqB7tmNG3hoU
-ld56L95ct6hpoZA6fpQwgrT/BBpjJZGaBLtiXJAIV+hqffPeJlGcLfp9QCVal4Ta
-D9NgPLUN/BRgIWuVZhhM3e2jojDoPtr2nHGC+bq4Cksp7WcNo5U=
-=oJyE
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmckrboACgkQxD4O2n2T
+LbxT0BAAiFtMwoXwQZ86MJwK4TkmenuPSmnRfYcE5v3P3PYlhEqp1SCajyiOySiu
+Wy0qcJEhHb1xFZsxABlA/tzK23sqf2mt4rhaYSGzOjj2diOQvawS2ODSdnkKOXUb
+oaoUK8H2mav4uOaCHKXxYPA0Si1AS7wvUlkC/tR+ZM2kkiYwUvStKIZWivbsB+7K
+T6/1Xpc1vYSjuHJm+if4tbMaDXBDFZsMQZdGk5V5a4aNb+nBviSsG4OHsCFpEQbC
+kybhmNVaDXGsHbWPFGzoq7DAIHYj0qUQKe7eITkrHIiV1gi0k5ZQwN2qsUQNvmRY
+0XjvH2ioZ20xG9L2AHvLHVDcnpl4nzWqNgtXn9ouTGdZU3ks/aSsvmknPX0Z0OAu
+QBH9OchXSv2TGOA+gHik3//9NGi36W74SuW+P1B+69iA19xVPsvIzAMrOW3dDuGM
+j3MGsI54OLckDtO9UaWlDJ5yN6UrOya1OnPY8u8sZTsN5Zw272yC6Za3vH46XX8S
+bdIrh9atmfnQmzIQh/uaGLA/Z+H6Oj/7ERJbhoNDlK/edSntMPN+nnJAeAho+bOr
+Qsvyzu1kvxZUzQ4TdQS49PWy2yDLCd796DL6P9xfpzsIScEQlMfXEOViBlmkSujp
+SMEWsMRbGSV1qVpOT5UwEI7I305ZpcZ2Svd20DhM1c4F+/E1Pz8=
+=rADO
 -----END PGP SIGNATURE-----

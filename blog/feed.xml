@@ -23,7 +23,7 @@
 <p>TL;DR: An attacker located on the network can MITM TLS connections to IBM Security Verify Access (ISVA) appliances, recover credentials and compromise the entire IBM Security Verify Access infrastructure. IBM Security Verify Access is a SSO solution mainly used by banks, Fortune 500 companies and governmental entities.</p>
 <p><em>Miscellaneous notes</em>:</p>
 <p>The vulnerabilities were found in February 2023 and were communicated to IBM in March 2023. They ultimately were patched in April 2024 (after 13 months).</p>
-<p>Communications with IBM was difficult. At first, IBM support had confirmed that they would patch the vulnerabilities found in the ibmsecurity library. Then, in April 2024, IBM advised that the only way to get security patches is to go Full-disclosure and open a github issue containing all technical details. Although this was unusual, I created a github issue, which <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">was subsequently redacted by IBM</a>.</p>
+<p>Communication with IBM was difficult. At first, IBM support had confirmed that they would patch the vulnerabilities found in the ibmsecurity library. Then, in April 2024, IBM advised that the only way to get security patches is to go Full-disclosure and open a github issue containing all technical details. Although this was unusual, I created a github issue, which <a href="https://github.com/IBM-Security/ibmsecurity/issues/416">was subsequently redacted by IBM</a>.</p>
 <p><em>Impacts</em></p>
 <p>An attacker can compromise the entire authentication infrastructure based on IBM Security Verify Access by intercepting admin credentials on the network.</p>
 <p><em>Recommendations</em></p>
