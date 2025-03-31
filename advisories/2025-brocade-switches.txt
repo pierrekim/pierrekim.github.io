@@ -602,8 +602,8 @@ We can confirm the traffic of .jar files over HTTP or HTTPS using a second switc
 * Sep 2022: The report was rejected by Brocade.
 * Oct 2022 - Dec 2022: Negotiations with Brocade to get security patches.
 * Nov 8, 2022: CVE-2022-33186 - Pre-auth RCE - Custom insecure management protocol with "ezswitchsetup" - RCE (https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217) was patched and credited to Brocade.
-* Dec 7, 2022: **Failed negotiations**: Brocade support team confirmed that (i) no security patches would be provided since the tests were not carried out on the latest version and therefore invalid, (ii) all the reported vulnerabilities were misconfiguration issues in the devices and sannav, (iii) anyway, since the tested versions were EOL, CVEs would never be published even if a vulnerability is found and (iv) Brocade asked Dell to provide a list of relevant vulnerabilities for the supported versions.<br>
-Pierre's comments: At that time, <u>some of the reported vulnerabilities were found in 3 supported versions of FOS (Fabric Operating System).</u>
+* Dec 7, 2022: **Failed negotiations**: Brocade support team confirmed that (i) no security patches would be provided since the tests were not carried out on the latest version and therefore invalid, (ii) all the reported vulnerabilities were misconfiguration issues in the devices and sannav, (iii) anyway, since the tested versions were EOL, CVEs would never be published even if a vulnerability is found and (iv) Brocade asked Dell to provide a list of relevant vulnerabilities for the supported versions.
+Pierre's comments: At that time, some of the reported vulnerabilities were found in 3 supported versions of FOS (Fabric Operating System).
 * Dec 12, 2022: Contacted Dell to clarify CVE-2022-33186 and reach Brocade to provide credits.
 * Jan 31, 2023: The report was sent again to the Dell's Broadcom support team.
 * Feb 1, 2023: Dell replied that no actions would be taken until the vulnerabilities were replicated by the customer in the latest versions of SANnav and FOS and confirmed that the latest FOS and SANnav were patched.
@@ -619,7 +619,7 @@ Pierre's comments: At that time, <u>some of the reported vulnerabilities were fo
 * May 3, 2024: Brocade PSIRT informed me that more time would be required to analyze all the reported vulnerabilities.
 * May 6, 2024: Asked the Brocade PSIRT when they would be able to share the analysis.
 * May 7, 2024: Brocade PSIRT confirmed that they would share the results of the final investigation next week. They also justified the previous rejections of the Report because attempts were made through an OEM support oganization and "OEM support organizations are not equipped to respond to an investigation made for an end of support software version" and "As a result, Brocade PSIRT / Engineering wasn't aware of this initial attempt to raise your issue". Brocade PSIRT also confirmed that they (Brocade PSIRT) would always investigate potential vulnerabilities.
-* May 7, 2024: I provided Brocade PSIRT the official email sent by Brocade in 2022 where Brocade L3 support replied that security vulnerabilities would not be patched and that the Report was rejected.<br>
+* May 7, 2024: I provided Brocade PSIRT the official email sent by Brocade in 2022 where Brocade L3 support replied that security vulnerabilities would not be patched and that the Report was rejected.
 Pierre's comments: Brocade was made aware of these vulnerabilities in 2022 and rejected the report, while 3 versions were still supported at that time.
 * May 17, 2024: Brocade PSIRT provided an analysis of the vulnerabilities.
 * May 20, 2024: Asked Brocade PSIRT when the security patches would be available and asked about a coordinated disclosure.
@@ -672,17 +672,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmfqcb8ACgkQxD4O2n2T
-LbxGDA/9E7vMGVcQwlyj4YW9nCMZr1yCSICnVpbBdUPNBMy2LZkqNvfarpdviD5q
-qzWmJCPUX8aQSt0ZANNBkk3GPKth25k5/KmqF9prXHPsOWBld8rcn9f3AE3mXH9k
-85j/CNJtOmsbPWOcbR1eTLJdKpfx5tqzhw0aPVQ9dTJ+mw6YczJNF8fq51CKVT4/
-60RIAW+cM9K2Ard9VlP5XhWPJPmq4Hc/e9xJmZe2c0l4yixAiDXhCXlPGN6FthJX
-SdQ9zMVK3uumLUpt8zt09Hooe7Y2JSxtJzz21ovt69h1SfsYk9w0CYlk8xQme95P
-K/gQnuIJmOgogSvAyv0qC4q30D30ogwsZzNLnimK/xDe+Lj6Wc85JOAtyXy5QlyL
-PJKpFUUGe8RJ/To73ldWilSMz1dmm80RrmuiZGyGb5tsjQF0cxrUpRf5ZQF/dH/b
-A7ZL6YhCaeLwsL8xDFalKOO5nUpDk5qqmdfg1nyanWycc9bW7hasG6VBYuM3bWCz
-3Tr7eyRAzP0LFf87Hgjb0/Mmj0ad3TvYxd07IErfWrXT6B7424x8IIMe1HOG3ofm
-Hlfq2QXYrojg/LaGh/tyBqcQNmZQ03/WXImDevHEHLeC5VzC2jQvoIqIPq2ApDy3
-/9tmqzR1v1zDKllwRxuXVbwW940ik0dG9diCPtNNwHVzWuNNEjg=
-=8nRZ
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmfqihcACgkQxD4O2n2T
+Lbzm7A//bLGPLrJGaj3wjTtZ/K8gPxSLwAv0gp+M8it76McS+aDG7IIfSTTkw6Cx
+uhEdBb7mNzRzV6WKuk0hsQ6+qmEpy2Cy0sRBqqlLpXccK4zxz4jql1uuMyqemZ1o
+QMikRRC/BjPk0HxWqUcxDxzH8AygSwbo0ydsGRmqBqW7VQtAfVS/WQoRNkS1BEyG
+8M4rlXn/hmLimrpolCX3MGPO87OIgLHQAk8z9/KH9frPfoLzhsUKwgKKVGN38Vn8
+iS+FQ5CAOIFQPkPKjAsHqVmeJPNjiddY71lULJU14yBYv0UhJLmRIDFsgOJExloq
+ePQ4JDFBKcAWGlQVQKAWXdvZ7oTggg5tSc8TBgPQ2YT08hnem3BVU3uX+nELFSPp
+JYyAYwacLQIx91Sa9ZaywO+5aZTJogzTpBY/WeqA/LfdLh1zAozAdf5F7RoWakRm
+CzqeThmFJv/imIYSJOnjBugbXKCv0W31yTU+e/NYF8Q7NqUHOGGK10kb4kuIZk46
+U6vqZSfH5e8174TAnZmf9Wmiz0uxo69dTnzpw7eW8/LFlo0BuGbmkFbVu8zz0O5b
+kMCubn7RwOsGEf5ZQ24I4QuU5AFdtGpkwT+2v6iZN5eGFmh+ZzlkjzyjnUGB1cjT
+YUOMjjDqoor1h21SkPSeDs3po9DYZr3fi+pdw+lXwEzSDaQZ7jE=
+=+dXH
 -----END PGP SIGNATURE-----
