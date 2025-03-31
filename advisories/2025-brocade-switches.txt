@@ -618,7 +618,7 @@ Pierre's comments: At that time, some of the reported vulnerabilities were found
 * Apr 25, 2024: Brocade PSIRT confirmed that they were validating the analysis of the vulnerabilities.
 * May 3, 2024: Brocade PSIRT informed me that more time would be required to analyze all the reported vulnerabilities.
 * May 6, 2024: Asked the Brocade PSIRT when they would be able to share the analysis.
-* May 7, 2024: Brocade PSIRT confirmed that they would share the results of the final investigation next week. They also justified the previous rejections of the Report because attempts were made through an OEM support oganization and "OEM support organizations are not equipped to respond to an investigation made for an end of support software version" and "As a result, Brocade PSIRT / Engineering wasn't aware of this initial attempt to raise your issue". Brocade PSIRT also confirmed that they (Brocade PSIRT) would always investigate potential vulnerabilities.
+* May 7, 2024: Brocade PSIRT confirmed that they would share the results of the final investigation next week. They also justified the previous rejections of the Report because attempts were made through an OEM support organization and "OEM support organizations are not equipped to respond to an investigation made for an end of support software version" and "As a result, Brocade PSIRT / Engineering wasn't aware of this initial attempt to raise your issue". Brocade PSIRT also confirmed that they (Brocade PSIRT) would always investigate potential vulnerabilities.
 * May 7, 2024: I provided Brocade PSIRT the official email sent by Brocade in 2022 where Brocade L3 support replied that security vulnerabilities would not be patched and that the Report was rejected.
 Pierre's comments: Brocade was made aware of these vulnerabilities in 2022 and rejected the report, while 3 versions were still supported at that time.
 * May 17, 2024: Brocade PSIRT provided an analysis of the vulnerabilities.
@@ -672,17 +672,17 @@ Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmfqihcACgkQxD4O2n2T
-Lbzm7A//bLGPLrJGaj3wjTtZ/K8gPxSLwAv0gp+M8it76McS+aDG7IIfSTTkw6Cx
-uhEdBb7mNzRzV6WKuk0hsQ6+qmEpy2Cy0sRBqqlLpXccK4zxz4jql1uuMyqemZ1o
-QMikRRC/BjPk0HxWqUcxDxzH8AygSwbo0ydsGRmqBqW7VQtAfVS/WQoRNkS1BEyG
-8M4rlXn/hmLimrpolCX3MGPO87OIgLHQAk8z9/KH9frPfoLzhsUKwgKKVGN38Vn8
-iS+FQ5CAOIFQPkPKjAsHqVmeJPNjiddY71lULJU14yBYv0UhJLmRIDFsgOJExloq
-ePQ4JDFBKcAWGlQVQKAWXdvZ7oTggg5tSc8TBgPQ2YT08hnem3BVU3uX+nELFSPp
-JYyAYwacLQIx91Sa9ZaywO+5aZTJogzTpBY/WeqA/LfdLh1zAozAdf5F7RoWakRm
-CzqeThmFJv/imIYSJOnjBugbXKCv0W31yTU+e/NYF8Q7NqUHOGGK10kb4kuIZk46
-U6vqZSfH5e8174TAnZmf9Wmiz0uxo69dTnzpw7eW8/LFlo0BuGbmkFbVu8zz0O5b
-kMCubn7RwOsGEf5ZQ24I4QuU5AFdtGpkwT+2v6iZN5eGFmh+ZzlkjzyjnUGB1cjT
-YUOMjjDqoor1h21SkPSeDs3po9DYZr3fi+pdw+lXwEzSDaQZ7jE=
-=+dXH
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmfqjegACgkQxD4O2n2T
+Lbxxng//cw8YTcIi5PrMtH0ANrqVi9fO0U9+hNY6qMq3Ljh78LwnQIhxHsx3Ra+m
+eptQGUrzQX9uHvNpeluxodAYzzrK5WFX4nqKsjdrPZipUrvr1kR0aWNV6aRI0WwJ
+j+M7cSEgyM1ym5tT9Gz0eZVyDGSpB/pggSnVHZa63tnOiXclyx107T+LU32JMWFG
+njPMukUldXHUHniVJAnjitACFd7jq2SWlSnn4pEtTys3PAhZQmMFSoSbMzCPYkrR
+WMRhXrYLfpAB3t20zeDjDe3H8y7BCVksSj9KqHrKTqPswAJxZU5EAvpZYDAbRDEa
+/qThAGQ9j52glBZjCFVj1DF80QOGLV5zsdojz/k82tZ+XvsF6nUFat9sAH6bYX1E
+iodestelrnYDpUaPlqcX7JQUGr5xi3m244rwQibzmhFXfaoebKPGn2oiLCdi41hd
+RGa88gUn4R506EhXZEBTuTp1Axn1YwGHCmgdmnmXszMzQPD45E+OSGVq7baHrr+c
+kDkgznA0XaIF/+2NW84BUKD1qU/ESuz6FTrabK6DDcxsJHrc1RaXhytCofCNgScZ
+i8aoiwEeXF9MYX4hB2hfX5SgD7zQt10ibInzYGIiNdE7rv+ZciT2LU5tkQN6Ol7l
+Fh1hzyxWkJmV/cSOwmIOau+TDdINQ8GQQwCNtBJ4M8+YpfYN9F4=
+=YMh+
 -----END PGP SIGNATURE-----
