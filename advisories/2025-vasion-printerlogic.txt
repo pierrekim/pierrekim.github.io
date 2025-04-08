@@ -197,7 +197,7 @@ Implementing these recommendations will considerably reduce the attack surface, 
 - - Deploy the Virtual Appliance version on-premise instead of using Cloud infrastructures. This protects against SSRF vulnerabilities that could compromise Cloud-based infrastructure.
 - - Implement workarounds for unpatched and disputed vulnerabilities.
 - - Remove the hardcoded `~printerlogic/.ssh/authorized_keys` file found in the Virtual Appliance. This file contains a hardcoded public SSH key allowing an undocumented backdoor SSH access with password-less sudo privileges (providing a full root access) if SSH is used on the Virtual Appliance. Vasion rejected this vulnerability.
-- - If you are using the SaaS version, rotate passwords, because some of them corresponding to Domain Controller administrators were returned in clear-text when sending a regular HTTP request to the badge API without authentication in any instance. It is worth noting that these passwords were corresponding to different tenants. This vulnerability is "_V-2024-003 - Cross Tenant Password Exposure_" in the vendor's security bulletins (CVSS: 10) and was patched in January 2024.
+- - If you are using the SaaS version, rotate passwords, because some of them corresponding to Domain Controller administrators were returned in clear-text when sending a regular HTTP request to the badge API without authentication in any instance. It is worth noting that these passwords were corresponding to different tenants. This vulnerability is "_V-2024-003 - Cross Tenant Password Exposure_" in the vendor's security bulletins (CVSS: 10) and was patched in January 2024 (CVE-2025-27648).
 
 
 
@@ -10913,17 +10913,17 @@ used to explain the root causes of the vulnerabilities.
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1T9QACgkQxD4O2n2T
-LbyZFw/9GW67GBAcIANYo9r9UQefgWGWrM71drRwoWJZd7ayjBayj81isBdc3DwG
-4wkw/hpFRuJVYyZtQO2g3ke+ULqUnwZTkGrVSxHeAXYfyws15IDNmR/XcoiI6SUO
-+FpW5zeCUuDRG0n4zGi9NB9zQstPWz0mLdK4vYiYsesBjOEvUiXqDQFyU6ZjLNe4
-XrvVv/Y6GTCNCsTQiwqfh0wVmPtp6US3kv7+c6Ad4uQbXeMLVReRP2TvnieiBkZb
-dBQ3pZz3heGW4Hk9/PgC/PsuXCZLJOrbKEb8koz0FbwRPEuGOhV79KktNKa5u4rD
-iZiS8GOA3rscPULbU0R36zSPDDQghWN7l2/TqmFPZpCJzgJLIBNb3C+CYA2EsmZy
-yNaU7kEmHU1esZbhxAgAe7ARnn0+EaICXMjFW82+L1kfCvxC57lI3Q6FOK41tkpS
-Hj+adB8geXQAk1CQwgvmWdMg4hP20lU0vmz8R4LuGrN7lxGHYhnql4NPkMtfA0UJ
-M23Vdw+ai9ql36tkgUYoFcG2mehG8BNhR+8Pa2D9Cg+lhNpdtDaJun81ALevR50z
-a0PDBYE0bHsyWgtR/yFB8atAQHA2ssefAqaW/R/lqvRLGQ4qCtgZHrO47JkeRaxq
-hP/XG60DGxYbsmbXcrwpWhfK8QtgFthk5gFpAuy72co5vLoQdnw=
-=0B3s
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1UvcACgkQxD4O2n2T
+Lbzjfg//dO574emduJRrFcqxXEIiFGUQK84qSIT3xZR+x/rTOQoMd44yuT7ja10w
+bDO7tAjMjv1jH9RR64RpRIMV9A9kmhSSfS6cKc0U14f8BSbfmqIwhnodgUcRXfVp
+6+HMtqa04reIWL8nz5lmxAI4hku4Am6KTNPMc5PnvB9JVcPl3dFDnJijuk1DxdU/
+nQahoBxiHWOpjaSSz96bKCEmgQmBmZutkuPbmXj9kfrNuJQY2ITw62CsSrB47uuD
+4nAIGvyzPSuwaJa70UlwszMGUZvq7SzZ4SfMMR2zNi5xpv53oUEkPZqdW+RslGaA
+bITdabH/YyplBjeXTn3RZ/s8rtL1ylTjGl1V7lYIlkY4Cfl/0f941qpNqTxVlcvy
+CLb1y2NFYbGoaKU5IPvG7gHInjlDxeJ8gugvnO+u04XZNWIJ2OWIMQmdUypwQ8Fz
+gh244a16FzSag8/2kDG1QSARCJwoa2Ya5T+vTkNlzvRXLuisH3XeFilGD63sePjS
+4Y8Vmh5p04ad51FUKz+ubVem97IQlgOgplt/CcchpYEIE51SOtj0FPMUpUEUzrif
+6qaX9LLZJTuNMItH1pxWgnbhLt4jIlf7jSMc4im9JGAfOn+kehzom/sgtyRzsFYw
+QzpRNObvtD/V1gMue0G+Akd6DYDUVXTD44cLV4QoIJ2C93YJ3Ks=
+=/AAF
 -----END PGP SIGNATURE-----
