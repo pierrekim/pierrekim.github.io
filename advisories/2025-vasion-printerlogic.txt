@@ -156,7 +156,7 @@ Following an email sent to the vendor in September 2024 stating that I would dis
 
 It took more than 3 years to get incomplete security patches for vulnerabilities found in 2022 and 1 year for vulnerabilities found in 2024 (see below). My interpretation is that the vendor was overwhelmed with my findings.
 
-Regarding reports sent in 2022 and 2024, the vendor never asked me technical details regarding vulnerabilities and they stated by email in October 5, 2024 that all the reported vulnerabilities would be fixed. The vendor also reconfirmed again in January 17, 2025 that all the vulnerabilities had been fixed (except vulnerabilities related to Docker configuration) so my assumption was they accepted all the vulnerabilities and patched them. Unfortunately, I was incorrect and in discussions related to disclosure and missing Vendor's security bulletins in March 2025, it appeared, to my surprise, that Vasion considered 8 vulnerabilities to be "feature requests" and had consequently not been patched. When reviewing the previous tracking document they shared with me, some of these vulnerabilities were missing or were indicated as "patched". It is unclear if the vendor would patch them. I included the *Vendor Response regarding disputed and unpatched vulnerabilities* in this document, followed by my comments, because the vendor disagreed with my analysis but I **strongly** believe that some of the final Vendor's reponses are technically incorrect (please find my technical explanations below).
+Regarding reports sent in 2022 and 2024, the vendor never asked me technical details regarding vulnerabilities and they stated by email on October 5, 2024 that all the reported vulnerabilities would be fixed. The vendor also reconfirmed again on January 17, 2025 that all the vulnerabilities had been fixed (except vulnerabilities related to Docker configuration) so my assumption was they accepted all the vulnerabilities and patched them. Unfortunately, I was incorrect and in discussions related to disclosure and missing Vendor's security bulletins in March 2025, it appeared, to my surprise, that Vasion considered 8 vulnerabilities to be "feature requests" and had consequently not been patched. When reviewing the previous tracking document they shared with me, some of these vulnerabilities were missing or were indicated as "patched". It is unclear if the vendor would patch them. I included the *Vendor Response regarding disputed and unpatched vulnerabilities* in this document, followed by my comments, because the vendor disagreed with my analysis but I **strongly** believe that some of the final Vendor's responses are technically incorrect (please find my technical explanations below).
 
 At least 4 vulnerabilities (2 reported in February 2020 and 2 reported in January 2024 [including a rejected vulnerability]) have not been yet patched, allowing a remote attacker to get a Remote Code Execution against Vasion Print without authentication. Requiring more than 3 years to provide incomplete security patches does not appear to be in line with the best practices in responding to cybersecurity risks. It is also quite worrying that the vendor decided to reject valid vulnerabilities (including a backdoor RCE reported in January 2024) and did not provide security patches for 1 RCE reported in January 2022 and 2 RCEs reported in January 2024.
 
@@ -10913,17 +10913,17 @@ used to explain the root causes of the vulnerabilities.
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1RbkACgkQxD4O2n2T
-LbxzBRAAhpmZcTvV1aW6KQzsiTG1TqtfZXCywtJ29a7cUCDV35AZpz87WucPISRo
-TLoqAzIIInCBVhzZFIE3RH8F4zIWc+XxFqXzuMzbv0DzKf1rLEuq9vGjx8qyHL62
-n0M+70Y8QVDTxJATp2i8PUxjr6MqR3kO+HQUeICv/M1Zq2yGrxi+fTUnp4qfMx0A
-knhxQFhRXcsiPVWc4KcQb+wgQx6ms+v92DpQ/W+YeXkalwADtk1mKoKz+Xux3uUY
-e0kQg+8wvsFOugJeNxFu54fNRhESTJTDKRfTUGz7mUFXH6jyk5tqizrcl7klJMUi
-eNclHo6IS1NZefNu7UK+sLIhKi/6vh/wbT+HceMjtqk9S9i0HVXjRcGp+E4KnlSB
-WYBnySlMTLQOcx4qd6jd6TPgfIgHuL21VfxnpamYmfeqTF6biO9M+rP1gyochgf7
-KmG4K4ZNQWME8VL8VPPEd+KEQiVD7BLEW+HNIDCzeSh8GfWlEgCWFZP13PmBY2Yw
-0cG+l9vttpzPsEe2QSgWZY94I5jm8hWkIbSio/bspp78PtkCxDUhozNBr89IHKgM
-jlUbTB1tJoCu2uRkt5sZUHnzUKLaRTGHfGbhGpNOxGyq9a2uo/ab4PeZNJL5IjJL
-gz0acyxaATDziMMbJqFgHB1Y2FooXZ7GlYSlEaAoIsiBK1cfPf0=
-=VcCO
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1T9QACgkQxD4O2n2T
+LbyZFw/9GW67GBAcIANYo9r9UQefgWGWrM71drRwoWJZd7ayjBayj81isBdc3DwG
+4wkw/hpFRuJVYyZtQO2g3ke+ULqUnwZTkGrVSxHeAXYfyws15IDNmR/XcoiI6SUO
++FpW5zeCUuDRG0n4zGi9NB9zQstPWz0mLdK4vYiYsesBjOEvUiXqDQFyU6ZjLNe4
+XrvVv/Y6GTCNCsTQiwqfh0wVmPtp6US3kv7+c6Ad4uQbXeMLVReRP2TvnieiBkZb
+dBQ3pZz3heGW4Hk9/PgC/PsuXCZLJOrbKEb8koz0FbwRPEuGOhV79KktNKa5u4rD
+iZiS8GOA3rscPULbU0R36zSPDDQghWN7l2/TqmFPZpCJzgJLIBNb3C+CYA2EsmZy
+yNaU7kEmHU1esZbhxAgAe7ARnn0+EaICXMjFW82+L1kfCvxC57lI3Q6FOK41tkpS
+Hj+adB8geXQAk1CQwgvmWdMg4hP20lU0vmz8R4LuGrN7lxGHYhnql4NPkMtfA0UJ
+M23Vdw+ai9ql36tkgUYoFcG2mehG8BNhR+8Pa2D9Cg+lhNpdtDaJun81ALevR50z
+a0PDBYE0bHsyWgtR/yFB8atAQHA2ssefAqaW/R/lqvRLGQ4qCtgZHrO47JkeRaxq
+hP/XG60DGxYbsmbXcrwpWhfK8QtgFthk5gFpAuy72co5vLoQdnw=
+=0B3s
 -----END PGP SIGNATURE-----
