@@ -4,6 +4,502 @@
     <title>IT Security Research by Pierre</title>
     
     <entry>
+        <title>10 vulnerabilities in Brocade Fibre Channel switches</title>
+        <link href="2025-03-31-brocade-switches-10-vulnerabilities.html"/>
+        <content type="html"><h2>Product description</h2>
+<blockquote>
+<p>Brocade Fibre Channel switches deliver industry-leading performance that shatters bottlenecks and simplifies scale-out network architectures.</p>
+<p>From <a href="https://www.broadcom.com/products/fibre-channel-networking/switches">https://www.broadcom.com/products/fibre-channel-networking/switches</a></p>
+</blockquote>
+<h2>Vulnerabilities Summary</h2>
+<p>Vulnerable versions: Brocade Fabric OS &lt; 9.2.2. Note: several vulnerabilities have not been patched since they were found in EOL and unsupported versions of Brocade Fabric OS (as of March 2024).</p>
+<p>The summary of the vulnerabilities is:</p>
+<ol>
+<li><a href="#default-weak-creds">CVE-2021-27797 - Default and weak credentials</a><br></li>
+<li><a href="#leak-of-logs">non-assigned CVE vulnerability - Leak of logs</a><br></li>
+<li><a href="#incorrect-permissions">non-assigned CVE vulnerability - Incorrect permissions</a><br></li>
+<li><a href="#insecure-telnet-code">non-assigned CVE vulnerability - Insecure telnet code</a><br></li>
+<li><a href="#ezswitchsetup">CVE-2022-33186 - Pre-auth RCE - Custom insecure management protocol with "ezswitchsetup"</a><br></li>
+<li><a href="#insecure-snmp">CVE-2024-5460 - Pre-auth RCE - Insecure SNMP access, leak of SNMP communities to low-privileged users and MITM RCE</a><br></li>
+<li><a href="#insecure-code">CVE-2024-5461 - Insecure Code</a><br>
+7.1. <a href="#insecure-code-http">CVE-2023-3454, CVE-2024-7516 - HTTP server (MITM RCEs, command injections) - 0.webliker.fcg</a><br>
+7.2. <a href="#insecure-code-sectelnet">SecTELNET server (hardcoded keys, use of ECB)</a><br>
+7.3. <a href="#insecure-code-opinions">Opinions</a><br></li>
+<li><a href="#insecure-code-in-shell-scripts">non-assigned CVE vulnerability - Insecure code in shell scripts</a><br></li>
+<li><a href="#management-http">non-assigned CVE vulnerability - Lack of encryption for management protocol (HTTP)</a><br></li>
+<li><a href="#remote-exec-of-jar-files">non-assigned CVE vulnerability - Remote execution of JAR files over HTTP and HTTPS</a><br></li>
+</ol>
+<p><em>Miscellaneous notes</em>:</p>
+<p>The Report was provided in September 2022 to the Brocade support through Dell but it was rejected by Brocade because it didn't address the latest version of FOS (Fabric Operating System) while some of the tested versions were still supported (8.2.3a, 9.0.1b4 and 9.0.1c).</p>
+<p>Status of the tested versions in September 2022 (from the <a href="https://docs.broadcom.com/doc/Brocade-SW-Support-RM">official documentation</a>):</p>
+<ul>
+<li>8.2.3a (<strong><a href="images/2025-brocade-switches-support-02.png">supported in September 2022</a></strong> - screenshot showing this supported version provided in the report),</li>
+<li>9.0.1b4 (<strong><a href="images/2025-brocade-switches-support-01.png">supported in September 2022</a></strong> - screenshot showing this supported version provided in the report),</li>
+<li>9.0.1c (<strong><a href="images/2025-brocade-switches-support-01.png">supported in September 2022</a></strong> - screenshot showing this supported version provided in the report),</li>
+<li>6.2.2f (EOL and unsupported in September 2022),</li>
+<li>7.4.2c (EOL and unsupported in September 2022),</li>
+<li>8.2.1c (EOL and unsupported in September 2022),</li>
+<li>8.1.2d (EOL and unsupported in September 2022),</li>
+<li>v8.2.0_gft (EOL and unsupported in September 2022).</li>
+</ul>
+<p>While the Report contains 0-day vulnerabilities in EOL versions of FOS (6.2.2, 7.4.2, 8.1.2, 8.2.0 and 8.2.1), <strong>it also contains 0-day vulnerabilities in supported versions of Brocade FOS</strong> (8.2.3a, 9.0.1b4 and 9.0.1c) at the time the Report was shared with Dell and Brocade.</p>
+<p>However, this entire security assessment was rejected by Brocade (refer to the <a href="#timeline">Timeline</a> for more information).</p>
+<p>Two months after the Report was rejected, one of the reported vulnerability, <a href="#ezswitchsetup">Pre-auth RCE - Custom insecure management protocol with "ezswitchsetup"</a>, was internally found by Brocade and patched in November 2022: <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217">CVE-2022-33186</a> (CVSS: 9.4, Critical, credited to Brocade). I was finally credited for this vulnerability in April 2024.</p>
+<p>The Report was shared again with Brocade (through the Brocade PSIRT) in January 2024 following a <a href="https://pierrekim.github.io/blog/2024-04-24-brocade-sannav-18-vulnerabilities.html">coordinated disclosure of SANnav vulnerabilities</a>, which was also initially rejected by Brocade. Brocade confirmed the vulnerabilities and asked to delay any disclosure until October 2024 to prepare security patches. Subsequentely Brocade released a security bulletin in November 2024 - 27 months after a full security assessment had been initially shared with Brocade and 10 months after it had been shared with Brocade PSIRT.</p>
+<p>4 reported vulnerabilities were confirmed to be Remote Code Executions: <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217">CVE-2022-33186</a>, <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23215">CVE-2023-3454</a>, <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/24411">CVE-2024-5461</a> and <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/25177">CVE-2024-7516</a>. Some vulnerabilities found in EOL and unsupported releases also did not receive a CVE identifier.</p>
+<p>Unfortunately, because the Fibre Channel switches were used in production, the following analysis had to be extremely superficial and no dynamic analysis was performed. However, there are likely many more exploitable vulnerabilities. I did not have access to a test device and was not allowed to exploit any vulnerability since it could disrupt the production network.</p>
+<p><em>Impacts</em></p>
+<p>An attacker can compromise Brocade switches. These switches are running Linux and are powerful. They are ideal to host implants.</p>
+<p>The vendor provided an evaluation of the vulnerabilities 21 months after reporting them:</p>
+<blockquote>
+<p>Already patched:</p>
+<ul>
+<li>Default credentials - CVE-2021-27797</li>
+<li>Custom insecure management protocol with "ezwitchsetup" - CVE-2022-33186</li>
+<li>Insecure code - 0.webliker.fcg - CVE-2023-3454</li>
+</ul>
+<p>Vulnerabilities that will be patched and CVEs will be assigned:</p>
+<ul>
+<li>Insecure SNMP access and lack of encryption for management protocol (SNMP) - SNMPv1 usage and default community strings</li>
+<li>Weblinker and other critical backend processes (which make use of system() calls) still run as root user</li>
+<li>Insecure code - Scp operations on the switch do not enforce strict host key checking</li>
+</ul>
+<p>Vulnerabilities affecting unsupported versions of FOS - no patches will be provided:</p>
+<ul>
+<li>Leak of logs</li>
+<li>Incorrect permissions</li>
+<li>Insecure code Issue with ""bc_systemFileCmd_set ()""</li>
+<li>Insecure code - sectelnet with ECB</li>
+<li>insecure code - sectelnet with hardcoded key</li>
+<li>Lack of encryption for management protocol (HTTP) - use of JAR over HTTP</li>
+<li>Insecure telnet code</li>
+<li>Insecure code in shell scripts</li>
+</ul>
+<p>Not a vulnerability:</p>
+<ul>
+<li>Inconsistency in firewall rules [N.B. Pierre - removed from this security advisory]</li>
+<li>Lack of encryption for management protocol (HTTP) - use of HTTP is not a vulnerability</li>
+</ul>
+</blockquote>
+<p><em>Recommendations</em></p>
+<ul>
+<li>Do not use unsupported versions of Fabric OS;</li>
+<li>Do not expose Fibre Channel switches to the network;</li>
+<li>Use network segmentation if the management interface must be exposed;</li>
+<li>Reduce the attack surface by disabling TELNET, SNMP, HTTP, HTTPS and ezswitchsetup access;</li>
+<li>Use only SSH access with MFA and update iptables firewall rules using root access only to allow specific IPs to reach SSH.</li>
+</ul>
+<p><a id="default-weak-creds"></a></p>
+<h2>Details - Default and weak credentials</h2>
+<p>It was observed that the Brocade switches use default and weak credentials by default. It is recommended to update them:</p>
+<ul>
+<li><code>root</code>/<code>fibranne</code></li>
+</ul>
+<p>The credentials <code>root</code>/<code>fibranne</code> are well-known and, if not changed by admins, can be used to remotely compromise the devices using the telnet, the SSH or the web interfaces, as shown below.</p>
+<p><a href="https://www.elasticsky.de/en/2018/02/change-brocade-fos-default-passwords/">https://www.elasticsky.de/en/2018/02/change-brocade-fos-default-passwords/</a>:</p>
+<p><img alt="" src="images/2024-sannav-root-fibranne.png" /></p>
+<p>An attacker can get root access to the devices using known credentials.</p>
+<p>An attacker can upload malicious firmware images and install them: the device will stay compromised forever.</p>
+<p>An attacker can change the IP address of any switch to the IP address of the local gateway and DoS the entire network segment, impacting several critical services.</p>
+<p><a id="leak-of-logs"></a></p>
+<h2>Details - Leak of logs</h2>
+<p>It was observed that the version v6.2.2f is vulnerable to an authentication bypass. This allows an attacker to retrieve the logs over HTTP without authentication by visiting the <code>/events.html</code> webpage:</p>
+<p><img alt="" src="images/2025-brocade-switches-logs-leak.png" /></p>
+<p>Only the version v6.2.2f is vulnerable to an authentication bypass. The other firmware versions are not vulnerable to this authentication bypass.</p>
+<p>This vulnerability was likely silently patched by the vendor.</p>
+<p><a id="incorrect-permissions"></a></p>
+<h2>Details - Incorrect permissions</h2>
+<p>It was observed that the version v6.2.2f uses incorrect permissions for <code>/etc/hosts</code> - any user can edit this file:</p>
+<pre><code>kali% cat test-rw-hosts.sh 
+#!/bin/sh
+
+echo 6.2.2f
+sshpass -p "advisory" ssh -l root -o KexAlgorithms=diffie-hellman-group1-sha1 10.14.1.1 ls -la /etc/hosts
+
+echo 7.4.2c
+sshpass -p "advisory" ssh -l root 10.14.1.2 ls -la /etc/hosts
+
+echo 8.2.1c
+sshpass -p "advisory" ssh -l root 10.14.1.3 ls -la /etc/hosts
+
+echo 8.1.2d
+sshpass -p "advisory" ssh -l root 10.14.1.4 ls -la /etc/hosts
+
+echo 9.0.1b4
+sshpass -p "advisory" ssh -l root 10.14.1.5 ls -la /etc/hosts
+kali% ./test-rw-hosts.sh 
+6.2.2f
+-rw-rw-rw-   1 root     root         6101 Dec 26  2019 /etc/hosts
+7.4.2c
+-rw-r--r--   1 root     sys          4344 Jan  2  2020 /etc/hosts
+8.2.1c
+-rw-r--r--   1 root     sys          4415 Oct 18  2019 /etc/hosts
+8.1.2d
+-rw-r--r--   1 root     sys          4288 Dec 27  2019 /etc/hosts
+9.0.1b4
+-rw-r--r--   1 root     root         5861 Oct 23  2021 /etc/hosts
+kali%
+</code></pre>
+<p>This allows a local attacker to edit the <code>/etc/hosts</code> file in the 6.2.2f firmware version, for example to define a specific HOST entry for a radius server. This can be used for Local Privilege Escalation.</p>
+<p>Other firmware versions are not vulnerable.</p>
+<p>Other files have been found to be word-readable:</p>
+<p>The file <code>/etc/fabos/fabos.0.conf</code> contains the entire configuration of the switch, including clear-text passwords. It was observed that this file is world-readable in the 6.2.2f and 7.4.2c versions.</p>
+<p>Interestingly, this incorrect permission was patched in 8.x and 9.x versions:</p>
+<pre><code>kali% sh incorrect.permissions.txt.sh 
+6.2.2f
+-rw-r--r--   1 root     sys         16339 Aug 21 11:33 /etc/fabos/fabos.0.conf
+
+7.4.2c
+-rw-r--r--   1 root     sys         29941 Aug 21 11:35 /etc/fabos/fabos.0.conf
+
+8.2.1c
+-rw-------   1 root     sys         32116 Aug 21 19:35 /etc/fabos/fabos.0.conf
+
+8.1.2d
+-rw-------   1 root     sys         41128 Aug 21 11:35 /etc/fabos/fabos.0.conf
+
+9.0.1
+-rw-------   1 root     sys        138577 Aug 20 18:22 /etc/fabos/fabos.0.conf
+kali%
+</code></pre>
+<p>The <code>/etc/fabos/user.db</code> - a sqlite3 database file - also contains information regarding the local users.</p>
+<p>It was observed that this file is incorrectly protected in the 6.2.2f version:</p>
+<pre><code>-rw-r--r--   1 root     nobody      14336 Dec 26  2019 /etc/fabos/user.db
+</code></pre>
+<p><a id="insecure-telnet-code"></a></p>
+<h2>Details - Insecure telnet code</h2>
+<p>It was observed that the telnetd server in all the firmware versions is a fork of netkit-telnet with custom codes.
+The code uses insecure calls to <code>system()</code> and <code>popen()</code>:</p>
+<p><code>sub_100043D0()</code> inside the <code>/usr/libexec/telnetd</code> binary:</p>
+<p><img alt="" src="images/2025-brocade-switches-telnetd-sub_100043D0.png" /></p>
+<p>Furthermore, sensitive information is written into the logs.
+When the debug is enabled, it will log the encrypted communication into a log file:</p>
+<p><img alt="" src="images/2025-brocade-switches-telnetd-sub_100043D0-log.png" /></p>
+<p>In the calls to <code>output_data()</code>, the communication will be automatically saved in a log file.</p>
+<p><img alt="" src="images/2025-brocade-switches-telnetd-sub_100043D0-log-2-not-debug.png" /></p>
+<p><a id="ezswitchsetup"></a></p>
+<h2>Details - Pre-auth RCE - Custom insecure management protocol with "ezswitchsetup"</h2>
+<p>The switches can be configured using the ezswitchsetup program, which is a custom and proprietary program from Brocade. This client is available at <a href="https://archive.org/download/BrocadeEZSwitchSetupV7.1.0">https://archive.org/download/BrocadeEZSwitchSetupV7.1.0</a>. [Note - Unfortunately, although this link was active since 2014, it was removed after Brocade rejected the Report in 2022. It is unclear whether the removal is related to the Report.]</p>
+<p>This program will interact with the switches on the port 52357/udp.</p>
+<p>On port <code>52357/udp</code> on the switch runs a program <code>superd</code> as root that will execute a lot of insecure commands to configure the switches:</p>
+<pre><code>udp        0      0 0.0.0.0:52357           0.0.0.0:*          0          4023  1569/superd
+</code></pre>
+<p>Interestingly, it appears this program is supposed to work only on the same subnet (Layer 2) as shown below but it is possible to replay the packets by changing the broadcast IP to the IP of the targeted switch.</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup.png" /></p>
+<p>On a LAN, it was possible to capture a packet, modify it and send it to a remote: the switch successfully replied. These packets are in clear-text.</p>
+<p>There is also no authentication mechanism:</p>
+<pre><code>kali% cat new-packet-2.txt
+kali% printf "$(&lt; new-packet-2.txt)"
+[REDACTED-BINARY-CONTENT]
+&lt;?xml version="1.0"?&gt;
+&lt;Request xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="calobject.xsd"  opcode="GetInstance" objectCount="1"&gt;
+   &lt;Class name="Brocade_Switch" majorVersion="1" minorVersion="0" propertyCount="8" &gt;
+      &lt;Property name="Name" type="string" encoding="No Encoding" &gt;
+         &lt;Value&gt;10:00:[REDACTED]&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="Model" type="string" encoding="No Encoding" &gt;
+         &lt;Value&gt;&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="DHCP" type="boolean" encoding="No Encoding" &gt;
+         &lt;Value&gt;0&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="FirmwareVersion" type="string" encoding="No Encoding" &gt;
+         &lt;Value&gt;&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="OutBandMask" type="string_array" encoding="No Encoding" &gt;
+         &lt;Value&gt;&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="OutBandIPAddressList" type="string_array" encoding="No Encoding" &gt;
+         &lt;Value&gt;&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="Gateway" type="string" encoding="No Encoding" &gt;
+         &lt;Value&gt;&lt;/Value&gt;
+      &lt;/Property&gt;
+      &lt;Property name="CreationClassName" type="string" encoding="No Encoding" &gt;
+         &lt;Value&gt;Brocade_Switch&lt;/Value&gt;
+      &lt;/Property&gt;
+   &lt;/Class&gt;
+&lt;/Request&gt;
+kali%
+</code></pre>
+<p>This program allows to change the IP of a switch and to edit its configuration depending on the Switch World Wide Name (WWN), an entirely guessable number:</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup2.png" /></p>
+<p>Datagrams sent by EZSwitchSetup:</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup-tcpdump-01.png" /></p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup-tcpdump-02.png" /></p>
+<p>When replaying the same packet and changing the broadcast IP to the IP of the targeted switch, the switch will reply:</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup-tcpdump-03.png" /></p>
+<p>When analyzing the <code>superd</code> program, it appears it is poorly written and there is no authentication. It uses a lot of calls to <code>system()</code> and it is possible to change the passwords using this execution flow:</p>
+<pre><code>main -&gt; sub_103FBFDC -&gt; hasm_main_loop -&gt; sub_1040649C -&gt; hasm_update_password()
+</code></pre>
+<p><code>hasm_update_password</code> function executing <code>/fabos/libexec/userdb_sync</code>:</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup-hasm_update_password.png" /></p>
+<p>It is possible to list the 145 calls to the insecure function system():</p>
+<p><img alt="" src="images/2025-brocade-switches-ezswitchsetup-systems.png" /></p>
+<p>As these switches were used in production, no exploitation bas heen carried out.</p>
+<p>From static analysis, an attacker can take control of switches without authentication.</p>
+<p>Note: this rejected vulnerability was later found by Brocade in November 2022 and I was finally credited 18 months later: <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217">CVE-2022-33186</a> (CVSS: 9.4 - CRITICAL).</p>
+<p><a id="insecure-snmp"></a></p>
+<h2>Details - Pre-auth RCE - Insecure SNMP access, leak of SNMP communities to low-privileged users and MITM RCE</h2>
+<p>The switches can be managed using SNMP.</p>
+<p>When doing reverse engineering against the snmpd binary, several read-only and read-write access were found. In the function <code>sub_100570F0()</code>, there is an array of valid SNMP communities:</p>
+<p><img alt="" src="images/2025-brocade-switches-snmpd-sub_100570F0_snmp.png" /></p>
+<p>At the offset <code>101CB670</code> in .data, we can extract these communities:</p>
+<p><img alt="" src="images/2025-brocade-switches-snmpd-offset_101CB670.data.png" /></p>
+<p>These communities work on all switches if these credentials have not been updated:</p>
+<pre><code>kali% snmpwalk -v 1 -c 'Secret C0de' 10.14.1.5
+iso.3.6.1.2.1.1.1.0 = STRING: "Access Gateway."
+iso.3.6.1.2.1.1.2.0 = OID: iso.3.6.1.4.1.1588.2.1.3
+iso.3.6.1.2.1.1.3.0 = Timeticks: (3784429504) 438 days, 0:18:15.04
+iso.3.6.1.2.1.1.4.0 = STRING: "Admin team"
+iso.3.6.1.2.1.1.5.0 = STRING: "SWITCH"
+iso.3.6.1.2.1.1.6.0 = STRING: "LOCATION"
+iso.3.6.1.2.1.1.7.0 = INTEGER: 79
+iso.3.6.1.2.1.2.1.0 = INTEGER: 30
+
+kali% snmpwalk -v 1 -c 'OrigEquipMfr' 10.14.1.5
+iso.3.6.1.2.1.1.1.0 = STRING: "Access Gateway."
+iso.3.6.1.2.1.1.2.0 = OID: iso.3.6.1.4.1.1588.2.1.3
+iso.3.6.1.2.1.1.3.0 = Timeticks: (3784431004) 438 days, 0:18:30.04
+iso.3.6.1.2.1.1.4.0 = STRING: "Admin team"
+iso.3.6.1.2.1.1.5.0 = STRING: "SWITCH"
+iso.3.6.1.2.1.1.6.0 = STRING: "LOCATION"
+iso.3.6.1.2.1.1.7.0 = INTEGER: 79
+iso.3.6.1.2.1.2.1.0 = INTEGER: 30
+</code></pre>
+<p>When reading the documentation, it appears these SNMP communities are well-documented: <a href="https://techdocs.broadcom.com/us/en/fibre-channel-networking/fabric-os/fabric-os-web-tools/9-1-x/v26882500/v26815803/v26850344.html">https://techdocs.broadcom.com/us/en/fibre-channel-networking/fabric-os/fabric-os-web-tools/9-1-x/v26882500/v26815803/v26850344.html</a>:</p>
+<p><img alt="" src="images/2025-brocade-switches-snmpd-default-communities.png" /></p>
+<p>It is also possible to extract the SNMP communities from a low-privilege user, as shown below, in switches still providing the Brocade JAVA client, the SNMP communities will be communicated in clear text over HTTP:</p>
+<p><img alt="" src="images/2025-brocade-switches-snmpd-web-interface.png" /></p>
+<p>Furthermore, the snmpd binary runs as root. And the code contains several executions of commands as root. For example, the function <code>bc_systemFileCmd_set()</code> managing the download of firmware images:</p>
+<p><img alt="" src="images/2025-brocade-switches-snmpd-bc_systemFileCmd_set-cmd_injections.png" /></p>
+<p>On a side note, we can also see that the SSH keys are not verified when using scp/sftp, allowing an attacker to MITM and intercept credentials over the network and inject a malicious firmware image during the update process to get a Remote Code Execution/downgrade of a vulnerable firmware version.</p>
+<p>There are also potential command injections everywhere.</p>
+<p><a id="insecure-code"></a></p>
+<h2>Details - Insecure Code</h2>
+<p>The quality of the code present in the switch is quite interesting.</p>
+<p>When doing reverse engineering on the <code>snmpd</code> binary in the 9.0.1b4 version, a lot of commands are executed using <code>system()</code> in the function <code>sub_10085C64()</code>:</p>
+<p><img alt="" src="images/2025-brocade-switches-quality-01.png" /></p>
+<p>The <code>/etc/rc.d/init.d/system.sh</code> script is vulnerable to command injection or argument injection with scp and sftp in <a href="#insecure-code-in-shell-scripts">Insecure code in shell scripts</a>.</p>
+<p><img alt="" src="images/2025-brocade-switches-snmp-system.png" /></p>
+<p>When reading scripts shells, we can also confirm security is regularly dismissed (<a href="#insecure-code-in-shell-scripts">Insecure code in shell scripts</a>).</p>
+<p><a id="insecure-code-http"></a></p>
+<h3>HTTP server (MITM RCEs, command injections) - 0.webliker.fcg</h3>
+<p>We can see insecure executions of scp/sftp in the <code>0.webliker.fcg</code> program (a custom HTTP server), running as root and reachable by an authenticated web user:</p>
+<pre><code>SWITCH:FID1:root&gt; ps auxw | grep link
+root      3078  0.5  0.2 139656 41280 ?        Sl    2021 2313:08 /fabos/webtools/htdocs/0.weblinker.fcg
+root      3358  0.0  0.0   2272   396 pts/0    S+   11:44   0:00 grep link
+SWITCH:FID1:root&gt; exit
+</code></pre>
+<p>This program provides the back-end interface to manage HTTP/HTTPS APIs. For example, the JAVA client is able to install a new firmware image as shown below:</p>
+<p><img alt="" src="images/2025-brocade-switches-firmware-download.png" /></p>
+<p>A specific HTTP request will be created by the JAVA client and this POST request will then be parsed by the <code>0.webliker.fcg</code> program.</p>
+<p>The user can submit specific values in a POST request - these values will be parsed by the <code>0.weblinker.cfg</code> program, running as <code>root</code> on the switch:</p>
+<p>Function <code>parseRequest</code> in the <code>0.weblinker.fcg</code> program:</p>
+<p><img alt="" src="images/2025-brocade-switches-weblinker-parseRequest-01.png" /></p>
+<p>Function <code>parseRequest</code> in the <code>0.weblinker.fcg</code> program:</p>
+<p><img alt="" src="images/2025-brocade-switches-weblinker-parseRequest-02.png" /></p>
+<p>And then these values will directly be used in commands (user, password, host, ...) executed as root (lines 1052 and then 1067 in the pseudo-code in the next image).</p>
+<p>It is also worth noting that by default, in these commands, the SSH keys of the remote server are not checked, allowing any attacker to MITM and intercept credentials over the network and/or inject a malicious firmware image during the update process to get a Remote Code Execution/downgrade of a vulnerable firmware version.</p>
+<p>For example, the function <code>configXfer</code> in the <code>0.weblinker.fcg</code> is used to upload configuration file over SCP:</p>
+<p><img alt="" src="images/2025-brocade-switches-weblinker-configXfer.png" /></p>
+<p>The code in the <code>0.weblinker.fcg</code> program contains multiple command injections.</p>
+<p><a id="insecure-code-sectelnet"></a></p>
+<h3>SecTELNET server (hardcoded keys, use of ECB)</h3>
+<p>The SecTelnet functionality provides secure connection to the switch. This is a custom implementation from Brocade that dates from 2000s. The telnet server will call the binary <code>/fabos/libexec/secDecrypt</code>:</p>
+<p><img alt="" src="images/2025-brocade-switches-sectelnet-sub_100043D0-decrypt.png" /></p>
+<p>The <code>secDecrypt</code> program will be called and this program is linked to <code>libpki.so</code>. <code>libpki.so</code> provides functions for encryption/decryption.</p>
+<p><code>libpki.so</code> uses ECB (Electronic Codebook) encryption mode that is strongly not recommended to use in cryptographic protocols. It was also possible to find a hardcoded key used for cryptography inside this library:</p>
+<p>Function <code>sub_D5F4</code> in <code>libpki.so</code> - Use of ECB with 4 Cross-references:</p>
+<p><img alt="" src="images/2025-brocade-switches-sectelnet-libpki.so-sub_D5F4-ecb.png" /></p>
+<p>Function <code>pkiCsrGenExin</code> in <code>libpki.so</code> - Use of a hardcoded key:</p>
+<p><img alt="" src="images/2025-brocade-switches-sectelnet-libpki.so-pkiCsrGenEx.png" /></p>
+<p><a id="insecure-code-opinions"></a></p>
+<h3>Opinions</h3>
+<p>The code quality is interesting (use of ECB, use of <code>system()</code> and <code>popen()</code> everywhere, use of hardcoded key inside binaries) and likely contains several critical vulnerabilities.</p>
+<p>The SSH keys are not checked, allowing an attacker to MITM and get Remote Code Execution against the switches (via the injection of a malicious firmware image or a previous vulnerable firmware version during the update process).</p>
+<p>Unfortunately, because these devices were used in production, this analysis had to be extremely superficial and no dynamic analysis was performed. However, there are likely many more exploitable vulnerabilities.</p>
+<p>I did not have access to a test device and was not allowed to exploit any vulnerability since it could disrupt the production network.</p>
+<p><a id="insecure-code-in-shell-scripts"></a></p>
+<h2>Details - Insecure code in shell scripts</h2>
+<p>The shell scripts inside the switches are insecure.</p>
+<p>For example, in the v9.0.1b4 firmware version, the script <code>/etc/init.d/system.sh</code> is used to debug switches. This script can be executed from the snmp binary.</p>
+<p>The result of the <code>/fabos/bin/supportshow</code> command will be sent to a remote SSH server without checking the identity of the remote server (<code>-oStrictHostKeyChecking=no</code>). This allows an attacker to MITM the SSH connection.</p>
+<p>There is also a fall-back to plain-text FTP (on line 52).</p>
+<p>Content of <code>/etc/init.d/system.sh</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #666666">37</span> <span style="color: #408080; font-style: italic">#Redirecting the output to the file in remote server</span>
+<span style="color: #666666">38</span> <span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$7</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&quot;scp&quot;</span> <span style="color: #666666">]</span> ; <span style="color: #008000; font-weight: bold">then</span> 
+<span style="color: #666666">39</span>         /usr/bin/scp -q -oStrictHostKeyChecking<span style="color: #666666">=</span>no <span style="color: #19177C">$y</span> <span style="color: #19177C">$1</span>@<span style="color: #666666">[</span><span style="color: #19177C">$3</span><span style="color: #666666">]</span>:<span style="color: #19177C">$4</span>  <span style="color: #408080; font-style: italic"># &gt; /dev/null 2&gt;&amp;1</span>
+<span style="color: #666666">40</span> <span style="color: #008000; font-weight: bold">elif</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$7</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&quot;sftp&quot;</span> <span style="color: #666666">]</span> ; <span style="color: #008000; font-weight: bold">then</span>
+<span style="color: #666666">41</span>         <span style="color: #19177C">x</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;/tmp/snmpd_sftp_file.bat&quot;</span>
+<span style="color: #666666">42</span>         <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;put </span><span style="color: #19177C">$y</span><span style="color: #BA2121"> </span><span style="color: #19177C">$8</span><span style="color: #BA2121">&quot;</span> &gt; <span style="color: #19177C">$x</span> <span style="color: #408080; font-style: italic">#2&gt;/dev/null</span>
+<span style="color: #666666">43</span>         /usr/bin/sftp -oPort<span style="color: #666666">=</span><span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">10</span><span style="color: #BB6688; font-weight: bold">}</span> -oPreferredAuthentications<span style="color: #666666">=</span>password -oSSHPassword<span style="color: #666666">=</span><span style="color: #19177C">$2</span> -oStrictHostKeyChecking<span style="color: #666666">=</span>no -b <span style="color: #19177C">$x</span> <span style="color: #19177C">$1</span>@<span style="color: #666666">[</span><span style="color: #19177C">$3</span><span style="color: #666666">]</span>:<span style="color: #19177C">$4</span>   <span style="color: #408080; font-style: italic">#&gt; /dev/null 2&gt;&amp;1</span>
+<span style="color: #666666">44</span>         <span style="color: #19177C">retVal</span><span style="color: #666666">=</span><span style="color: #19177C">$?</span>
+<span style="color: #666666">45</span>         <span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$retVal</span><span style="color: #BA2121">&quot;</span> !<span style="color: #666666">=</span> <span style="color: #666666">0</span> <span style="color: #666666">]</span> ; <span style="color: #008000; font-weight: bold">then</span>
+<span style="color: #666666">46</span>         <span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">10</span><span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">&quot;</span> -gt <span style="color: #666666">0</span> <span style="color: #666666">]</span> ; <span style="color: #008000; font-weight: bold">then</span>
+<span style="color: #666666">47</span>                 /usr/bin/sftp -oPort<span style="color: #666666">=</span><span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">10</span><span style="color: #BB6688; font-weight: bold">}</span> -oPreferredAuthentications<span style="color: #666666">=</span>password -oSSHPassword<span style="color: #666666">=</span><span style="color: #19177C">$2</span> -oStrictHostKeyChecking<span style="color: #666666">=</span>no -oBatchMode<span style="color: #666666">=</span>no -b <span style="color: #19177C">$x</span> <span style="color: #19177C">$1</span>@<span style="color: #666666">[</span><span style="color: #19177C">$3</span><span style="color: #666666">]</span>:<span style="color: #19177C">$4</span>      <span style="color: #408080; font-style: italic"># &gt; /dev/null 2&gt;&amp;1</span>
+<span style="color: #666666">48</span>         <span style="color: #008000; font-weight: bold">else</span>
+<span style="color: #666666">49</span>     /usr/bin/sftp -oPreferredAuthentications<span style="color: #666666">=</span>password -oSSHPassword<span style="color: #666666">=</span><span style="color: #19177C">$2</span> -oStrictHostKeyChecking<span style="color: #666666">=</span>no -oBatchMode<span style="color: #666666">=</span>no -b <span style="color: #19177C">$x</span> <span style="color: #19177C">$1</span>@<span style="color: #666666">[</span><span style="color: #19177C">$3</span><span style="color: #666666">]</span>:<span style="color: #19177C">$4</span>
+<span style="color: #666666">50</span>     <span style="color: #008000; font-weight: bold">fi</span>
+<span style="color: #666666">51</span>         <span style="color: #008000; font-weight: bold">fi</span>
+<span style="color: #666666">52</span> <span style="color: #008000; font-weight: bold">elif</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$7</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&quot;ftp&quot;</span> <span style="color: #666666">]</span> ; <span style="color: #008000; font-weight: bold">then</span>
+<span style="color: #666666">53</span>         /bin/ncftpput -t <span style="color: #666666">60</span> -u <span style="color: #19177C">$1</span> -p <span style="color: #19177C">$2</span> <span style="color: #19177C">$3</span> <span style="color: #19177C">$4</span> <span style="color: #19177C">$y</span> <span style="color: #408080; font-style: italic">#&gt; /dev/null 2&gt;&amp;1</span>
+</pre></div>
+
+<p>Also the <code>-oSSHPassword</code> is a non-standard option for sftp and passwords will appear in the process list.</p>
+<p><a id="management-http"></a></p>
+<h2>Details - Lack of encryption for management protocol (HTTP)</h2>
+<p>It was observed that the firmware versions below provide management over HTTP:</p>
+<ul>
+<li>6.2.2f</li>
+<li>7.4.2c</li>
+<li>8.2.1c</li>
+<li>8.1.2d</li>
+<li>8.2.3a</li>
+</ul>
+<p>This allows an attacker to retrieve passwords of devices by sniffing the network:</p>
+<pre><code>09:04:57.406608 IP 10.13.3.7.59090 &gt; 10.13.3.8.http: Flags [P.], seq 1:274, ack 1, win 229, options [nop,nop,TS val 96789859 ecr 3236098423], length 273: HTTP: GET /authenticate.html HTTP/1.1
+        [...]
+        0x0030:  ffff ffff 4745 5420 2f61 7574 6865 6e74  ....GET./authent
+        0x0040:  6963 6174 652e 6874 6d6c 2048 5454 502f  icate.html.HTTP/
+        0x0050:  312e 310d 0a55 7365 722d 4167 656e 743a  1.1..User-Agent:
+        0x0060:  2053 414e 6e61 764d 502d 322e 312e 312d  .SANnavMP-2.1.1-
+        0x0070:  7065 7266 6d6f 6e2d 6d77 0d0a 4175 7468  perfmon-mw..Auth
+        0x0080:  6f72 697a 6174 696f 6e3a 2043 7573 746f  orization:.Custo
+        0x0090:  6d5f 4261 7369 6320 ffff ffff ffff ffff  m_Basic.....[REM
+        0x00a0:  ffff ffff ffff ffff ffff ffff 0d0a 4361  OVEDREMOVED]....
+        0x00b0:  6368 652d 436f 6e74 726f 6c3a 206e 6f2d  che-Control:.no-
+        0x00c0:  6361 6368 650d 0a50 7261 676d 613a 206e  cache..Pragma:.n
+        0x00d0:  6f2d 6361 6368 650d 0a48 6f73 743a 20ff  o-cache..Host:.[
+        0x00e0:  ffff ffff ffff ffff ffff ffff 0a41 6363  REMOVEDREMO].Acc
+        0x00f0:  6570 743a 2074 6578 742f 6874 6d6c 2c20  ept:.text/html,.
+        0x0100:  696d 6167 652f 6769 662c 2069 6d61 6765  image/gif,.image
+        0x0110:  2f6a 7065 672c 202a 3b20 713d 2e32 2c20  /jpeg,.*;.q=.2,.
+        0x0120:  2a2f 2a3b 2071 3d2e 320d 0a43 6f6e 6e65  */*;.q=.2..Conne
+        0x0130:  6374 696f 6e3a 206b 6565 702d 616c 6976  ction:.keep-aliv
+        0x0140:  650d 0a0d 0a                             e....
+</code></pre>
+<p>Since the credentials are just base64-encoded, it is possible to decrypt them:</p>
+<pre><code>kali% echo YWRtaW46YWR2aXNvcnk= | base64 -d;echo
+admin:advisory
+</code></pre>
+<p>Using stolen credentials, it is possible to SSH the Brocade switches:</p>
+<pre><code>kali% sshpass -p 'advisory' ssh -l admin 10.13.3.8
+Warning: SSH client configured for wide compatibility by kali-tweaks.
+SWITCH:admin&gt;
+</code></pre>
+<p><a id="remote-exec-of-jar-files"></a></p>
+<h2>Details - Remote execution of JAR files over HTTP and HTTPS</h2>
+<p>The firmware versions below provide management over HTTP with a JAVA client:</p>
+<ul>
+<li>6.2.2f</li>
+<li>7.4.2c</li>
+<li>8.2.1c</li>
+<li>8.1.2d</li>
+<li>8.2.3a</li>
+</ul>
+<p>The firmware version below provides management over HTTPS with a JAVA client:</p>
+<ul>
+<li>8.2.0gft</li>
+</ul>
+<p>The management interface is provided by a JAVA client that will download .jar files from the switches over the network (clear-text HTTP or insecure HTTPS).</p>
+<p>Starting the JAVA Client from the browser:</p>
+<p><img alt="" src="images/2025-brocade-switches-java-client-1.png" /></p>
+<p>Content of the JNLP file provide by the switch to the browser:</p>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;jnlp spec="1.7+" codebase="http://10.13.3.8/"&gt;
+&lt;information&gt;
+&lt;title&gt;swd : WebTools: Switch Explorer&lt;/title&gt;
+&lt;vendor&gt;[REDACTED]&lt;/vendor&gt;
+&lt;description&gt;Web Tools&lt;/description&gt;
+&lt;icon kind="splash" href="/Splash_WT.jpg"/&gt;
+&lt;/information&gt;
+&lt;application-desc main-class="com.brocade.web.switchview.SwitchExplorerApplet"&gt;
+&lt;argument&gt;[REDACTED]&lt;/argument&gt;
+&lt;/application-desc&gt;
+&lt;resources&gt;
+&lt;j2se version="1.7+" initial-heap-size="64m" max-heap-size="512m" /&gt;&lt;jar href="wt-app.jar" download="eager"/&gt;
+&lt;jar href=" wt-thirdparty.jar" download="eager"/&gt;
+&lt;property name="jnlp.packEnabled" value="true" /&gt;
+&lt;property name="jnlp.wt.page" value="/switchExplorer.html" /&gt;
+&lt;property name="jnlp.wt.token" value="" /&gt;
+&lt;property name="jnlp.wt.authenticated" value="-2" /&gt;
+&lt;property name="jnlp.wt.WebStarted" value="yes" /&gt;
+&lt;property name="jnlp.wt.urlProtocol" value="http" /&gt;
+&lt;property name="jnlp.wt.urlPort" value="80" /&gt;
+&lt;property name="jnlp.wt.adCapable" value="0" /&gt;
+&lt;property name="jnlp.wt.isVFEnabled" value="false" /&gt;
+&lt;property name="jnlp.wt.switchName" value="[REDACTED]" /&gt;
+&lt;property name="jnlp.wt.isSwitchManager" value="false" /&gt;
+&lt;/resources&gt;
+&lt;security&gt;
+&lt;all-permissions/&gt;
+&lt;/security&gt;
+&lt;/jnlp&gt;
+</code></pre>
+<p>We can confirm the traffic of .jar files over HTTP or HTTPS using a second switch and the JAVA client will download files containing executable codes that will run on the workstation:</p>
+<p><img alt="" src="images/2025-brocade-switches-java-client-2.png" /></p>
+<p><a id="timeline"></a></p>
+<h2>Report Timeline</h2>
+<ul>
+<li>Aug 2022: Security assessment performed on Brocade Fibre Channel switches.</li>
+<li>Sep 2022: A complete report was sent to Dell (as a support provider for this software) and forwarded to Brocade.</li>
+<li>Sep 2022: The report was rejected by Brocade.</li>
+<li>Oct 2022 - Dec 2022: Negotiations with Brocade to get security patches.</li>
+<li>Nov 8, 2022: <a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217">CVE-2022-33186 - Pre-auth RCE - Custom insecure management protocol with "ezswitchsetup" - RCE</a> was patched and credited to Brocade.</li>
+<li>Dec 7, 2022: <strong>Failed negotiations</strong>: Brocade support team confirmed that (i) no security patches would be provided since the tests were not carried out on the latest version and therefore invalid, (ii) all the reported vulnerabilities were misconfiguration issues in the devices and sannav, (iii) anyway, since the tested versions were EOL, CVEs would never be published even if a vulnerability is found and (iv) Brocade asked Dell to provide a list of relevant vulnerabilities for the supported versions.<br>
+Pierre's comments: At that time, <u>some of the reported vulnerabilities were found in 3 supported versions of FOS (Fabric Operating System).</u></li>
+<li>Dec 12, 2022: Contacted Dell to clarify CVE-2022-33186 and reach Brocade to provide credits.</li>
+<li>Jan 31, 2023: The report was sent again to the Dell's Broadcom support team.</li>
+<li>Feb 1, 2023: Dell replied that no actions would be taken until the vulnerabilities were replicated by the customer in the latest versions of SANnav and FOS and confirmed that the latest FOS and SANnav were patched.</li>
+<li>Jan 29, 2024: Contacted Dell to clarify CVE-2022-33186 and reach Brocade to provide credits.</li>
+<li>Jan 30, 2024: Dell provided a list of unrelated CVEs.</li>
+<li>Jan 31, 2024: Contacted Dell to clarify CVE-2022-33186 and reach Brocade to provide credits.</li>
+<li>Jan 31, 2024: The Report was sent to Brocade PSIRT and clarifications on CVE-2022-33186 were requested to Brocade.</li>
+<li>Mar 22, 2024: The Report was sent again to Brocade PSIRT.</li>
+<li>Mar 22, 2024: Brocade PSIRT replied that they were investigating the vulnerabilities.</li>
+<li>Apr 18, 2024: Contacted Brocade PSIRT to get status of the vulnerabilities.</li>
+<li>Apr 18, 2024: Brocade PSIRT replied that they were currently reviewing all the issues.</li>
+<li>Apr 25, 2024: Brocade PSIRT confirmed that they were validating the analysis of the vulnerabilities.</li>
+<li>May 3, 2024: Brocade PSIRT informed me that more time would be required to analyze all the reported vulnerabilities.</li>
+<li>May 6, 2024: Asked the Brocade PSIRT when they would be able to share the analysis.</li>
+<li>May 7, 2024: Brocade PSIRT confirmed that they would share the results of the final investigation next week. They also justified the previous rejections of the Report because attempts were made through an OEM support organization and "OEM support organizations are not equipped to respond to an investigation made for an end of support software version" and "As a result, Brocade PSIRT / Engineering wasn't aware of this initial attempt to raise your issue". Brocade PSIRT also confirmed that they (Brocade PSIRT) would always investigate potential vulnerabilities.</li>
+<li>May 7, 2024: I provided Brocade PSIRT the official email sent by Brocade in 2022 where Brocade L3 support replied that security vulnerabilities would not be patched and that the Report was rejected.<br>
+Pierre's comments: Brocade was made aware of these vulnerabilities in 2022 and rejected the report, while 3 versions were still supported at that time.</li>
+<li>May 17, 2024: Brocade PSIRT provided an analysis of the vulnerabilities.</li>
+<li>May 20, 2024: Asked Brocade PSIRT when the security patches would be available and asked about a coordinated disclosure.</li>
+<li>May 30, 2024: Sent a follow-up email to Brocade PSIRT.</li>
+<li>May 30, 2024: Brocade PSIRT said a report would be sent tomorrow.</li>
+<li>Jun 3, 2024: Brocade PSIRT confirmed that security patches would be available in September 2024 and then several vulnerabilities were under embargo until the end of October 2024.</li>
+<li>Jun 8, 2024: I confirmed that I would publish a security advisory containing all the vulnerabilities at the end of October 2024, after the end of embargo.</li>
+<li>Jun 8, 2024: Brocade PSIRT confirmed they received my email.</li>
+<li>Jun 10, 2024: Brocade PSIRT confirmed that they would work with me on the October announcement.</li>
+<li>Oct 31, 2024: Asked Brocade PSIRT to communicate the links of the security bulletins and said that I would publish the technical advisory in the first week of November 2024, even without official security bulletins.</li>
+<li>Oct 31, 2024: Brocade PSIRT replied that security bulletins would be published on November 12, 2024.</li>
+<li>Nov 1, 2024: I replied that the embargo period set by Brocade ended and that I was planning to publish a security advisory. I requested the corresponding CVE identifiers and the vulnerable and patched firmware versions for all the vulnerabilities.</li>
+<li>Nov 7, 2024: Brocade PSIRT indicated they would provide more information later regarding the vulnerabilities.</li>
+<li>Nov 8, 2024: Brocade PSIRT provided a link to CVE-2024-5460, CVE-2024-5461 and CVE-2020-10188 and confirmed that additional updates would be published.</li>
+<li>Nov 8, 2024: Asked Brocade PSIRT information regarding missing CVEs in supported and unsupported versions of Fabric OS.</li>
+<li>Nov 8, 2024: Brocade informed me that the security advisory would be published on November 12.</li>
+<li>Dec 11, 2024: Brocade PSIRT provided a link to CVE-2024-7516.</li>
+<li>Mar 31, 2025: A security advisory is published.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Barre aka Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/blog/2025-03-31-brocade-switches-10-vulnerabilities.html">https://pierrekim.github.io/blog/2025-03-31-brocade-switches-10-vulnerabilities.html</a></p>
+<p><a href="https://pierrekim.github.io/advisories/2025-brocade-switches.txt">https://pierrekim.github.io/advisories/2025-brocade-switches.txt</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/25177">CVE-2024-7516 - Brocade Fabric OS before 9.2.2 does not enforce strict host key checking</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/24409">CVE-2024-5460 - Fabric OS versions prior to v9.0 have default community strings</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/24411">CVE-2024-5461 - Command or parameter injection via unique embedded switch SNMP commands</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23215">CVE-2023-3454 - Remote code execution (RCE) vulnerability in Brocade Fabric OS</a></p>
+<p><a href="https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/21217">CVE-2022-33186 - EZServer module vulnerability. (BSA-2022-2121)</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p></content>
+    </entry>
+    
+    <entry>
         <title>3 vulnerabilities in Palo Alto Deep Packet Inspection mechanism</title>
         <link href="2025-03-31-paloalto-dpi-3-vulnerabilities.html"/>
         <content type="html"><h2>Product description</h2>
