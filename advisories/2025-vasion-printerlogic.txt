@@ -50,7 +50,7 @@ __11 vulnerabilities affecting the MacOS/Linux client__
 __5 vulnerabilities affecting the Windows client__
 
 12. non-assigned CVE vulnerability - Insecure PrinterInstallerClientInterface.exe, PrinterInstallerClient.exe and PrinterInstallClientLauncher.exe
-13. CVE-2025-27678 - Local Privilege Escalation with insecure of C:\Windows\Temp\PPP\Log
+13. CVE-2025-27678 - Local Privilege Escalation with insecure use of C:\Windows\Temp\PPP\Log
 14. non-assigned CVE vulnerability - Local Privilege Escalation with insecure use of C:\Users\%USER%\AppData\Local\Temp
 15. non-assigned CVE vulnerability - Remote Code Execution (Execution of C:\Program.exe during the installation of a driver)
 16. non-assigned CVE vulnerability - Hardcoded Private key for the PrinterLogic CA and Hardcoded password
@@ -1529,7 +1529,7 @@ Furthermore, these programs are a mix of outdated technologies:
 
 
 
-## Details - Local Privilege Escalation with insecure of C:\Windows\Temp\PPP\Log
+## Details - Local Privilege Escalation with insecure use of C:\Windows\Temp\PPP\Log
 
 When these 3 programs are analyzed, the logs are written into disk as `NT AUTHORITY\SYSTEM` into `C:\Windows\Temp\PPP\Log\`:
 
@@ -10913,17 +10913,17 @@ used to explain the root causes of the vulnerabilities.
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1UvcACgkQxD4O2n2T
-Lbzjfg//dO574emduJRrFcqxXEIiFGUQK84qSIT3xZR+x/rTOQoMd44yuT7ja10w
-bDO7tAjMjv1jH9RR64RpRIMV9A9kmhSSfS6cKc0U14f8BSbfmqIwhnodgUcRXfVp
-6+HMtqa04reIWL8nz5lmxAI4hku4Am6KTNPMc5PnvB9JVcPl3dFDnJijuk1DxdU/
-nQahoBxiHWOpjaSSz96bKCEmgQmBmZutkuPbmXj9kfrNuJQY2ITw62CsSrB47uuD
-4nAIGvyzPSuwaJa70UlwszMGUZvq7SzZ4SfMMR2zNi5xpv53oUEkPZqdW+RslGaA
-bITdabH/YyplBjeXTn3RZ/s8rtL1ylTjGl1V7lYIlkY4Cfl/0f941qpNqTxVlcvy
-CLb1y2NFYbGoaKU5IPvG7gHInjlDxeJ8gugvnO+u04XZNWIJ2OWIMQmdUypwQ8Fz
-gh244a16FzSag8/2kDG1QSARCJwoa2Ya5T+vTkNlzvRXLuisH3XeFilGD63sePjS
-4Y8Vmh5p04ad51FUKz+ubVem97IQlgOgplt/CcchpYEIE51SOtj0FPMUpUEUzrif
-6qaX9LLZJTuNMItH1pxWgnbhLt4jIlf7jSMc4im9JGAfOn+kehzom/sgtyRzsFYw
-QzpRNObvtD/V1gMue0G+Akd6DYDUVXTD44cLV4QoIJ2C93YJ3Ks=
-=/AAF
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmf1VAQACgkQxD4O2n2T
+LbyfdxAApdT7ZQikRyjigOJpgy5rswzewJbY4yB1BOxRl448zhQKZ1FlOed/DVse
+yHQ3hlQVqP0Y/qDjBMtnRyGaYOcwxNTPl69fROfxV/1iUKPMt1e5U8iyNffTn4zh
+BklM3/NWi/SAnbz1mAoeDtate+kbvpjGR29ym85NV2FjTn4tUCFgugNd5fjzdhdD
+vPwM3jiVGY5MUmrAHYHFWNXIkso66KR0ePxAckk5xP8OFfe8K5pYDjNATGBfVCM2
+joms7/MCeINwGt+CIFMsw1Su1ROJF9ijXE//X1SQ530LrNeoIEQEgpYfs+sLnalL
+E2zziOWWwSVgXp/OiREeteV+YkX7O1EoF8at3RcTjqSLT+LpXOHiuPKcIxp2LjQz
+m6+0pnBpkjEc82u17mQgJsabHH+mADeaMMB7QeXCE9uiDigSVIL5HvTCgV39ScLw
+Dar69HzjY/I2J4DHvAQWNGoYsqFWENyUbV0ahUmyzvcLWPS2gj90tt5zYbq5AfRR
+FSwwGIrJXI4O1NPbpegz72lmna5mNXRsrRqfXZzVG0wgXdj+DxvhPyYtpC/rDxcA
+oXJx9tF6TtEYbC7NA0v3jcLsqz/u1L/yCjhmtidUPIDP3nfQbABSxr0PHoJnQMvy
+P2gnjMKjEAu/rP6mCF4hQnsb7U7oO3UT9o3ZioK6gYaTQnMNgzw=
+=XAD4
 -----END PGP SIGNATURE-----

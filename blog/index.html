@@ -67,7 +67,7 @@ Print servers are prone to failure, expensive to maintain, and pose major securi
 11. <a href="#mac-outdated-openssl">non-assigned CVE vulnerability - Outdated OpenSSL version</a></p>
 <p><strong>5 vulnerabilities affecting the Windows client</strong></p>
 <p>12. <a href="#win-insecure-programs">non-assigned CVE vulnerability - Insecure PrinterInstallerClientInterface.exe, PrinterInstallerClient.exe and PrinterInstallClientLauncher.exe</a><br>
-13. <a href="#win-lpe-01">CVE-2025-27678 - Local Privilege Escalation with insecure of C:\Windows\Temp\PPP\Log</a><br>
+13. <a href="#win-lpe-01">CVE-2025-27678 - Local Privilege Escalation with insecure use of C:\Windows\Temp\PPP\Log</a><br>
 14. <a href="#win-lpe-02">non-assigned CVE vulnerability - Local Privilege Escalation with insecure use of C:\Users\%USER%\AppData\Local\Temp</a><br>
 15. <a href="#win-rce-01">non-assigned CVE vulnerability - Remote Code Execution (Execution of C:\Program.exe during the installation of a driver)</a><br>
 16. <a href="#win-hardcoded-private-key">non-assigned CVE vulnerability - Hardcoded Private key for the PrinterLogic CA and Hardcoded password</a></p>
@@ -174,7 +174,7 @@ Implementing these recommendations will considerably reduce the attack surface, 
 <li>Deploy the Virtual Appliance version on-premise instead of using Cloud infrastructures. This protects against SSRF vulnerabilities that could compromise Cloud-based infrastructure.</li>
 <li>Implement workarounds for unpatched and disputed vulnerabilities.</li>
 <li>Remove the hardcoded <code>~printerlogic/.ssh/authorized_keys</code> file found in the Virtual Appliance. This file contains a hardcoded public SSH key allowing an undocumented backdoor SSH access with password-less sudo privileges (providing a full root access) if SSH is used on the Virtual Appliance. Vasion rejected this vulnerability.</li>
-<li>If you are using the SaaS version, rotate passwords, because some of them corresponding to Domain Controller administrators were returned in clear-text when sending a regular HTTP request to the badge API without authentication in any instance. It is worth noting that these passwords were corresponding to different tenants. This vulnerability is "<em>V-2024-003 - Cross Tenant Password Exposure</em>" in the vendor's security bulletins (CVSS: 10) and was patched in January 2024.</li>
+<li>If you are using the SaaS version, rotate passwords, because some of them corresponding to Domain Controller administrators were returned in clear-text when sending a regular HTTP request to the badge API without authentication in any instance. It is worth noting that these passwords were corresponding to different tenants. This vulnerability is "<em>V-2024-003 - Cross Tenant Password Exposure</em>" in the vendor's security bulletins (CVSS: 10) and was patched in January 2024 (CVE-2025-27648).</li>
 </ul>
 <h2>Unpatched vulnerabilities</h2>
 <p>The vendor stated they would patch these vulnerabilities in a future release of Vasion Print:</p>
@@ -1351,7 +1351,7 @@ root@laptop /tmp #
 <li>Python 2.</li>
 </ul>
 <p><a id="win-lpe-01"></a></p>
-<h2>Details - Local Privilege Escalation with insecure of C:\Windows\Temp\PPP\Log</h2>
+<h2>Details - Local Privilege Escalation with insecure use of C:\Windows\Temp\PPP\Log</h2>
 <p>When these 3 programs are analyzed, the logs are written into disk as <code>NT AUTHORITY\SYSTEM</code> into <code>C:\Windows\Temp\PPP\Log\</code>:</p>
 <p><img alt="" src="images/2025-vasion-report-0-win-lpe-01.png" /></p>
 <p><a href="images/2025-vasion-report-0-win-lpe-01-full.png">Click here for full image</a></p>
