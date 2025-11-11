@@ -56,36 +56,36 @@ Print servers are prone to failure, expensive to maintain, and pose major securi
 <p><strong>11 vulnerabilities affecting the MacOS/Linux client</strong></p>
 <p>1. <a href="#mac-hardcoded-private-key">CVE-2025-27685 - Hardcoded Private key for the PrinterLogic CA and Hardcoded password</a><br>
 2. <a href="#mac-incorrect-permissions">CVE-2025-27682 - Incorrect permissions in /opt/PrinterInstallerClient/log</a><br>
-3. <a href="#mac-leak-secrets">non-assigned CVE vulnerability - Leak of secrets inside the logs</a><br>
-4. <a href="#mac-lack-auth-communication">non-assigned CVE vulnerability - Lack of authentication of the communication between services</a><br>
+3. <a href="#mac-leak-secrets">CVE-2025-34188 - Leak of secrets inside the logs</a><br>
+4. <a href="#mac-lack-auth-communication">CVE-2025-34189 - Lack of authentication of the communication between services</a><br>
 5. <a href="#mac-bypass-admin-ipc">CVE-2025-27681 - Bypass of admin commands using IPC</a><br>
-6. <a href="#mac-auth-bypass-printerinstallerclientservice">non-assigned CVE vulnerability - Authentication bypass on the PrinterInstallerClientService program</a><br>
+6. <a href="#mac-auth-bypass-printerinstallerclientservice">CVE-2025-34190 - Authentication bypass on the PrinterInstallerClientService program</a><br>
 7. <a href="#mac-potential-drivers-upload">CVE-2025-27683 - Potential upload of new drivers</a><br>
 8. <a href="#mac-insecure-generation-debug-archive">CVE-2025-27684 - Insecure generation of debug archive</a><br>
 9. <a href="#mac-arbitrary-file-read">CVE-2025-27677 - Arbitrary File Read as root</a><br>
-10. <a href="#mac-arbitrary-file-write">non-assigned CVE vulnerability - Arbitrary File Write as root</a><br>
-11. <a href="#mac-outdated-openssl">non-assigned CVE vulnerability - Outdated OpenSSL version</a></p>
+10. <a href="#mac-arbitrary-file-write">CVE-2025-34191 - Arbitrary File Write as root</a><br>
+11. <a href="#mac-outdated-openssl">CVE-2025-34192 - Outdated OpenSSL version</a></p>
 <p><strong>5 vulnerabilities affecting the Windows client</strong></p>
-<p>12. <a href="#win-insecure-programs">non-assigned CVE vulnerability - Insecure PrinterInstallerClientInterface.exe, PrinterInstallerClient.exe and PrinterInstallClientLauncher.exe</a><br>
+<p>12. <a href="#win-insecure-programs">CVE-2025-34193 - Insecure PrinterInstallerClientInterface.exe, PrinterInstallerClient.exe and PrinterInstallClientLauncher.exe</a><br>
 13. <a href="#win-lpe-01">CVE-2025-27678 - Local Privilege Escalation with insecure use of C:\Windows\Temp\PPP\Log</a><br>
-14. <a href="#win-lpe-02">non-assigned CVE vulnerability - Local Privilege Escalation with insecure use of C:\Users\%USER%\AppData\Local\Temp</a><br>
-15. <a href="#win-rce-01">non-assigned CVE vulnerability - Remote Code Execution (Execution of C:\Program.exe during the installation of a driver)</a><br>
-16. <a href="#win-hardcoded-private-key">non-assigned CVE vulnerability - Hardcoded Private key for the PrinterLogic CA and Hardcoded password</a></p>
+14. <a href="#win-lpe-02">CVE-2025-34194 - Local Privilege Escalation with insecure use of C:\Users\%USER%\AppData\Local\Temp</a><br>
+15. <a href="#win-rce-01">CVE-2025-34195 - Remote Code Execution (Execution of C:\Program.exe during the installation of a driver)</a><br>
+16. <a href="#win-hardcoded-private-key">CVE-2025-34196 - Hardcoded Private key for the PrinterLogic CA and Hardcoded password</a></p>
 <p><strong>II. The summary of the vulnerabilities found in 2022:</strong></p>
 <p><strong>33 vulnerabilities affecting the VA and SaaS versions</strong></p>
-<p>17. <a href="#va-hardcoded-password-ubuntu">non-assigned CVE vulnerability - Hardcoded password for the ubuntu user</a><br>
-18. <a href="#va-hardcoded-ssh-keys">non-assigned CVE vulnerability - Hardcoded SSH server keys</a><br>
-19. <a href="#va-insecure-communications">non-assigned CVE vulnerability - Insecure communications to printers and insecure communications to micro-services by disabling all SSL verifications</a><br>
-20. <a href="#va-clear-text-password">non-assigned CVE vulnerability - Password for <code>network</code> stored in clear-text inside <code>/etc/issue</code>, world-readable</a><br>
+<p>17. <a href="#va-hardcoded-password-ubuntu">CVE-2025-34197 - Hardcoded password for the ubuntu user</a><br>
+18. <a href="#va-hardcoded-ssh-keys">CVE-2025-34198 - Hardcoded SSH server keys</a><br>
+19. <a href="#va-insecure-communications">CVE-2025-34199 - Insecure communications to printers and insecure communications to micro-services by disabling all SSL verifications</a><br>
+20. <a href="#va-clear-text-password">CVE-2025-34200 - Password for <code>network</code> stored in clear-text inside <code>/etc/issue</code>, world-readable</a><br>
 21. <a href="#va-hardocoded-private-ssh-keys">CVE-2025-27650 - Hardcoded SSH keys + private SSH keys for [redacted]@printerlogic.com</a><br>
 22. <a href="#va-hardcoded-aws-key">CVE-2025-27643 - Hardcoded AWS secret key and Presence of CI/CD scripts</a><br>
 23. <a href="#va-hardcoded-mailgun-credentials">CVE-2025-27638 - Hardcoded Mailgun credentials</a><br>
 24. <a href="#va-hardcoded-okta-private-key">CVE-2025-27674 - Hardcoded OKTA Private key</a><br>
-25. <a href="#va-lack-of-fw">non-assigned CVE vulnerability - Lack of firewall between Docker instances</a><br>
-26. <a href="#va-insecure-access-docker-instances-from-wan">non-assigned CVE vulnerability - Insecure access to Docker instances from the WAN</a><br>
-27. <a href="#va-insecure-security-architecture">non-assigned CVE vulnerability - Incorrect security architecture and wrong permissions in /var/www/efs_storage allowing allowing to compromise the solution</a><br>
-28. <a href="#va-outdated-components">non-assigned CVE vulnerability - Outdated, End-Of-Life, unsupported and vulnerable components (Nginx, libraries, Laravel, operating systems)</a><br>
-29. <a href="#va-processes-running-as-root">non-assigned CVE vulnerability - Processes running as root in Docker instances</a><br>
+25. <a href="#va-lack-of-fw">CVE-2025-34201 - Lack of firewall between Docker instances</a><br>
+26. <a href="#va-insecure-access-docker-instances-from-wan">CVE-2025-34202 - Insecure access to Docker instances from the WAN</a><br>
+27. <a href="#va-insecure-security-architecture">CVE-2025-34206 - Incorrect security architecture and wrong permissions in /var/www/efs_storage allowing allowing to compromise the solution</a><br>
+28. <a href="#va-outdated-components">CVE-2025-34203 - Outdated, End-Of-Life, unsupported and vulnerable components (Nginx, libraries, Laravel, operating systems)</a><br>
+29. <a href="#va-processes-running-as-root">CVE-2025-34204 - Processes running as root in Docker instances</a><br>
 30. <a href="#va-lpe">CVE-2025-27639 - Creation of administrator cookies using the credentials of regular users</a><br>
 31. <a href="#va-xss-01">CVE-2025-27637 - XSS in the license generator and weak encryption algorithm</a><br>
 32. <a href="#va-incorrect-acl-php">CVE-2025-27649 - Incorrect Access Control to PHP webpages allowing to reach printers</a><br>
@@ -97,14 +97,14 @@ Print servers are prone to failure, expensive to maintain, and pose major securi
 38. <a href="#va-xss-03">CVE-2025-27676 - XSS in /www/app/admin/design/reports/overview_popup.php and Incorrect Access Control</a><br>
 39. <a href="#va-xss-04">CVE-2025-27654 - XSS everywhere in /www/app/admin/*</a><br>
 40. <a href="#va-rce-01">CVE-2025-27657 - Remote Code Executions using eval() - requires administrator privileges</a><br>
-41. <a href="#va-dead-code">non-assigned CVE vulnerability - Dangerous PHP dead code</a><br>
-42. <a href="#va-insecure-ssh-config">non-assigned CVE vulnerability - Insecure SSH configuration</a><br>
-43. <a href="#va-incorrect-encryption-algorithms-password">non-assigned CVE vulnerability - Incorrect encryption algorithms used to store passwords</a><br>
-44. <a href="#va-private-gpg-key">non-assigned CVE vulnerability - GPG Private key stored in the solution</a><br>
-45. <a href="#va-readable-passwords">non-assigned CVE vulnerability - Passwords readable and stored in clear-text</a><br>
-46. <a href="#va-hardcoded-ssl-private-key">non-assigned CVE vulnerability - Hardcoded SSL certificate / Private keys</a><br>
+41. <a href="#va-dead-code">CVE-2025-34205 - Dangerous PHP dead code</a><br>
+42. <a href="#va-insecure-ssh-config">CVE-2025-34207 - Insecure SSH configuration</a><br>
+43. <a href="#va-incorrect-encryption-algorithms-password">CVE-2025-34208 - Incorrect encryption algorithms used to store passwords</a><br>
+44. <a href="#va-private-gpg-key">CVE-2025-34209 - GPG Private key stored in the solution</a><br>
+45. <a href="#va-readable-passwords">CVE-2025-34210 - Passwords readable and stored in clear-text</a><br>
+46. <a href="#va-hardcoded-ssl-private-key">CVE-2025-34211 - Hardcoded SSL certificate / Private keys</a><br>
 47. <a href="#va-disclosure-samba-password">CVE-2025-27656 - Samba password available in the process list</a><br>
-48. <a href="#va-supply-chain-build-system">non-assigned CVE vulnerability - Supply Chain attack against the PrinterLogic build system</a><br>
+48. <a href="#va-supply-chain-build-system">CVE-2025-34212 - Supply Chain attack against the PrinterLogic build system</a><br>
 49. <a href="#va-vulnerable-openid">CVE-2025-27675 - Vulnerable OpenID implementation</a></p>
 <p><strong> 1 vulnerability affecting only the VA version</strong></p>
 <p>50. <a href="#va-insecure-firmware-update-ms-auth-key">CVE-2025-27680 - Insecure firmware image update using the MS_AUTH_KEY variable</a></p>
@@ -115,32 +115,32 @@ Print servers are prone to failure, expensive to maintain, and pose major securi
 53. <a href="#saas-insecure-design">non-assigned CVE vulnerability - Insecure design of the SaaS version</a><br>
 54. <a href="#saas-clear-text-sql-backups">non-assigned CVE vulnerability - SQL Backups stored in clear-text in the Cloud</a></p>
 <p><strong> 2 vulnerabilities affecting only the VA version</strong></p>
-<p>55. <a href="#va-rce-02">non-assigned CVE vulnerability - Pre-authenticated Remote take over of PrinterLogic instances (Remote Code Execution)</a><br>
-56. <a href="#va-rce-03">non-assigned CVE vulnerability - Remote Code Execution and Leak of passwords using APIs</a></p>
+<p>55. <a href="#va-rce-02">CVE-2025-34215 - Pre-authenticated Remote take over of PrinterLogic instances (Remote Code Execution)</a><br>
+56. <a href="#va-rce-03">CVE-2025-34216 - Remote Code Execution and Leak of passwords using APIs</a></p>
 <p><strong> 25 vulnerabilities affecting the VA and SaaS versions</strong></p>
-<p>57. <a href="#va-undocumented-hardcoded-ssh-key">non-assigned CVE vulnerability - Undocumented hardcoded SSH key</a><br>
-58. <a href="#va-exposed-docker-instances">non-assigned CVE vulnerability - Internal Docker instances exposed on the LAN and the Internet</a><br>
+<p>57. <a href="#va-undocumented-hardcoded-ssh-key">CVE-2025-34217 - Undocumented hardcoded SSH key</a><br>
+58. <a href="#va-exposed-docker-instances">CVE-2025-34218 - Internal Docker instances exposed on the LAN and the Internet</a><br>
 59. <a href="#va-exposed-upload-docker-instance">non-assigned CVE vulnerability - Docker instance used to upload clients reachable from the Internet and the LAN</a><br>
-60. <a href="#va-api-leak">non-assigned CVE vulnerability - Unauthenticated API leaking group information</a><br>
+60. <a href="#va-api-leak">CVE-2025-34220 - Unauthenticated API leaking group information</a><br>
 61. <a href="#va-firefox-plugin-over-http">CVE-2025-27645 - Installation of the Firefox plugin over HTTP</a><br>
-62. <a href="#va-auth-bypass">non-assigned CVE vulnerability - Authentication Bypass - Docker instances reachable without authentication</a><br>
+62. <a href="#va-auth-bypass">CVE-2025-34221 - Authentication Bypass - Docker instances reachable without authentication</a><br>
 63. <a href="#va-add-partial-admin-without-auth">CVE-2025-27647 - Addition of partial-admin users without authentication</a><br>
 64. <a href="#va-insecure-apis-01">CVE-2025-27641 - Unauthenticated admin APIs allowing to configure the IdP (SSO) authentication mechanism</a><br>
-65. <a href="#va-insecure-apis-02">non-assigned CVE vulnerability - Unauthenticated admin APIs allowing to upload/download SSL certificates</a><br>
-66. <a href="#va-insecure-credentials-installation">non-assigned CVE vulnerability - Insecure credentials used for the installation</a><br>
-67. <a href="#va-lack-of-auth-manage-printers">non-assigned CVE vulnerability - No authentication required to configure/delete printers/rfid devices</a><br>
-68. <a href="#va-ssrf-03">non-assigned CVE vulnerabilities - 11 SSRF vulnerabilities in the console_release directory</a><br>
-68.1. <a href="#va-ssrf-04">non-assigned CVE vulnerabilities - 4 SSRF vulnerabilities in /var/www/app/console_release/lexmark/update.php</a><br>
-68.2. <a href="#va-ssrf-05">non-assigned CVE vulnerability - 1 blind SSRF vulnerability in /var/www/app/console_release/hp/installApp.php</a><br>
-68.3. <a href="#va-ssrf-06">non-assigned CVE vulnerabilities - 2 blind SSRF vulnerabilities in /var/www/app/console_release/hp/log_off_single_sign_on.php</a><br>
-68.4. <a href="#va-ssrf-07">non-assigned CVE vulnerabilities - 2 SSRF vulnerabilities in /var/www/app/console_release/hp/badgeSetup.php</a><br>
-68.5. <a href="#va-ssrf-08">non-assigned CVE vulnerabilities - 2 blind SSRF vulnerabilities in /var/www/app/console_release/lexmark/dellCheck.php</a><br>
-69. <a href="#va-insecure-use-file_get_contents">non-assigned CVE vulnerability - Insecure use of file_get_contents() allowing to bypass security checks</a><br>
-70. <a href="#va-hardcoded-key">non-assigned CVE vulnerability - Hardcoded keys used to encrypt information - insecure encryption</a><br>
+65. <a href="#va-insecure-apis-02">CVE-2025-34222 - Unauthenticated admin APIs allowing to upload/download SSL certificates</a><br>
+66. <a href="#va-insecure-credentials-installation">CVE-2025-34223 - Insecure credentials used for the installation</a><br>
+67. <a href="#va-lack-of-auth-manage-printers">CVE-2025-34224 - No authentication required to configure/delete printers/rfid devices</a><br>
+68. <a href="#va-ssrf-03">CVE-2025-34225 - 11 SSRF vulnerabilities in the console_release directory</a><br>
+68.1. <a href="#va-ssrf-04">CVE-2025-34228 - 4 SSRF vulnerabilities in /var/www/app/console_release/lexmark/update.php</a><br>
+68.2. <a href="#va-ssrf-05">CVE-2025-34229 - 1 blind SSRF vulnerability in /var/www/app/console_release/hp/installApp.php</a><br>
+68.3. <a href="#va-ssrf-06">CVE-2025-34230 - 2 blind SSRF vulnerabilities in /var/www/app/console_release/hp/log_off_single_sign_on.php</a><br>
+68.4. <a href="#va-ssrf-07">CVE-2025-34231 - 2 SSRF vulnerabilities in /var/www/app/console_release/hp/badgeSetup.php</a><br>
+68.5. <a href="#va-ssrf-08">CVE-2025-34232 - 2 blind SSRF vulnerabilities in /var/www/app/console_release/lexmark/dellCheck.php</a><br>
+69. <a href="#va-insecure-use-file_get_contents">CVE-2025-34233 - Insecure use of file_get_contents() allowing to bypass security checks</a><br>
+70. <a href="#va-hardcoded-key">CVE-2025-34234 - Hardcoded keys used to encrypt information - insecure encryption</a><br>
 71. <a href="#va-edit-driver-packages-without-auth">CVE-2025-27642 - Unauthenticated webpage allowing to edit driver packages</a><br></p>
 <p><strong> 2 vulnerabilities affecting the Windows client</strong></p>
 <p>72. <a href="#win-lpe-03">CVE-2025-27644 - Local Privilege Escalation</a><br>
-73. <a href="#win-lpe-04">non-assigned CVE vulnerability - Insecure option allowing an attacker to get Remote Code Execution against any client</a></p>
+73. <a href="#win-lpe-04">CVE-2025-34235 - Insecure option allowing an attacker to get Remote Code Execution against any client</a></p>
 <p><em>Miscellaneous notes</em>:</p>
 <p>A blackbox security assessment of the MacOS client was done in 2021 (3 days of work) without access to the back-end (Virtual Appliance or SaaS) and was provided to PrinterLogic (now Vasion Print). A (very) quick security assessment of the Windows Client was also done in 2021 (~ 6 hours of work - as PrinterLogic was not the main target of the security evaluation) and was provided to PrinterLogic (now Vasion Print).</p>
 <p>A third report analysing the Virtual Appliance and SaaS version was provided in February 2022 to Vasion after a 3-week security assessment. The vendor provided a test SaaS deployment.</p>
@@ -158,7 +158,7 @@ Print servers are prone to failure, expensive to maintain, and pose major securi
 <p>Although the list of vulnerabilities is substantial, I consider that the security posture of Vasion Print has improved significantly as a result of the reporting of these vulnerabilities.</p>
 <p>Regarding the (lack of) CVEs, the vendor confirmed that they reached MITRE multiple times to have CVE identifiers assigned to vulnerabilities.
 Unfortunately, they never got any reply and they used custom identifiers to track vulnerabilities (<code>V-YEAR-NUMBER</code>) in their security bulletins. I reached JPCERT to assign CVE Identifiers to the vulnerabilities, since I worked with JPCERT in 2023 for vulnerabilities found in <a href="https://pierrekim.github.io/blog/2024-06-27-toshiba-mfp-40-vulnerabilities.html">Toshiba</a> and <a href="https://pierrekim.github.io/blog/2024-06-27-sharp-mfp-17-vulnerabilities.html">Sharp</a> Multi-Function printers. Finally, MITRE assigned 33 CVEs in March 2025 but more than 50 CVE IDs are still missing.</p>
-<p>I reached MITRE in March 2025 two times to assign CVE IDs to the non-assigned vulnerabilities and will update this security advisory accordingly if CVEs are assigned.</p>
+<p>I reached MITRE in March 2025 two times to assign CVE IDs to the non-assigned vulnerabilities and will update this security advisory accordingly if CVEs are assigned. <strong>Update November 2025: VulnCheck assigned the missing CVEs.</strong></p>
 <p><em>Impacts</em></p>
 <p>An attacker can compromise Vasion Printer installations without authentication, move laterally in the Windows/MacOS clients and get Remote Code Execution on these clients.</p>
 <p>It was also possible to compromise other customers since cross-tenant vulnerabilities were found, allowing to disclose clear-text passwords of other customers and get admin access to their accounts using multiple vulnerabilities.</p>
@@ -9646,6 +9646,8 @@ The driver could not be found or has already been updated.
 <li>Mar 14, 2025: Follow-up email sent to MITRE.</li>
 <li>Mar 18, 2025: Vasion provided the final analysis on the disputed findings.</li>
 <li>Apr 8, 2025: A security advisory is published.</li>
+<li>Sep and Oct 2025: Vulncheck assigns missing CVEs.</li>
+<li>Nov 11, 2025: An updated security advisory is published.</li>
 </ul>
 <h2>Credits</h2>
 <p>These vulnerabilities were found by Pierre Barre aka Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
